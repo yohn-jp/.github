@@ -43,10 +43,9 @@ export function validateBranchName(branch, options = {}) {
   }
   let regex;
   try {
-    // codeql[js/regex-injection]: pattern is trusted workflow-input config
-    // (see the comment above MAX_PATTERN_LENGTH), length-bounded above, and
-    // wrapped here so a malformed pattern fails closed instead of crashing.
-    regex = new RegExp(pattern);
+    // Trusted workflow-input config, length-bounded above (see the comment
+    // near MAX_PATTERN_LENGTH); wrapped so a malformed pattern fails closed.
+    regex = new RegExp(pattern); // codeql[js/regex-injection]
   } catch (cause) {
     return [`configured branch-name-pattern is not a valid regular expression: ${cause.message}`];
   }
