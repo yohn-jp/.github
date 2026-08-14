@@ -1,0 +1,12 @@
+name: valid
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@e7c61c6407c8ef40854f85e1ab910abc9df81f8e
+      - uses: ./local-action
+      - uses: docker://alpine@sha256:0c52bd1b6e7bc9c2e04da62e10d07ad6a388ee9250aaa9625995b167b35169e4
+  call:
+    uses: yohn-jp/.github/.github/workflows/reusable.yml@e7c61c6407c8ef40854f85e1ab910abc9df81f8e

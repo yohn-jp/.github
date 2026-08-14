@@ -1,0 +1,5 @@
+description: Report a defect.
+body:
+  - type: dropdown
+    attributes:
+      label: Scope

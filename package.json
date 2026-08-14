@@ -1,0 +1,20 @@
+{
+  "name": "@yohn-jp/dotgithub",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Organization-wide GitHub metadata defaults, reusable workflows, and metadata validation for yohn-jp repositories.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
+    "validate:action-pins": "node scripts/validate-action-pins.mjs",
+    "validate": "npm run validate:issue-forms && npm run validate:action-pins"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "packageManager": "pnpm@9.15.4"
+}
