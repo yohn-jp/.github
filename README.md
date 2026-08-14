@@ -18,3 +18,10 @@ pnpm test           # unit tests, including the flow-mapping regression fixture
 The same checks run in CI via
 [`.github/workflows/metadata-validation.yml`](.github/workflows/metadata-validation.yml),
 which other repositories can also call as a reusable workflow.
+
+## Reusable TypeScript CLI CI
+
+See [`docs/typescript-cli-ci.md`](docs/typescript-cli-ci.md) for the
+`.github/workflows/typescript-cli-ci.yml` contract, its capability inputs
+(`committed-dist`, `release-docs-fast-path`, `conformance-script`), and the
+stable `verify` required-status gate consumer Rulesets should point at.
