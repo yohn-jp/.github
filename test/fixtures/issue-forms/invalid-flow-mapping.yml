@@ -1,0 +1,11 @@
+name: Bug report
+description: Report a defect.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: reproduction
+    attributes: { label: Reproduction, description: Minimal steps, observed result, expected result, and environment }
+    validations:
+      required: true

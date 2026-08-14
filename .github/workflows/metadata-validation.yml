@@ -1,0 +1,85 @@
+name: Metadata validation
+
+# Deterministic validation for GitHub repository metadata: Issue Form
+# structure, immutable Action SHA pinning, and GitHub Actions workflow
+# syntax. Callable as a reusable workflow so other yohn-jp repositories can
+# consume the same gate instead of duplicating validation logic; also runs
+# directly here to self-validate this repository's own defaults.
+on:
+  workflow_call: {}
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  metadata:
+    name: Validate repository metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # A reusable workflow's own files are not part of the caller's
+      # checkout above. github.job_workflow_ref carries the exact ref this
+      # workflow file was invoked at (owner/repo/path@ref), so the tooling
+      # checkout below always matches the version of validate-*.mjs the
+      # caller pinned to, including when this workflow is triggered
+      # directly (push/pull_request) in yohn-jp/.github itself.
+      - name: Resolve tooling ref
+        id: tools-ref
+        shell: bash
+        env:
+          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          FALLBACK_SHA: ${{ github.sha }}
+        run: |
+          ref="${JOB_WORKFLOW_REF##*@}"
+          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout metadata validation tooling (yohn-jp/.github)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: yohn-jp/.github
+          ref: ${{ steps.tools-ref.outputs.ref }}
+          path: .metadata-tools
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+        with:
+          package_json_file: .metadata-tools/package.json
+
+      - name: Install validator dependencies
+        working-directory: .metadata-tools
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Issue Forms
+        run: node .metadata-tools/scripts/validate-issue-forms.mjs
+
+      - name: Validate Actions SHA pinning
+        run: node .metadata-tools/scripts/validate-action-pins.mjs
+
+      - name: Download actionlint
+        shell: bash
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/914e7df21a07ef503a81201c76d2b11c789d3fca/scripts/download-actionlint.bash) 1.7.12
+          echo "$PWD" >> "$GITHUB_PATH"
+
+      - name: Run actionlint
+        shell: bash
+        run: |
+          if [ -d .github/workflows ]; then
+            # -ignore suppresses a known actionlint schema gap: github.job_workflow_ref
+            # is a real, GA GitHub Actions context property (used above to resolve
+            # which ref of this reusable workflow is running) that actionlint's
+            # embedded context schema does not yet include as of v1.7.12.
+            actionlint -color -ignore 'property "job_workflow_ref" is not defined'
+          else
+            echo "No .github/workflows directory; skipping actionlint."
+          fi
