@@ -43,3 +43,10 @@ contract validation to the published `yohn-jp/gh-inari` CLI (pinned to an
 exact version) rather than redefining that authority here; this repository
 only owns branch-name validation and the GitHub-side labeling/commenting
 plumbing.
+
+## Reusable npm publishing
+
+See [`docs/npm-publish.md`](docs/npm-publish.md) for
+`.github/workflows/npm-publish.yml`: release-tag/version verification,
+packed-tarball smoke testing across a Node-version matrix, and idempotent
+publishing via npm Trusted Publishing (OIDC) — no long-lived npm token.

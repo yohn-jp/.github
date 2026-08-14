@@ -2,7 +2,7 @@
   "name": "ts-cli-fixture",
   "version": "0.1.0",
   "private": true,
-  "description": "Minimal fixture CLI used only to self-test yohn-jp/.github's reusable TypeScript CLI CI workflow (.github/workflows/typescript-cli-ci.yml). Not a published package.",
+  "description": "Minimal fixture CLI used only to self-test yohn-jp/.github's reusable TypeScript CLI CI and npm publish workflows (.github/workflows/typescript-cli-ci.yml, npm-publish.yml). Not a published package.",
   "type": "commonjs",
   "bin": {
     "ts-cli-fixture": "./dist/cli.js"
@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test test/*.test.mjs",
     "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
-    "conformance:contract": "node scripts/check-contract.mjs"
+    "conformance:contract": "node scripts/check-contract.mjs",
+    "smoke-test": "node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
