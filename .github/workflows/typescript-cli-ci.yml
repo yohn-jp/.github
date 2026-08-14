@@ -1,0 +1,323 @@
+name: TypeScript CLI CI
+
+# Reusable CI contract for yohn-jp TypeScript CLI repositories: format,
+# lint, typecheck, test, Actions governance, build, and packed-package
+# validation, behind a single stable "verify" aggregate status that
+# Rulesets can require without tracking internal job names. Differences
+# between consumer repositories are expressed as explicit inputs, never as
+# repository-name conditionals.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the CLI package (package.json, src/, etc).
+        type: string
+        default: "."
+      node-version:
+        description: Node.js version used across all jobs.
+        type: string
+        default: "22"
+      committed-dist:
+        description: >-
+          Verify the committed dist/ directory is byte-identical to a fresh
+          build. Enable for repositories that commit build output.
+        type: boolean
+        default: false
+      release-docs-fast-path:
+        description: >-
+          On pull requests whose changed files all match
+          docs-path-patterns, skip format/lint/typecheck/test/build/package
+          validation and run only Actions governance validation.
+        type: boolean
+        default: false
+      docs-path-patterns:
+        description: Newline-separated glob patterns considered docs-only.
+        type: string
+        default: |
+          docs/**
+          **/*.md
+          CHANGELOG.md
+      conformance-script:
+        description: >-
+          Optional package.json script name to run as an explicit
+          conformance-validation step (e.g. validating CLI output against a
+          contract). Empty (default) skips this step.
+        type: string
+        default: ""
+      run-governance:
+        description: >-
+          Run Actions/Issue-Form governance validation (from
+          metadata-validation.yml) as part of this workflow. Disable only if
+          the consumer already runs it separately.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      fast_path: ${{ steps.decide.outputs.fast_path }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tooling ref
+        id: tools-ref
+        if: inputs.release-docs-fast-path && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          FALLBACK_SHA: ${{ github.sha }}
+        run: |
+          ref="${JOB_WORKFLOW_REF##*@}"
+          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout metadata validation tooling (yohn-jp/.github)
+        if: inputs.release-docs-fast-path && github.event_name == 'pull_request'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: yohn-jp/.github
+          ref: ${{ steps.tools-ref.outputs.ref }}
+          path: .metadata-tools
+
+      - name: Decide fast path
+        id: decide
+        shell: bash
+        env:
+          FAST_PATH_ENABLED: ${{ inputs.release-docs-fast-path }}
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          PATTERNS: ${{ inputs.docs-path-patterns }}
+        run: |
+          if [ "$FAST_PATH_ENABLED" != "true" ] || [ "$IS_PULL_REQUEST" != "true" ]; then
+            echo "fast_path=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # PATTERNS is intentionally word-split: docs-path-patterns is a
+          # newline-separated list meant to become one argv entry per line.
+          # shellcheck disable=SC2086
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+              | node .metadata-tools/scripts/is-docs-only-change.mjs $PATTERNS; then
+            echo "fast_path=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fast_path=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  governance:
+    name: Actions governance validation
+    needs: plan
+    if: inputs.run-governance && needs.plan.outputs.fast_path != 'true'
+    uses: ./.github/workflows/metadata-validation.yml
+
+  format:
+    name: Format check
+    needs: plan
+    if: needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - working-directory: ${{ inputs.working-directory }}
+        run: pnpm run format:check
+
+  lint:
+    name: Lint
+    needs: plan
+    if: needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - working-directory: ${{ inputs.working-directory }}
+        run: pnpm run lint
+
+  typecheck:
+    name: Typecheck
+    needs: plan
+    if: needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - working-directory: ${{ inputs.working-directory }}
+        run: pnpm run typecheck
+
+  test:
+    name: Test
+    needs: plan
+    if: needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - working-directory: ${{ inputs.working-directory }}
+        run: pnpm test
+
+  conformance:
+    name: Conformance validation
+    needs: plan
+    if: needs.plan.outputs.fast_path != 'true' && inputs.conformance-script != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - working-directory: ${{ inputs.working-directory }}
+        env:
+          CONFORMANCE_SCRIPT: ${{ inputs.conformance-script }}
+        run: pnpm run "$CONFORMANCE_SCRIPT"
+
+  build:
+    name: Build
+    needs: plan
+    if: needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - working-directory: ${{ inputs.working-directory }}
+        run: pnpm run build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: ${{ inputs.working-directory }}/dist
+          retention-days: 1
+
+  committed-dist-check:
+    name: Committed dist verification
+    needs: [plan, build]
+    if: inputs.committed-dist && needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: dist
+          path: ${{ inputs.working-directory }}/.built-dist
+      - shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if ! diff -rq dist .built-dist; then
+            echo "::error::committed dist/ does not match a fresh build. Run the build and commit the result." >&2
+            exit 1
+          fi
+
+  package-validate:
+    name: Package validation
+    needs: [plan, build]
+    if: needs.plan.outputs.fast_path != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: dist
+          path: ${{ inputs.working-directory }}/dist
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+      - name: Pack and inspect tarball contents
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          rm -f ./*.tgz
+          pnpm pack
+          tarballs=( ./*.tgz )
+          tarball="${tarballs[0]}"
+          echo "Packed: $tarball"
+          contents="$(tar -tzf "$tarball")"
+          echo "$contents"
+          for forbidden in 'node_modules/' '\.env$' '^package/\.git' '^package/src/'; do
+            if echo "$contents" | grep -Eq "$forbidden"; then
+              echo "::error::packed tarball unexpectedly contains files matching '$forbidden'" >&2
+              exit 1
+            fi
+          done
+          if ! echo "$contents" | grep -q '^package/dist/'; then
+            echo "::error::packed tarball does not contain dist/" >&2
+            exit 1
+          fi
+          echo "TARBALL=$PWD/$tarball" >> "$GITHUB_ENV"
+      - name: Smoke test packed tarball
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          smoke_dir="$(mktemp -d)"
+          echo '{"private":true}' > "$smoke_dir/package.json"
+          npm install --no-save --prefix "$smoke_dir" "$TARBALL"
+          bin_names="$(node -e '
+            const path = require("node:path");
+            const pkg = require(path.resolve("package.json"));
+            const bin = pkg.bin;
+            if (!bin) process.exit(0);
+            const names = typeof bin === "string" ? [pkg.name] : Object.keys(bin);
+            console.log(names.join("\n"));
+          ')"
+          if [ -z "$bin_names" ]; then
+            echo "No bin entries declared in package.json; skipping executable smoke test."
+            exit 0
+          fi
+          while IFS= read -r bin_name; do
+            [ -z "$bin_name" ] && continue
+            "$smoke_dir/node_modules/.bin/$bin_name" --version || \
+              "$smoke_dir/node_modules/.bin/$bin_name" --help
+          done <<< "$bin_names"
+
+  verify:
+    name: verify
+    if: always()
+    needs:
+      - plan
+      - governance
+      - format
+      - lint
+      - typecheck
+      - test
+      - conformance
+      - build
+      - committed-dist-check
+      - package-validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required job results
+        shell: bash
+        env:
+          RESULTS: >-
+            ${{ join(needs.*.result, ',') }}
+        run: |
+          echo "Job results: $RESULTS"
+          IFS=',' read -ra results <<< "$RESULTS"
+          for r in "${results[@]}"; do
+            if [ "$r" != "success" ] && [ "$r" != "skipped" ]; then
+              echo "::error::one or more required jobs did not succeed (result: $r)" >&2
+              exit 1
+            fi
+          done
+          echo "All required jobs succeeded or were intentionally skipped."

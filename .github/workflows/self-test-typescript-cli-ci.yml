@@ -1,0 +1,22 @@
+name: Self-test TypeScript CLI CI
+
+# Exercises .github/workflows/typescript-cli-ci.yml end-to-end against the
+# fixture package in test/fixtures/ts-cli, including the committed-dist and
+# conformance-script capabilities, so the reusable workflow itself is
+# validated by CI rather than only by inspection.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/typescript-cli-ci.yml
+    with:
+      working-directory: test/fixtures/ts-cli
+      committed-dist: true
+      conformance-script: "conformance:contract"
+      release-docs-fast-path: true

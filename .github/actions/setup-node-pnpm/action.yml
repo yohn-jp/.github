@@ -1,0 +1,37 @@
+name: Setup Node.js and pnpm
+description: >-
+  Sets up pnpm (version read from packageManager in package.json) and
+  Node.js with pnpm dependency caching, then installs dependencies with a
+  frozen lockfile. Bundles the steps every job in the reusable TypeScript
+  CLI CI workflow needs, so cache configuration and version resolution stay
+  in one place instead of being repeated per job.
+
+inputs:
+  working-directory:
+    description: Directory containing package.json and the pnpm lockfile.
+    required: false
+    default: "."
+  node-version:
+    description: Node.js version to install.
+    required: false
+    default: "22"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup pnpm
+      uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+      with:
+        package_json_file: ${{ inputs.working-directory }}/package.json
+
+    - name: Setup Node.js
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+        cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm install --frozen-lockfile
