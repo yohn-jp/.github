@@ -100,6 +100,9 @@ jobs:
             echo "fast_path=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # PATTERNS is intentionally word-split: docs-path-patterns is a
+          # newline-separated list meant to become one argv entry per line.
+          # shellcheck disable=SC2086
           if git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
               | node .metadata-tools/scripts/is-docs-only-change.mjs $PATTERNS; then
             echo "fast_path=true" >> "$GITHUB_OUTPUT"
@@ -245,7 +248,8 @@ jobs:
           set -euo pipefail
           rm -f ./*.tgz
           pnpm pack
-          tarball="$(ls ./*.tgz | head -n1)"
+          tarballs=( ./*.tgz )
+          tarball="${tarballs[0]}"
           echo "Packed: $tarball"
           contents="$(tar -tzf "$tarball")"
           echo "$contents"
