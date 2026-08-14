@@ -1,0 +1,113 @@
+name: Issue governance
+
+# Reusable baseline Issue governance: delegates Issue contract validation
+# to the published gh-inari CLI (the organization's single semantic
+# authority for Issue/PR content contracts; see docs/governance.md), then
+# owns only the GitHub-side plumbing: labeling/commenting on violation and
+# clearing that state once the Issue is corrected. Mirrors
+# yohn-jp/gh-inari's own issue-governance.yml: Issues have no CI check to
+# fail against, so a label + comment is the violation signal instead of a
+# red status check.
+on:
+  workflow_call:
+    inputs:
+      issue-template:
+        description: >-
+          Repository-native Issue Form id, path, or unique name to
+          validate against. Empty (default) lets gh-inari deterministically
+          auto-detect the template.
+        type: string
+        default: ""
+      gh-inari-version:
+        description: >-
+          Exact published gh-inari npm version to install. Never "latest" —
+          a new gh-inari release must not silently change what every
+          consumer's Issue governance enforces.
+        type: string
+        default: "0.3.0"
+      invalid-label:
+        type: string
+        default: "status:invalid"
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  validate-issue:
+    name: Validate Issue contract (gh-inari)
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Resolve tooling ref
+        id: tools-ref
+        shell: bash
+        env:
+          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          FALLBACK_SHA: ${{ github.sha }}
+        run: |
+          ref="${JOB_WORKFLOW_REF##*@}"
+          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout governance tooling (yohn-jp/.github)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: yohn-jp/.github
+          ref: ${{ steps.tools-ref.outputs.ref }}
+          path: .governance-tools
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install gh-inari
+        env:
+          GH_INARI_VERSION: ${{ inputs.gh-inari-version }}
+        run: npm install --global "gh-inari@$GH_INARI_VERSION"
+
+      - name: Validate Issue contract
+        id: validate
+        continue-on-error: true
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TEMPLATE: ${{ inputs.issue-template }}
+        run: |
+          set -euo pipefail
+          args=(issue validate "$ISSUE_NUMBER" --repository "$GH_REPO")
+          if [ -n "$ISSUE_TEMPLATE" ]; then
+            args+=(--template "$ISSUE_TEMPLATE")
+          fi
+          gh-inari "${args[@]}" | tee /tmp/issue-validate.json
+
+      - name: Build diagnostic report
+        if: steps.validate.outcome == 'failure'
+        run: |
+          node .governance-tools/scripts/format-governance-violations.mjs \
+            < /tmp/issue-validate.json > /tmp/issue-governance-report.md
+
+      - name: Mark invalid Issue
+        if: steps.validate.outcome == 'failure'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          INVALID_LABEL: ${{ inputs.invalid-label }}
+        run: |
+          gh label create "$INVALID_LABEL" --color D73A4A --description "Issue governance contract violation" --force
+          gh issue edit "$ISSUE_NUMBER" --add-label "$INVALID_LABEL"
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/issue-governance-report.md
+
+      - name: Clear invalid label
+        if: steps.validate.outcome == 'success'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          INVALID_LABEL: ${{ inputs.invalid-label }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" --remove-label "$INVALID_LABEL" 2>/dev/null || true

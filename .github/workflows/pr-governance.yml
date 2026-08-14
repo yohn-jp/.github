@@ -1,0 +1,113 @@
+name: PR governance
+
+# Reusable baseline PR governance: branch-name validation (owned here) and
+# PR contract validation delegated to the published gh-inari CLI, the
+# organization's single semantic authority for Issue/PR content contracts
+# (see docs/governance.md). This workflow enforces or invokes that
+# authority; it never redefines PR contract semantics independently.
+on:
+  workflow_call:
+    inputs:
+      branch-name-pattern:
+        description: >-
+          Regex a PR's head branch name must match. Default matches
+          yohn-jp/gh-inari's own <type>/<issue-number>-<slug> convention.
+        type: string
+        default: '^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$'
+      branch-name-exempt:
+        description: Comma-separated branch names exempt from the pattern.
+        type: string
+        default: "main"
+      skip-branch-name-check:
+        type: boolean
+        default: false
+      pr-template:
+        description: >-
+          Repository-native PR template id, path, or unique name to
+          validate against. Empty (default) lets gh-inari deterministically
+          auto-detect the template; multiple structural matches fail
+          closed, per gh-inari's own semantics.
+        type: string
+        default: ""
+      gh-inari-version:
+        description: >-
+          Exact published gh-inari npm version to install. Never "latest" —
+          this is the deterministic-validator-source-selection contract:
+          a new gh-inari release must not silently change what every
+          consumer's PR governance enforces.
+        type: string
+        default: "0.3.0"
+      skip-pr-contract-check:
+        type: boolean
+        default: false
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-governance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-branch-name:
+    name: Validate branch name
+    if: github.event_name == 'pull_request' && !inputs.skip-branch-name-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tooling ref
+        id: tools-ref
+        shell: bash
+        env:
+          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          FALLBACK_SHA: ${{ github.sha }}
+        run: |
+          ref="${JOB_WORKFLOW_REF##*@}"
+          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout governance tooling (yohn-jp/.github)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: yohn-jp/.github
+          ref: ${{ steps.tools-ref.outputs.ref }}
+          path: .governance-tools
+
+      - name: Validate branch name
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BRANCH_NAME_PATTERN: ${{ inputs.branch-name-pattern }}
+          BRANCH_NAME_EXEMPT: ${{ inputs.branch-name-exempt }}
+        run: node .governance-tools/scripts/validate-branch-name.mjs --branch "$HEAD_REF"
+
+  validate-pr-contract:
+    name: Validate PR contract (gh-inari)
+    if: github.event_name == 'pull_request' && !inputs.skip-pr-contract-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install gh-inari
+        env:
+          GH_INARI_VERSION: ${{ inputs.gh-inari-version }}
+        run: npm install --global "gh-inari@$GH_INARI_VERSION"
+
+      - name: Validate PR contract
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TEMPLATE: ${{ inputs.pr-template }}
+        run: |
+          set -euo pipefail
+          args=(pr validate "$PR_NUMBER" --repository "$GH_REPO")
+          if [ -n "$PR_TEMPLATE" ]; then
+            args+=(--template "$PR_TEMPLATE")
+          fi
+          gh-inari "${args[@]}"

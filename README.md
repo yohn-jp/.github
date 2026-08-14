@@ -33,3 +33,13 @@ See [`docs/codeql.md`](docs/codeql.md) for the
 Actions analysis, least-privilege permissions, and the `config-file` input
 for repository-specific CodeQL configuration without duplicating the
 workflow.
+
+## PR and Issue governance
+
+See [`docs/governance.md`](docs/governance.md) for
+`.github/workflows/pr-governance.yml` and
+`.github/workflows/issue-governance.yml`. Both delegate Issue/PR content
+contract validation to the published `yohn-jp/gh-inari` CLI (pinned to an
+exact version) rather than redefining that authority here; this repository
+only owns branch-name validation and the GitHub-side labeling/commenting
+plumbing.
