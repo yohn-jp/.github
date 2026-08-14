@@ -25,3 +25,11 @@ See [`docs/typescript-cli-ci.md`](docs/typescript-cli-ci.md) for the
 `.github/workflows/typescript-cli-ci.yml` contract, its capability inputs
 (`committed-dist`, `release-docs-fast-path`, `conformance-script`), and the
 stable `verify` required-status gate consumer Rulesets should point at.
+
+## Reusable CodeQL
+
+See [`docs/codeql.md`](docs/codeql.md) for the
+`.github/workflows/codeql.yml` contract: JavaScript/TypeScript and GitHub
+Actions analysis, least-privilege permissions, and the `config-file` input
+for repository-specific CodeQL configuration without duplicating the
+workflow.
