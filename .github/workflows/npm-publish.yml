@@ -1,0 +1,209 @@
+name: npm publish
+
+# Reusable release-triggered npm publishing: build/test, verify the release
+# tag matches package.json's version, pack a tarball, smoke-test that exact
+# tarball across a Node-version matrix, then publish it via npm Trusted
+# Publishing (OIDC) — no long-lived npm token secret. Package name/version
+# are discovered from package.json, never from repository-name branching.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the package to publish.
+        type: string
+        default: "."
+      node-version:
+        description: Node.js version used for build/test/publish.
+        type: string
+        default: "22"
+      smoke-test-node-versions:
+        description: Comma-separated Node.js versions to smoke-test the packed tarball on.
+        type: string
+        default: "22,24"
+      npm-cli-version:
+        description: >-
+          Minimum npm CLI version required for OIDC Trusted Publishing,
+          installed globally before `npm publish`.
+        type: string
+        default: "11.5.1"
+    secrets: {}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      smoke_test_node_versions: ${{ steps.split.outputs.versions }}
+    steps:
+      - name: Split smoke-test-node-versions into a JSON array
+        id: split
+        shell: bash
+        env:
+          VERSIONS: ${{ inputs.smoke-test-node-versions }}
+        run: |
+          versions_json="$(echo "$VERSIONS" | tr ',' '\n' | jq -R -s -c 'split("\n") | map(gsub("^\\s+|\\s+$";"")) | map(select(length > 0))')"
+          echo "versions=$versions_json" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and pack
+    runs-on: ubuntu-latest
+    outputs:
+      package-name: ${{ steps.package.outputs.name }}
+      package-version: ${{ steps.package.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Resolve tooling ref
+        id: tools-ref
+        shell: bash
+        env:
+          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
+          FALLBACK_SHA: ${{ github.sha }}
+        run: |
+          ref="${JOB_WORKFLOW_REF##*@}"
+          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release tooling (yohn-jp/.github)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: yohn-jp/.github
+          ref: ${{ steps.tools-ref.outputs.ref }}
+          path: .release-tools
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Typecheck
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm run typecheck
+
+      - name: Test
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm test
+
+      - name: Build
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm run build
+
+      - name: Read package metadata
+        id: package
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: node .release-tools/scripts/check-release-version.mjs --package-version "$PACKAGE_VERSION" --tag "$RELEASE_TAG"
+
+      - name: Pack tarball
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          rm -f ./*.tgz
+          pnpm pack
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: package-tarball
+          path: ${{ inputs.working-directory }}/*.tgz
+          retention-days: 1
+
+  smoke-test:
+    name: Smoke test (Node ${{ matrix.node-version }})
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ${{ fromJSON(needs.plan.outputs.smoke_test_node_versions) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download tarball
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: package-tarball
+          path: ${{ inputs.working-directory }}
+
+      - name: Smoke test packed tarball
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          tarballs=( ./*.tgz )
+          node scripts/smoke-test.mjs --tarball "${tarballs[0]}"
+
+  publish:
+    name: Publish (OIDC Trusted Publishing)
+    needs: [build, smoke-test]
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: https://registry.npmjs.org
+
+      - name: Require an OIDC-capable npm CLI
+        env:
+          NPM_CLI_VERSION: ${{ inputs.npm-cli-version }}
+        run: npm install --global "npm@$NPM_CLI_VERSION"
+
+      - name: Download tarball
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: package-tarball
+          path: ${{ inputs.working-directory }}
+
+      - name: Check whether version is already published
+        id: registry
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          PACKAGE_NAME: ${{ needs.build.outputs.package-name }}
+          PACKAGE_VERSION: ${{ needs.build.outputs.package-version }}
+        run: |
+          if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.registry.outputs.published != 'true'
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          tarballs=( ./*.tgz )
+          npm publish "${tarballs[0]}"
