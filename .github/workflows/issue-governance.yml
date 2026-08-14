@@ -28,8 +28,12 @@ on:
       invalid-label:
         type: string
         default: "status:invalid"
-  issues:
-    types: [opened, edited, reopened]
+
+# Intentionally workflow_call-only: this repository's own Issue Forms were
+# not authored against gh-inari's contract model, so self-triggering here
+# would exercise the check against content it was never meant to validate.
+# Consumer repositories are the real integration point; see
+# docs/governance.md.
 
 permissions:
   contents: read

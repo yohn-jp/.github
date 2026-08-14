@@ -40,8 +40,14 @@ on:
       skip-pr-contract-check:
         type: boolean
         default: false
-  pull_request:
-    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+# Intentionally workflow_call-only: this repository's own PRs come from an
+# automated harness with a fixed, non-conventional branch-naming scheme,
+# and its Issue Forms were not authored against gh-inari's contract model —
+# self-triggering here would either fail this repository's own PRs on a
+# convention they can't follow, or exercise the gh-inari check against
+# content it was never meant to validate. Consumer repositories are the
+# real integration point; see docs/governance.md.
 
 concurrency:
   group: pr-governance-${{ github.event.pull_request.number || github.ref }}
