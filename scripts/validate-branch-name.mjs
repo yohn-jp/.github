@@ -15,6 +15,17 @@ import { execFileSync } from "node:child_process";
 const DEFAULT_PATTERN = "^(feat|fix|docs|refactor|test|chore)/\\d+-[a-z0-9-]+$";
 const DEFAULT_EXEMPT = ["main"];
 
+// `pattern` is caller-supplied config (the pr-governance.yml workflow_call
+// `branch-name-pattern` input, set in a consumer repository's own committed
+// workflow YAML) — not attacker-reachable through PR/issue content. It is
+// still dynamic input to `RegExp`, so both the pattern and the branch name
+// tested against it are length-bounded before compilation: this keeps any
+// pathological (catastrophically backtracking) pattern's worst case bounded
+// and cheap regardless of source, and a malformed pattern fails closed with
+// a clear diagnostic instead of throwing.
+const MAX_PATTERN_LENGTH = 200;
+const MAX_BRANCH_LENGTH = 200;
+
 /**
  * @param {string} branch
  * @param {{pattern?: string, exempt?: string[]}} [options]
@@ -24,7 +35,19 @@ export function validateBranchName(branch, options = {}) {
   const pattern = options.pattern ?? DEFAULT_PATTERN;
   const exempt = options.exempt ?? DEFAULT_EXEMPT;
   if (exempt.includes(branch)) return [];
-  if (new RegExp(pattern).test(branch)) return [];
+  if (branch.length > MAX_BRANCH_LENGTH) {
+    return [`branch name exceeds the maximum supported length of ${MAX_BRANCH_LENGTH} characters`];
+  }
+  if (pattern.length > MAX_PATTERN_LENGTH) {
+    return [`configured branch-name-pattern exceeds the maximum supported length of ${MAX_PATTERN_LENGTH} characters`];
+  }
+  let regex;
+  try {
+    regex = new RegExp(pattern);
+  } catch (cause) {
+    return [`configured branch-name-pattern is not a valid regular expression: ${cause.message}`];
+  }
+  if (regex.test(branch)) return [];
   return [`branch name "${branch}" does not match required pattern ${pattern}`];
 }
 

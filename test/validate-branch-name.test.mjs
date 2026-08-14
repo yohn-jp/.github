@@ -33,3 +33,21 @@ test("pattern is configurable", () => {
     1,
   );
 });
+
+test("overlong branch name is rejected before regex compilation", () => {
+  const errors = validateBranchName(`feat/1-${"a".repeat(300)}`);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /exceeds the maximum supported length/);
+});
+
+test("overlong configured pattern is rejected before regex compilation", () => {
+  const errors = validateBranchName("feat/1-x", { pattern: `^(${"a|".repeat(150)}z)$` });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /exceeds the maximum supported length/);
+});
+
+test("an invalid configured pattern fails closed with a clear diagnostic", () => {
+  const errors = validateBranchName("feat/1-x", { pattern: "(unterminated" });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /is not a valid regular expression/);
+});
