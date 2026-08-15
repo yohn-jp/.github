@@ -116,6 +116,14 @@ jobs:
           path: ${{ inputs.working-directory }}/*.tgz
           retention-days: 1
 
+      - name: Restore release tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/release-tools" ] && [ ! -e .release-tools ]; then
+            mv "$RUNNER_TEMP/release-tools" .release-tools
+          fi
+
   smoke-test:
     name: Smoke test (Node ${{ matrix.node-version }})
     needs: [plan, build]

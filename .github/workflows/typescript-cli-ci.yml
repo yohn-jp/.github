@@ -132,6 +132,13 @@ jobs:
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run format:check
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   lint:
     name: Lint
@@ -155,6 +162,13 @@ jobs:
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run lint
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   typecheck:
     name: Typecheck
@@ -178,6 +192,13 @@ jobs:
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run typecheck
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   test:
     name: Test
@@ -201,6 +222,13 @@ jobs:
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm test
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   conformance:
     name: Conformance validation
@@ -226,6 +254,13 @@ jobs:
         env:
           CONFORMANCE_SCRIPT: ${{ inputs.conformance-script }}
         run: pnpm run "$CONFORMANCE_SCRIPT"
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   build:
     name: Build
@@ -254,6 +289,13 @@ jobs:
           name: dist
           path: ${{ inputs.working-directory }}/dist
           retention-days: 1
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   committed-dist-check:
     name: Committed dist verification
@@ -346,6 +388,13 @@ jobs:
             "$smoke_dir/node_modules/.bin/$bin_name" --version || \
               "$smoke_dir/node_modules/.bin/$bin_name" --help
           done <<< "$bin_names"
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   verify:
     name: verify

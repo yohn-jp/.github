@@ -168,6 +168,32 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
         );
       }
 
+      // A local composite action may register post steps. Keep its checkout
+      // available for those post steps, while still keeping it out of the
+      // consumer workspace during the consumer command itself.
+      const localActionIndex = steps.findIndex(
+        (candidate, candidateIndex) =>
+          candidateIndex > i &&
+          typeof candidate?.uses === "string" &&
+          (candidate.uses === `./${checkoutPath}` || candidate.uses.startsWith(`./${checkoutPath}/`)),
+      );
+      if (localActionIndex >= 0) {
+        const checkoutBasename = checkoutPath.split("/").pop().replace(/^\./, "");
+        const escapedBasename = checkoutBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const restorePattern = new RegExp(
+          `\\bmv\\s+[\"']?\\$RUNNER_TEMP/${escapedBasename}[\"']?\\s+${escapedPath}(?:\\s|$)`,
+        );
+        const restoreIndex = steps.findIndex(
+          (candidate, candidateIndex) =>
+            candidateIndex > moveIndex && typeof candidate?.run === "string" && restorePattern.test(candidate.run),
+        );
+        if (restoreIndex < 0) {
+          errors.push(
+            `${where}: provider local action "./${checkoutPath}" must be restored after the consumer command for its post steps`,
+          );
+        }
+      }
+
       // The metadata workflow installs the provider package itself. Its pnpm
       // setup and install paths must both point at the moved provider tree;
       // a relative path would still allow pnpm to discover the consumer's

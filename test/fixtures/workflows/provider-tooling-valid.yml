@@ -18,5 +18,9 @@ jobs:
       - name: Isolate provider tooling
         shell: bash
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: mv "$RUNNER_TEMP/provider-tools" .provider-tools
   nested-reusable-workflow:
     uses: ./.github/workflows/metadata-validation.yml
