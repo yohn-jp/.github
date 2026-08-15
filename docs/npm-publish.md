@@ -57,9 +57,8 @@ optional leading `v` stripped) doesn't equal `package.json`'s `version`.
 This check is `scripts/check-release-version.mjs` (unit tested in
 `test/check-release-version.test.mjs`), fetched into the job the same way
 other reusable workflows in this repository fetch their tooling — via a
-checkout of `yohn-jp/.github` at the ref resolved from
-`github.job_workflow_ref`, so it always matches the version the caller
-pinned to.
+checkout of `yohn-jp/.github` at `job.workflow_repository`/`job.workflow_sha`,
+so it always matches the exact provider revision the caller pinned to.
 
 ## Idempotent publish
 

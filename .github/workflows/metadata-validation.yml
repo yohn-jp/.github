@@ -23,26 +23,19 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # A reusable workflow's own files are not part of the caller's
-      # checkout above. github.job_workflow_ref carries the exact ref this
-      # workflow file was invoked at (owner/repo/path@ref), so the tooling
-      # checkout below always matches the version of validate-*.mjs the
-      # caller pinned to, including when this workflow is triggered
-      # directly (push/pull_request) in yohn-jp/.github itself.
-      - name: Resolve tooling ref
-        id: tools-ref
-        shell: bash
-        env:
-          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
-          FALLBACK_SHA: ${{ github.sha }}
-        run: |
-          ref="${JOB_WORKFLOW_REF##*@}"
-          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
-
+      # checkout above. job.workflow_repository/job.workflow_sha identify
+      # the exact repository and commit that DEFINE this job (the provider
+      # revision the caller pinned to via `uses: owner/repo/.github/workflows/x@sha`),
+      # so the tooling checkout below always matches the version of
+      # validate-*.mjs the caller pinned to, including when this workflow
+      # is triggered directly (push/pull_request) in yohn-jp/.github itself.
+      # Never use github.sha here: that is the caller's checked-out commit,
+      # not necessarily this provider repository's.
       - name: Checkout metadata validation tooling (yohn-jp/.github)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          repository: yohn-jp/.github
-          ref: ${{ steps.tools-ref.outputs.ref }}
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: .metadata-tools
 
       - name: Setup Node.js
@@ -65,6 +58,9 @@ jobs:
       - name: Validate Actions SHA pinning
         run: node .metadata-tools/scripts/validate-action-pins.mjs
 
+      - name: Validate provider tooling cross-repository resolution
+        run: node .metadata-tools/scripts/validate-provider-tooling-resolution.mjs
+
       - name: Download actionlint
         shell: bash
         run: |
@@ -75,11 +71,16 @@ jobs:
         shell: bash
         run: |
           if [ -d .github/workflows ]; then
-            # -ignore suppresses a known actionlint schema gap: github.job_workflow_ref
-            # is a real, GA GitHub Actions context property (used above to resolve
-            # which ref of this reusable workflow is running) that actionlint's
-            # embedded context schema does not yet include as of v1.7.12.
-            actionlint -color -ignore 'property "job_workflow_ref" is not defined'
+            # -ignore suppresses a known actionlint schema gap: job.workflow_repository,
+            # job.workflow_sha, and job.workflow_ref are real, GA `job` context
+            # properties (used above to resolve the exact provider revision a
+            # caller pinned to) that actionlint's embedded context schema does
+            # not yet include as of v1.7.12 (rhysd/actionlint#647, fix in
+            # progress as rhysd/actionlint#707).
+            actionlint -color \
+              -ignore 'property "workflow_repository" is not defined' \
+              -ignore 'property "workflow_sha" is not defined' \
+              -ignore 'property "workflow_ref" is not defined'
           else
             echo "No .github/workflows directory; skipping actionlint."
           fi

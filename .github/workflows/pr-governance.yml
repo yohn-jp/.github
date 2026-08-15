@@ -62,21 +62,11 @@ jobs:
     if: github.event_name == 'pull_request' && !inputs.skip-branch-name-check
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve tooling ref
-        id: tools-ref
-        shell: bash
-        env:
-          JOB_WORKFLOW_REF: ${{ github.job_workflow_ref }}
-          FALLBACK_SHA: ${{ github.sha }}
-        run: |
-          ref="${JOB_WORKFLOW_REF##*@}"
-          echo "ref=${ref:-$FALLBACK_SHA}" >> "$GITHUB_OUTPUT"
-
       - name: Checkout governance tooling (yohn-jp/.github)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          repository: yohn-jp/.github
-          ref: ${{ steps.tools-ref.outputs.ref }}
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: .governance-tools
 
       - name: Validate branch name
