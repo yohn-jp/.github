@@ -18,13 +18,6 @@ on:
           auto-detect the template.
         type: string
         default: ""
-      gh-inari-version:
-        description: >-
-          Exact published gh-inari npm version to install. Never "latest" —
-          a new gh-inari release must not silently change what every
-          consumer's Issue governance enforces.
-        type: string
-        default: "0.3.0"
       invalid-label:
         type: string
         default: "status:invalid"
@@ -68,9 +61,7 @@ jobs:
           node-version: "22"
 
       - name: Install gh-inari
-        env:
-          GH_INARI_VERSION: ${{ inputs.gh-inari-version }}
-        run: npm install --global "gh-inari@$GH_INARI_VERSION"
+        run: npm install --global gh-inari@latest
 
       - name: Validate Issue contract
         id: validate

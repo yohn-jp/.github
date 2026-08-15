@@ -20,13 +20,13 @@ gh-inari pr validate <number> --repository <owner>/<repo> [--template <id>]
 gh-inari issue validate <number> --repository <owner>/<repo> [--template <id>]
 ```
 
-Both workflows install an **exact, pinned** `gh-inari` version
-(`gh-inari-version` input, default `0.3.0` — never `latest`) so a new
-gh-inari release can't silently change what every consumer's governance
-enforces. This is the "deterministic validator source selection"
-requirement: bumping the enforced gh-inari version is a deliberate,
-reviewable change to this repository's workflow inputs, exactly like
-bumping a SHA-pinned Action.
+Both workflows install `gh-inari@latest`. `gh-inari` is an organization-owned
+tool (`yohn-jp/gh-inari`), not a third-party dependency, so it follows the
+same "always latest" policy as other `yohn-jp`-owned tooling: a new release
+should reach every consumer without a manual version bump here. This is
+distinct from the SHA-pinning policy for third-party Actions (see
+`scripts/validate-action-pins.mjs`), which exists specifically to bound
+supply-chain risk from repositories this organization does not control.
 
 **Branch-name validation is owned directly by `.github/workflows/pr-governance.yml`**
 (via `scripts/validate-branch-name.mjs`), because gh-inari's own scope is

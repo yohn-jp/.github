@@ -79,6 +79,12 @@ jobs:
       - name: Validate provider tooling cross-repository resolution
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-provider-tooling-resolution.mjs"
 
+      - name: Install gh-inari
+        run: npm install --global gh-inari@latest
+
+      - name: Check semantic template projection drift
+        run: gh-inari template sync --check
+
       - name: Download actionlint
         shell: bash
         run: |
