@@ -51,10 +51,17 @@ jobs:
         with:
           node-version: 22
 
+      - name: Read provider pnpm version
+        id: provider-pnpm-version
+        shell: bash
+        run: |
+          version="$(node -p 'require(process.argv[1]).packageManager.replace(/^pnpm@/, "")' "$RUNNER_TEMP/metadata-tools/package.json")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
         with:
-          package_json_file: ${{ runner.temp }}/metadata-tools/package.json
+          version: ${{ steps.provider-pnpm-version.outputs.version }}
 
       - name: Install validator dependencies
         working-directory: ${{ runner.temp }}/metadata-tools
