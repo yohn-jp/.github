@@ -1,83 +1,79 @@
-name: Bug report
-description: Report a defect in behavior, output, or documentation.
-title: "bug: "
-labels:
-  - bug
+name: Bug
+description: Reproducible defect
+title: "fix: "
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for taking the time to file a bug report. Please fill in as
-        much detail as you can so the issue is reproducible.
-
   - type: textarea
     id: summary
-    attributes:
-      label: Summary
-      description: >-
-        A clear and concise description of what the bug is.
-      placeholder: What happened, and what did you expect instead?
-    validations:
-      required: true
-
+    attributes: { label: Summary, description: Concise defect description }
+    validations: { required: true }
   - type: textarea
-    id: reproduction
+    id: problem
     attributes:
-      label: Reproduction steps
-      description: >-
-        Minimal steps to reproduce the behavior. Include commands, inputs,
-        and configuration where relevant.
-      placeholder: |
-        1. Run '...'
-        2. With input '...'
-        3. See error
-      render: shell
-    validations:
-      required: true
-
+      {
+        label: Problem,
+        description: "Actual result, expected result, reproduction steps, and environment",
+      }
+    validations: { required: true }
   - type: textarea
-    id: expected
+    id: failing_scenario
     attributes:
-      label: Expected result
-      description: What did you expect to happen?
-    validations:
-      required: true
-
+      {
+        label: Failing scenario,
+        description: "Minimal reproduction, observed failure, and affected environment",
+      }
+    validations: { required: true }
   - type: textarea
-    id: observed
-    attributes:
-      label: Observed result
-      description: What actually happened? Include error messages or logs if any.
-    validations:
-      required: true
-
-  - type: input
-    id: version
-    attributes:
-      label: Version
-      description: Package/tool version, commit SHA, or release tag affected.
-      placeholder: e.g. v1.4.2 or commit abc1234
-    validations:
-      required: true
-
+    id: goal
+    attributes: { label: Goal, description: State after the fix }
+    validations: { required: true }
   - type: textarea
-    id: environment
-    attributes:
-      label: Environment
-      description: >-
-        Operating system, runtime version (e.g. Node.js), and any other
-        environment details relevant to reproducing the bug.
-      placeholder: |
-        - OS:
-        - Node.js:
-        - Package manager:
-    validations:
-      required: false
-
+    id: expected_contract
+    attributes: { label: Expected contract, description: Behavior and invariant that the fix must establish }
+    validations: { required: true }
   - type: textarea
-    id: additional-context
+    id: non_goals
+    attributes: { label: Non-goals, description: Explicitly excluded fixes }
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
     attributes:
-      label: Additional context
-      description: Anything else that would help diagnose the issue.
-    validations:
-      required: false
+      { label: Acceptance criteria, description: Completion criteria including regression tests, value: "- [ ] " }
+    validations: { required: true }
+  - type: textarea
+    id: affected
+    attributes: { label: Affected areas, description: Affected areas }
+    validations: { required: true }
+  - type: textarea
+    id: test_layer
+    attributes:
+      {
+        label: Test layer,
+        description: "Regression, unit, integration/process, fault, E2E, or package layer that proves the fix",
+      }
+    validations: { required: true }
+  - type: textarea
+    id: risks
+    attributes: { label: Risks / compatibility, description: Fix risks and compatibility }
+    validations: { required: true }
+  - type: textarea
+    id: release_impact
+    attributes:
+      { label: Release impact, description: "Package, publish, artifact, or explicit no-release impact" }
+    validations: { required: true }
+  - type: textarea
+    id: security_impact
+    attributes:
+      {
+        label: Security impact,
+        description: "Security boundary impact, negative scenario, or explicit no-impact decision",
+      }
+    validations: { required: true }
+  - type: textarea
+    id: dependencies
+    attributes: { label: Dependencies, description: Related Issues and external conditions; explain if none }
+    validations: { required: true }
+  - type: textarea
+    id: implementation
+    attributes:
+      { label: Implementation notes, description: "Root-cause hypothesis, logs, and workaround" }
+    validations: { required: true }
