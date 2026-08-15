@@ -42,7 +42,7 @@ jobs:
       - name: Sync templates to org repositories
         uses: BetaHuhn/repo-file-sync-action@8d7590ac8bf240686428959b8fd060a34d508b3f # v1.9.4
         with:
-          GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_PAT: ${{ steps.app-token.outputs.token }}
           GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
           GIT_USERNAME: yohn-jp-template-sync[bot]
           CONFIG_PATH: .github/sync.yml
