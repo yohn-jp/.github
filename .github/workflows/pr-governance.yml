@@ -29,14 +29,6 @@ on:
           closed, per gh-inari's own semantics.
         type: string
         default: ""
-      gh-inari-version:
-        description: >-
-          Exact published gh-inari npm version to install. Never "latest" —
-          this is the deterministic-validator-source-selection contract:
-          a new gh-inari release must not silently change what every
-          consumer's PR governance enforces.
-        type: string
-        default: "0.3.0"
       skip-pr-contract-check:
         type: boolean
         default: false
@@ -96,9 +88,7 @@ jobs:
           node-version: "22"
 
       - name: Install gh-inari
-        env:
-          GH_INARI_VERSION: ${{ inputs.gh-inari-version }}
-        run: npm install --global "gh-inari@$GH_INARI_VERSION"
+        run: npm install --global gh-inari@latest
 
       - name: Validate PR contract
         env:
