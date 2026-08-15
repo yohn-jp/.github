@@ -40,7 +40,7 @@ jobs:
           private-key: ${{ secrets.ORG_TEMPLATE_SYNC_APP_PRIVATE_KEY }}
 
       - name: Sync templates to org repositories
-        uses: BetaHuhn/repo-file-sync-action@8d7590ac8bf240686428959b8fd060a34d508b3f # v1.9.4
+        uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
         with:
           # Must be GH_INSTALLATION_TOKEN, not GH_PAT: the action only
           # prefixes the push URL with `x-access-token:` (the form GitHub
@@ -50,6 +50,13 @@ jobs:
           # which git reads as a bare username with no password and fails
           # non-interactively with "could not read Password ... No such
           # device or address" on every target.
+          #
+          # GH_INSTALLATION_TOKEN itself requires v1.21.1: the previously
+          # pinned v1.9.4 predates that input entirely — its dist/index.js
+          # hardcodes GH_PAT as the only (required) token input and always
+          # builds the push URL as `https://${GITHUB_TOKEN}@...` with no
+          # `x-access-token:` prefix, so no input combination on that
+          # version can push with a GitHub App token.
           GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
           GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
           GIT_USERNAME: yohn-jp-template-sync[bot]
