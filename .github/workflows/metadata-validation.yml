@@ -1,7 +1,7 @@
 name: Metadata validation
 
 # Deterministic validation for GitHub repository metadata: Issue Form
-# structure, immutable Action SHA pinning, and GitHub Actions workflow
+# structure, organization/third-party Action reference policy, and GitHub Actions workflow
 # syntax. Callable as a reusable workflow so other yohn-jp repositories can
 # consume the same gate instead of duplicating validation logic; also runs
 # directly here to self-validate this repository's own defaults.
@@ -25,9 +25,9 @@ jobs:
       # A reusable workflow's own files are not part of the caller's
       # checkout above. job.workflow_repository/job.workflow_sha identify
       # the exact repository and commit that DEFINE this job (the provider
-      # revision the caller pinned to via `uses: owner/repo/.github/workflows/x@sha`),
-      # so the tooling checkout below always matches the version of
-      # validate-*.mjs the caller pinned to, including when this workflow
+      # revision selected by the caller (organization reusable workflow callers
+      # use `@main`), so the tooling checkout below always matches the version
+      # of validate-*.mjs selected for the run, including when this workflow
       # is triggered directly (push/pull_request) in yohn-jp/.github itself.
       # Never use github.sha here: that is the caller's checked-out commit,
       # not necessarily this provider repository's.
@@ -73,7 +73,7 @@ jobs:
       - name: Validate Issue Forms
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-issue-forms.mjs"
 
-      - name: Validate Actions SHA pinning
+      - name: Validate Action reference policy
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-action-pins.mjs"
 
       - name: Validate provider tooling cross-repository resolution
@@ -91,8 +91,8 @@ jobs:
           if [ -d .github/workflows ]; then
             # -ignore suppresses a known actionlint schema gap: job.workflow_repository,
             # job.workflow_sha, and job.workflow_ref are real, GA `job` context
-            # properties (used above to resolve the exact provider revision a
-            # caller pinned to) that actionlint's embedded context schema does
+            # properties (used above to resolve the exact provider revision
+            # selected by the caller) that actionlint's embedded context schema does
             # not yet include as of v1.7.12 (rhysd/actionlint#647, fix in
             # progress as rhysd/actionlint#707).
             actionlint -color \

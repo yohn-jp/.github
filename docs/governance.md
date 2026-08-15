@@ -53,7 +53,7 @@ permissions:
 
 jobs:
   governance:
-    uses: yohn-jp/.github/.github/workflows/pr-governance.yml@<pinned-commit-sha>
+    uses: yohn-jp/.github/.github/workflows/pr-governance.yml@main
 ```
 
 ```yaml
@@ -70,7 +70,7 @@ permissions:
 
 jobs:
   governance:
-    uses: yohn-jp/.github/.github/workflows/issue-governance.yml@<pinned-commit-sha>
+    uses: yohn-jp/.github/.github/workflows/issue-governance.yml@main
 ```
 
 Both accept `pr-template` / `issue-template` when a repository needs to

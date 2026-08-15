@@ -107,7 +107,7 @@ jobs:
   governance:
     name: Actions governance validation
     needs: plan
-    if: inputs.run-governance && needs.plan.outputs.fast_path != 'true'
+    if: inputs.run-governance
     uses: ./.github/workflows/metadata-validation.yml
 
   format:

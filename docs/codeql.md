@@ -22,15 +22,16 @@ permissions:
 
 jobs:
   analyze:
-    uses: yohn-jp/.github/.github/workflows/codeql.yml@<pinned-commit-sha>
+    uses: yohn-jp/.github/.github/workflows/codeql.yml@main
     with:
       languages: "javascript-typescript,actions" # optional, this is the default
       config-file: ".github/codeql/codeql-config.yml" # optional, default: none
 ```
 
-As with every other reusable workflow in this repository, pin `@<sha>` to
-a full 40-character commit SHA, never a branch or tag — see
-`docs/github-metadata-inheritance.md` for the rollout-safety rationale.
+This organization-owned reusable workflow intentionally uses `@main`. The
+third-party Actions inside the shared implementation remain immutable
+SHA-pinned; consumer workflows must apply the same SHA rule to any
+third-party `uses:` references they add.
 
 ## Inputs
 

@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   publish:
-    uses: yohn-jp/.github/.github/workflows/npm-publish.yml@<pinned-commit-sha>
+    uses: yohn-jp/.github/.github/workflows/npm-publish.yml@main
     with:
       working-directory: .              # optional, default "."
       node-version: "22"                # optional, default "22"
@@ -58,7 +58,8 @@ This check is `scripts/check-release-version.mjs` (unit tested in
 `test/check-release-version.test.mjs`), fetched into the job the same way
 other reusable workflows in this repository fetch their tooling — via a
 checkout of `yohn-jp/.github` at `job.workflow_repository`/`job.workflow_sha`,
-so it always matches the exact provider revision the caller pinned to.
+so it always matches the exact provider revision selected by the caller's
+`@main` reference.
 
 ## Idempotent publish
 

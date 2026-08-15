@@ -11,7 +11,7 @@ override a default intentionally.
 
 ```sh
 pnpm install
-pnpm run validate   # Issue Form structure + Action SHA pinning
+pnpm run validate   # Issue Form structure + Action reference policy
 pnpm test           # unit tests, including the flow-mapping regression fixture
 ```
 

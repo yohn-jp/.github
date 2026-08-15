@@ -32,7 +32,7 @@ defines its own).
 - **GitHub Actions workflows** (`.github/workflows/*.yml`) are never
   inherited implicitly. Every consumer repository must explicitly
   reference this repository's reusable workflows via `uses:
-  yohn-jp/.github/.github/workflows/<name>.yml@<pinned-sha>` in its own
+  yohn-jp/.github/.github/workflows/<name>.yml@main` in its own
   workflow files. See the versioning note below.
 - **Composite/other Actions** under `.github/actions/` are likewise only
   available to a consumer if it explicitly references them by
@@ -78,11 +78,13 @@ that:
   field into several unexpected ones — valid YAML, wrong shape. See
   `test/fixtures/issue-forms/invalid-flow-mapping.yml` for the reproduction
   fixture and `test/issue-forms.test.mjs` for the regression test.
-- Rejects any `uses:` reference (workflow step, job-level reusable
-  workflow call, or composite action) that is not pinned to an immutable
-  reference: a full 40-character commit SHA for GitHub-hosted actions, or
-  an image digest (`@sha256:...`) for `docker://` actions. Local action
-  references (`./path`) are exempt since there is no remote ref to pin.
+- Rejects any third-party `uses:` reference (workflow step, job-level
+  reusable workflow call, or composite action) that is not pinned to an
+  immutable reference: a full 40-character commit SHA for GitHub-hosted
+  actions, or an image digest (`@sha256:...`) for `docker://` actions.
+  Organization-owned reusable workflows under `yohn-jp/.github` must use
+  `@main`; local action references (`./path`) are exempt since there is no
+  remote ref to pin.
 - Runs [`actionlint`](https://github.com/rhysd/actionlint) for general
   GitHub Actions workflow syntax validation.
 
@@ -91,22 +93,19 @@ Other repositories can call the same gate as a reusable workflow:
 ```yaml
 jobs:
   metadata:
-    uses: yohn-jp/.github/.github/workflows/metadata-validation.yml@<pinned-sha>
+    uses: yohn-jp/.github/.github/workflows/metadata-validation.yml@main
 ```
 
 The workflow uses `job.workflow_repository` and `job.workflow_sha` to check
 out the matching version of the validator scripts from `yohn-jp/.github`,
 so the version of the tooling that runs always matches the exact provider
-revision the caller pinned to — never the caller's own HEAD/merge commit,
-and never an unpinned moving branch.
+revision selected by the caller's `@main` reference — never the caller's own
+HEAD/merge commit.
 
 ## Versioning and rollout safety
 
-Consumers must reference shared workflows and actions in this repository
-by full commit SHA (`@<40-hex-chars>`), never by branch or floating tag.
-This is enforced for this repository's own workflow files by the same
-SHA-pinning validator described above, and is expected of every
-`yohn-jp/.github`-consuming repository for the same reason: a defect
-introduced here must not instantly propagate to every consumer without an
-explicit, reviewable update (a bump of the pinned SHA) in that consumer's
-own repository.
+Consumers must reference reusable workflows in this repository by `@main`.
+Third-party workflows/actions in those consumers must remain full
+commit-SHA-pinned, and this distinction is enforced by the same validator
+described above. Updating the shared organization authority is therefore a
+central change on `yohn-jp/.github`; consumer callers stay thin.

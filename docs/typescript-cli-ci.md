@@ -18,7 +18,7 @@ on:
 
 jobs:
   ci:
-    uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@<pinned-commit-sha>
+    uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
     with:
       working-directory: .          # optional, default "."
       node-version: "22"            # optional, default "22"
@@ -94,28 +94,24 @@ any other internal job name): internal job topology can grow, shrink, or
 be renamed in a future revision of this workflow without breaking Ruleset
 enforcement, because `verify` never changes shape from the outside.
 
-`skipped` counts as passing so that intentionally-disabled or
-fast-pathed jobs (e.g. `conformance` with no `conformance-script`, or the
-whole pipeline under `release-docs-fast-path`) don't block merges — only
-an actual failure does.
+`skipped` counts as passing so that intentionally-disabled or fast-pathed
+jobs (e.g. `conformance` with no `conformance-script`, or the expensive
+validation jobs under `release-docs-fast-path`) don't block merges — only an
+actual failure does. Actions governance still runs on the fast path.
 
 ## Versioning and rollout safety for consumers
 
-Always reference this workflow (and the composite actions/other reusable
-workflows it in turn uses) by full 40-character commit SHA:
+Reference this organization-owned reusable workflow by `@main`:
 
 ```yaml
-uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@8f2c1e...
+uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
 ```
 
-Never pin to a branch (`@main`) or a floating tag. A defect introduced
-here must not instantly break every consumer — bumping the pinned SHA in
-each consumer repository, reviewed like any other dependency update, is
-the deliberate and only supported update path. This repository's own
-`scripts/validate-action-pins.mjs` (see #2 /
-`docs/github-metadata-inheritance.md`) enforces the same rule on every
-`uses:` in this repository's own workflows, including the ones this
-document describes.
+Third-party actions remain pinned to full 40-character commit SHAs; the
+provider's own workflow/action files enforce that rule. The shared reusable
+workflow callers intentionally use `@main` so the organization authority is
+updated centrally. The metadata validator rejects both a SHA-pinned
+`yohn-jp/.github` reusable workflow and any moving ref on a third-party Action.
 
 ## How this workflow is itself validated
 

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Validates that every `uses:` reference in GitHub Actions workflow/action
-// YAML is pinned to an immutable reference:
-//   - external actions: `owner/repo[/path]@<40-char commit SHA>`
+// YAML follows the organization reference policy:
+//   - yohn-jp/.github reusable workflows: `@main`
+//   - other external actions: `owner/repo[/path]@<40-char commit SHA>`
 //   - docker actions:   `docker://image@sha256:<digest>`
 //   - local actions:    `./path/to/action` (not applicable; skipped)
 //
-// A moving ref (branch or tag, e.g. `@v4` or `@main`) is rejected because a
-// compromised or republished tag can silently change what code runs.
+// A moving ref (branch or tag, e.g. `@v4`) is rejected for third-party actions.
+// The organization-owned reusable workflows intentionally follow `@main`, so
+// the shared authority is updated for all consumers at one explicit branch.
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -15,6 +17,7 @@ import yaml from "js-yaml";
 
 const SHA_PIN = /@[0-9a-f]{40}$/;
 const DOCKER_DIGEST_PIN = /@sha256:[0-9a-f]{64}$/;
+const ORG_REUSABLE_WORKFLOW = /^yohn-jp\/\.github\/\.github\/workflows\/[^@]+@([^@]+)$/u;
 
 /**
  * @param {unknown} node parsed YAML (sub)tree
@@ -53,6 +56,16 @@ export function validateActionPins(node, sourceLabel) {
       if (!DOCKER_DIGEST_PIN.test(ref)) {
         errors.push(
           `${where}: docker action "${ref}" must be pinned by digest (docker://image@sha256:<64-hex-digest>)`,
+        );
+      }
+      return;
+    }
+
+    const organizationWorkflow = ref.match(ORG_REUSABLE_WORKFLOW);
+    if (organizationWorkflow !== null) {
+      if (organizationWorkflow[1] !== "main") {
+        errors.push(
+          `${where}: organization-owned reusable workflow "${ref}" must use @main (third-party Actions remain SHA-pinned)`,
         );
       }
       return;

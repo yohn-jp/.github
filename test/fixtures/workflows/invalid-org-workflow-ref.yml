@@ -1,0 +1,8 @@
+name: invalid organization workflow refs
+on:
+  push:
+jobs:
+  call:
+    uses: yohn-jp/.github/.github/workflows/reusable.yml@e7c61c6407c8ef40854f85e1ab910abc9df81f8e
+  other:
+    uses: yohn-jp/.github/.github/workflows/reusable.yml@v1
