@@ -41,6 +41,13 @@ jobs:
 
       - name: Sync templates to org repositories
         uses: BetaHuhn/repo-file-sync-action@8d7590ac8bf240686428959b8fd060a34d508b3f # v1.9.4
+        env:
+          # v1.9.4 declares Node 20; forced Node 24 runners break its
+          # internal git push auth (`git push` prompts interactively and
+          # fails with "could not read Password ... No such device or
+          # address" even though GH_PAT/token creation succeed). Pin back
+          # to Node 20 until the action ships Node 24 support upstream.
+          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
         with:
           GH_PAT: ${{ steps.app-token.outputs.token }}
           GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
