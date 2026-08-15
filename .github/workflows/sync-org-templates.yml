@@ -1,0 +1,50 @@
+name: Sync org templates
+
+# Distributes this repository's Issue Forms and PR templates
+# (.github/ISSUE_TEMPLATE/*.yml, .github/PULL_REQUEST_TEMPLATE/*.md) to the
+# repositories listed in .github/sync.yml, pushing directly to each
+# target's default branch. See docs/github-metadata-inheritance.md — this
+# workflow is the org's only distribution path for these files; GitHub's
+# own implicit community-health file inheritance does not apply once PR
+# templates live under PULL_REQUEST_TEMPLATE/ instead of a single
+# pull_request_template.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE/**"
+      - ".github/sync.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-org-templates
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync managed templates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.ORG_TEMPLATE_SYNC_APP_ID }}
+          private-key: ${{ secrets.ORG_TEMPLATE_SYNC_APP_PRIVATE_KEY }}
+
+      - name: Sync templates to org repositories
+        uses: BetaHuhn/repo-file-sync-action@8d7590ac8bf240686428959b8fd060a34d508b3f # v1.9.4
+        with:
+          GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
+          GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
+          GIT_USERNAME: yohn-jp-template-sync[bot]
+          CONFIG_PATH: .github/sync.yml
+          SKIP_PR: true
+          COMMIT_PREFIX: "chore: sync org-managed Issue/PR templates"

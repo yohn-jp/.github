@@ -1,0 +1,35 @@
+yohn-jp/gh-inari:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
+
+yohn-jp/gh-makami:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
