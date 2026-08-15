@@ -1,0 +1,11 @@
+name: reproduces yohn-jp/gh-makami PR #13 failure 2 (missing caller-local setup action)
+on:
+  workflow_call: {}
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: "22"

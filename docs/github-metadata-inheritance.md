@@ -94,10 +94,11 @@ jobs:
     uses: yohn-jp/.github/.github/workflows/metadata-validation.yml@<pinned-sha>
 ```
 
-The workflow resolves `github.job_workflow_ref` to check out the matching
-version of the validator scripts from `yohn-jp/.github`, so the version of
-the tooling that runs always matches the ref the caller pinned to — never
-an unpinned moving branch.
+The workflow uses `job.workflow_repository` and `job.workflow_sha` to check
+out the matching version of the validator scripts from `yohn-jp/.github`,
+so the version of the tooling that runs always matches the exact provider
+revision the caller pinned to — never the caller's own HEAD/merge commit,
+and never an unpinned moving branch.
 
 ## Versioning and rollout safety
 

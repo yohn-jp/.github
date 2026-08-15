@@ -11,7 +11,8 @@
     "test": "node --test test/*.test.mjs",
     "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
-    "validate": "npm run validate:issue-forms && npm run validate:action-pins"
+    "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
+    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
