@@ -69,12 +69,16 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: .governance-tools
 
+      - name: Isolate governance tooling
+        shell: bash
+        run: mv .governance-tools "$RUNNER_TEMP/governance-tools"
+
       - name: Validate branch name
         env:
           HEAD_REF: ${{ github.head_ref }}
           BRANCH_NAME_PATTERN: ${{ inputs.branch-name-pattern }}
           BRANCH_NAME_EXEMPT: ${{ inputs.branch-name-exempt }}
-        run: node .governance-tools/scripts/validate-branch-name.mjs --branch "$HEAD_REF"
+        run: node "$RUNNER_TEMP/governance-tools/scripts/validate-branch-name.mjs" --branch "$HEAD_REF"
 
   validate-pr-contract:
     name: Validate PR contract (gh-inari)

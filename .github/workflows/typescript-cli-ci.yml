@@ -75,6 +75,11 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: .metadata-tools
 
+      - name: Isolate metadata validation tooling
+        if: inputs.release-docs-fast-path && github.event_name == 'pull_request'
+        shell: bash
+        run: mv .metadata-tools "$RUNNER_TEMP/metadata-tools"
+
       - name: Decide fast path
         id: decide
         shell: bash
@@ -93,7 +98,7 @@ jobs:
           # newline-separated list meant to become one argv entry per line.
           # shellcheck disable=SC2086
           if git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
-              | node .metadata-tools/scripts/is-docs-only-change.mjs $PATTERNS; then
+              | node "$RUNNER_TEMP/metadata-tools/scripts/is-docs-only-change.mjs" $PATTERNS; then
             echo "fast_path=true" >> "$GITHUB_OUTPUT"
           else
             echo "fast_path=false" >> "$GITHUB_OUTPUT"
@@ -122,8 +127,18 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run format:check
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   lint:
     name: Lint
@@ -142,8 +157,18 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run lint
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   typecheck:
     name: Typecheck
@@ -162,8 +187,18 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run typecheck
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   test:
     name: Test
@@ -182,8 +217,18 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm test
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   conformance:
     name: Conformance validation
@@ -202,10 +247,20 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         env:
           CONFORMANCE_SCRIPT: ${{ inputs.conformance-script }}
         run: pnpm run "$CONFORMANCE_SCRIPT"
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   build:
     name: Build
@@ -224,6 +279,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run build
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -231,6 +289,13 @@ jobs:
           name: dist
           path: ${{ inputs.working-directory }}/dist
           retention-days: 1
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   committed-dist-check:
     name: Committed dist verification
@@ -272,6 +337,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - name: Pack and inspect tarball contents
         shell: bash
         working-directory: ${{ inputs.working-directory }}
@@ -320,6 +388,13 @@ jobs:
             "$smoke_dir/node_modules/.bin/$bin_name" --version || \
               "$smoke_dir/node_modules/.bin/$bin_name" --help
           done <<< "$bin_names"
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
 
   verify:
     name: verify

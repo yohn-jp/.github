@@ -1,0 +1,21 @@
+name: reproduces provider workspace contamination
+on:
+  workflow_call: {}
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Checkout metadata validation tooling (yohn-jp/.github)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .metadata-tools
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+        with:
+          package_json_file: .metadata-tools/package.json
+      - name: Install validator dependencies
+        working-directory: .metadata-tools
+        run: pnpm install --frozen-lockfile

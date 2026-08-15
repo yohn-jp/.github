@@ -38,28 +38,46 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: .metadata-tools
 
+      # actions/checkout only accepts paths below GITHUB_WORKSPACE. Move the
+      # provider checkout out of the consumer workspace before pnpm or any
+      # provider validator runs, so pnpm cannot discover the consumer's
+      # pnpm-workspace.yaml while installing the provider package.
+      - name: Isolate metadata validation tooling
+        shell: bash
+        run: mv .metadata-tools "$RUNNER_TEMP/metadata-tools"
+
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
 
+      - name: Prepare provider pnpm metadata
+        shell: bash
+        run: |
+          mkdir -p .provider-pnpm
+          cp "$RUNNER_TEMP/metadata-tools/package.json" .provider-pnpm/package.json
+
       - name: Setup pnpm
         uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
         with:
-          package_json_file: .metadata-tools/package.json
+          package_json_file: .provider-pnpm/package.json
+
+      - name: Isolate provider pnpm metadata
+        shell: bash
+        run: mv .provider-pnpm "$RUNNER_TEMP/provider-pnpm-metadata"
 
       - name: Install validator dependencies
-        working-directory: .metadata-tools
+        working-directory: ${{ runner.temp }}/metadata-tools
         run: pnpm install --frozen-lockfile
 
       - name: Validate Issue Forms
-        run: node .metadata-tools/scripts/validate-issue-forms.mjs
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-issue-forms.mjs"
 
       - name: Validate Actions SHA pinning
-        run: node .metadata-tools/scripts/validate-action-pins.mjs
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-action-pins.mjs"
 
       - name: Validate provider tooling cross-repository resolution
-        run: node .metadata-tools/scripts/validate-provider-tooling-resolution.mjs
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-provider-tooling-resolution.mjs"
 
       - name: Download actionlint
         shell: bash
@@ -83,4 +101,12 @@ jobs:
               -ignore 'property "workflow_ref" is not defined'
           else
             echo "No .github/workflows directory; skipping actionlint."
+          fi
+
+      - name: Restore provider pnpm metadata for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-pnpm-metadata" ] && [ ! -e .provider-pnpm ]; then
+            mv "$RUNNER_TEMP/provider-pnpm-metadata" .provider-pnpm
           fi

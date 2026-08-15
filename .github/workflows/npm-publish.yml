@@ -72,6 +72,10 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
 
+      - name: Isolate release tooling
+        shell: bash
+        run: mv .release-tools "$RUNNER_TEMP/release-tools"
+
       - name: Typecheck
         working-directory: ${{ inputs.working-directory }}
         run: pnpm run typecheck
@@ -96,7 +100,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
-        run: node .release-tools/scripts/check-release-version.mjs --package-version "$PACKAGE_VERSION" --tag "$RELEASE_TAG"
+        run: node "$RUNNER_TEMP/release-tools/scripts/check-release-version.mjs" --package-version "$PACKAGE_VERSION" --tag "$RELEASE_TAG"
 
       - name: Pack tarball
         shell: bash
@@ -111,6 +115,14 @@ jobs:
           name: package-tarball
           path: ${{ inputs.working-directory }}/*.tgz
           retention-days: 1
+
+      - name: Restore release tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/release-tools" ] && [ ! -e .release-tools ]; then
+            mv "$RUNNER_TEMP/release-tools" .release-tools
+          fi
 
   smoke-test:
     name: Smoke test (Node ${{ matrix.node-version }})
