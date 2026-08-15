@@ -47,8 +47,7 @@ Test layers:
 ## Test contract
 
 <!-- Use one concrete value per field. List every required layer and explain
-each Not applicable decision. The machine-readable field names are defined in
-scripts/governance-rules.json. -->
+each Not applicable decision. -->
 
 - change type:
 - required layers:

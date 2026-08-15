@@ -71,11 +71,15 @@ that file.
 A repository with genuinely different Issue/PR semantics should be removed
 from (or never added to) `.github/sync.yml`, then define its own copy of
 the relevant file locally. Because the sync workflow pushes directly to
-each target's default branch, a repository still listed in `sync.yml`
-will have a manually-edited local file overwritten on the next sync —
+each target's default branch with no review gate (`SKIP_PR: true`),
 opting out of `sync.yml` is what makes a local override stick, not just
-adding the file. Document *why* the repository needs a different template
-in that file's own history/PR description so future maintainers
+adding the file — and the `sync.yml` removal must land and run *before*
+the local override is added, in its own commit/push to `main`, not bundled
+into the same push as other template edits. Bundling them risks the sync
+workflow run still reading the old `sync.yml` (still listing the target)
+while racing the override's own commit, which would silently overwrite
+the fresh local override. Document *why* the repository needs a different
+template in that file's own history/PR description so future maintainers
 understand it's a deliberate divergence rather than drift.
 
 Do not leave a repository in `sync.yml` while also locally patching "just

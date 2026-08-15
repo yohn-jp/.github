@@ -1,6 +1,8 @@
 name: Bug
 description: Reproducible defect
 title: "fix: "
+labels:
+  - bug
 body:
   - type: textarea
     id: summary
