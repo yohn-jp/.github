@@ -41,15 +41,16 @@ jobs:
 
       - name: Sync templates to org repositories
         uses: BetaHuhn/repo-file-sync-action@8d7590ac8bf240686428959b8fd060a34d508b3f # v1.9.4
-        env:
-          # v1.9.4 declares Node 20; forced Node 24 runners break its
-          # internal git push auth (`git push` prompts interactively and
-          # fails with "could not read Password ... No such device or
-          # address" even though GH_PAT/token creation succeed). Pin back
-          # to Node 20 until the action ships Node 24 support upstream.
-          ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
         with:
-          GH_PAT: ${{ steps.app-token.outputs.token }}
+          # Must be GH_INSTALLATION_TOKEN, not GH_PAT: the action only
+          # prefixes the push URL with `x-access-token:` (the form GitHub
+          # App installation tokens require) when IS_INSTALLATION_TOKEN is
+          # set, which only happens via this input. Passing an App token
+          # as GH_PAT makes it build `https://<token>@github.com/...`,
+          # which git reads as a bare username with no password and fails
+          # non-interactively with "could not read Password ... No such
+          # device or address" on every target.
+          GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
           GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
           GIT_USERNAME: yohn-jp-template-sync[bot]
           CONFIG_PATH: .github/sync.yml
