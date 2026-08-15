@@ -1,39 +1,45 @@
-## Summary
+# Release PR
 
-<!-- Version and what this release contains. -->
+Release PRs use a `release/*` head branch. This naming convention is an
+operational classification only; it is not an authorization or security
+boundary.
 
-## Version
+## Target version
 
-- previous:
-- next:
-- bump type: <!-- major / minor / patch -->
+- Target version:
+- Version bump (patch/minor/major):
 
-## Changelog
+## CHANGELOG / release notes
 
-<!-- Notable changes since the last release. Link merged PRs/Issues. -->
+- [ ] CHANGELOG updated and reviewed
+- [ ] Release notes drafted and reviewed
+- Notes:
 
-## Validation evidence
+## Package metadata
 
-- class: `package smoke`; status: ; command: ; target: ; result: ; artifact:
-- class: `release`; status: ; command: ; target: ; result: ; artifact: ; warnings:
+- [ ] `package.json` version matches the target version
+- [ ] Package metadata and files list reviewed
+- Metadata notes:
 
-## Release impact
+## Publish prerequisites
 
-- impact:
-- reason:
+- [ ] Required validation is complete
+- [ ] Publish tag and GitHub Release plan confirmed
+- [ ] npm/OIDC publish prerequisites confirmed
+- Prerequisite notes:
 
-## Breaking changes
+## Breaking changes / migration
 
-No. <!-- If Yes, describe impact and migration. -->
+- Breaking changes: None / Yes — describe:
+- Migration required: None / Yes — describe:
 
-## Migration / compatibility
+## Post-release checks
 
-<!-- Required when the release includes a breaking or config/schema change. -->
+- [ ] GitHub Release publication will trigger the existing `release: published` workflow
+- [ ] npm package/version publication will be verified
+- [ ] Post-release smoke test and install verification planned
+- Follow-up checks:
 
-## Rollback plan
+## Linked issue / release tracking
 
-<!-- How to revert this release if a defect surfaces post-publish. -->
-
-## Review focus
-
-<!-- Specific areas for reviewers to inspect. -->
+- Issue or release tracking reference:
