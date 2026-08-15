@@ -122,6 +122,90 @@ export function validateProviderToolingResolution(doc, sourceLabel) {
 }
 
 /**
+ * Verify that provider-owned files leave the consumer workspace before
+ * consumer commands run, and that metadata tooling is installed from the
+ * provider checkout rather than from a nested consumer workspace.
+ *
+ * actions/checkout deliberately only accepts paths below GITHUB_WORKSPACE,
+ * so workflows that need a provider-local composite action must first check
+ * it out into the workspace, invoke that action, and then move the checkout
+ * to RUNNER_TEMP. Metadata validation has no local-action dependency, but it
+ * follows the same move and uses the resulting absolute path for pnpm.
+ *
+ * @param {unknown} doc parsed workflow YAML
+ * @param {string} sourceLabel path used in error messages
+ * @returns {string[]} errors
+ */
+export function validateProviderToolingIsolation(doc, sourceLabel) {
+  const errors = [];
+  const jobs = doc?.jobs;
+  if (jobs === null || typeof jobs !== "object") {
+    return errors;
+  }
+
+  for (const [jobId, job] of Object.entries(jobs)) {
+    const steps = Array.isArray(job?.steps) ? job.steps : [];
+
+    for (const [i, step] of steps.entries()) {
+      if (typeof step?.uses !== "string" || !step.uses.startsWith("actions/checkout")) continue;
+      const withBlock = step.with ?? {};
+      if (!SAFE_REPOSITORY_EXPRESSION.test(String(withBlock.repository ?? ""))) continue;
+      if (!SAFE_REF_EXPRESSION.test(String(withBlock.ref ?? ""))) continue;
+
+      const checkoutPath = String(withBlock.path ?? "");
+      if (!checkoutPath) continue;
+      const escapedPath = checkoutPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const movePattern = new RegExp(`\\bmv\\s+${escapedPath}\\s+[\"']?\\$RUNNER_TEMP/`);
+      const moveIndex = steps.findIndex(
+        (candidate, candidateIndex) =>
+          candidateIndex > i && typeof candidate?.run === "string" && movePattern.test(candidate.run),
+      );
+      const where = `${sourceLabel}:jobs.${jobId}.steps[${i}]`;
+
+      if (moveIndex < 0) {
+        errors.push(
+          `${where}: provider checkout path "${checkoutPath}" must be moved under $RUNNER_TEMP before consumer commands run`,
+        );
+      }
+
+      // The metadata workflow installs the provider package itself. Its pnpm
+      // setup and install paths must both point at the moved provider tree;
+      // a relative path would still allow pnpm to discover the consumer's
+      // ancestor workspace configuration.
+      if (!checkoutPath.includes("metadata-tools")) continue;
+      const installStep = steps.find(
+        (candidate) => typeof candidate?.run === "string" && /pnpm\s+install\s+--frozen-lockfile/.test(candidate.run),
+      );
+      if (installStep) {
+        const workingDirectory = String(installStep["working-directory"] ?? "");
+        if (!/runner\.temp|\$RUNNER_TEMP/.test(workingDirectory) || !workingDirectory.includes("metadata-tools")) {
+          errors.push(
+            `${where}: provider dependency installation must use the moved metadata-tools directory under runner.temp`,
+          );
+        }
+      }
+
+      const setupStep = steps.find(
+        (candidate) =>
+          typeof candidate?.uses === "string" &&
+          candidate.uses.startsWith("pnpm/action-setup") &&
+          typeof candidate.with?.package_json_file === "string",
+      );
+      if (setupStep) {
+        const packageJsonFile = String(setupStep.with.package_json_file);
+        if (!/runner\.temp|\$RUNNER_TEMP/.test(packageJsonFile) || !packageJsonFile.includes("metadata-tools")) {
+          errors.push(
+            `${where}: pnpm setup must read package_json_file from the moved metadata-tools directory under runner.temp`,
+          );
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
  * @param {string} filePath
  * @returns {string[]} errors
  */
@@ -133,7 +217,10 @@ export function validateProviderToolingResolutionFile(filePath) {
   } catch (cause) {
     return [`${filePath}: invalid YAML: ${cause.message}`];
   }
-  return validateProviderToolingResolution(doc, filePath);
+  return [
+    ...validateProviderToolingResolution(doc, filePath),
+    ...validateProviderToolingIsolation(doc, filePath),
+  ];
 }
 
 function isMain() {

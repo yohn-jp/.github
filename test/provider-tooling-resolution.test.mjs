@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 import { validateProviderToolingResolutionFile } from "../scripts/validate-provider-tooling-resolution.mjs";
 
 test("correct job.workflow_repository/job.workflow_sha checkout and provider-relative local action pass", () => {
@@ -23,4 +24,20 @@ test("rejects the yohn-jp/gh-makami PR #13 missing-caller-local-action shape: ba
   assert.equal(errors.length, 1, JSON.stringify(errors, null, 2));
   assert.ok(errors[0].includes("./.github/actions/setup-node-pnpm"));
   assert.ok(errors[0].includes("CALLER's checked-out workspace"));
+});
+
+test("consumer-oriented regression: provider files leave the consumer workspace before commands and metadata pnpm uses the provider workdir", () => {
+  for (const workflow of ["typescript-cli-ci.yml", "metadata-validation.yml"]) {
+    const filePath = fileURLToPath(new URL(`../.github/workflows/${workflow}`, import.meta.url));
+    assert.deepEqual(validateProviderToolingResolutionFile(filePath), [], workflow);
+  }
+});
+
+test("rejects provider installation that remains inside the consumer workspace", () => {
+  const errors = validateProviderToolingResolutionFile(
+    "test/fixtures/workflows/provider-tooling-consumer-workspace.yml",
+  );
+  assert.ok(errors.some((e) => e.includes("must be moved under $RUNNER_TEMP")));
+  assert.ok(errors.some((e) => e.includes("provider dependency installation")));
+  assert.ok(errors.some((e) => e.includes("pnpm setup must read package_json_file")));
 });

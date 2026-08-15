@@ -75,6 +75,11 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: .metadata-tools
 
+      - name: Isolate metadata validation tooling
+        if: inputs.release-docs-fast-path && github.event_name == 'pull_request'
+        shell: bash
+        run: mv .metadata-tools "$RUNNER_TEMP/metadata-tools"
+
       - name: Decide fast path
         id: decide
         shell: bash
@@ -93,7 +98,7 @@ jobs:
           # newline-separated list meant to become one argv entry per line.
           # shellcheck disable=SC2086
           if git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
-              | node .metadata-tools/scripts/is-docs-only-change.mjs $PATTERNS; then
+              | node "$RUNNER_TEMP/metadata-tools/scripts/is-docs-only-change.mjs" $PATTERNS; then
             echo "fast_path=true" >> "$GITHUB_OUTPUT"
           else
             echo "fast_path=false" >> "$GITHUB_OUTPUT"
@@ -122,6 +127,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run format:check
 
@@ -142,6 +150,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run lint
 
@@ -162,6 +173,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run typecheck
 
@@ -182,6 +196,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm test
 
@@ -202,6 +219,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         env:
           CONFORMANCE_SCRIPT: ${{ inputs.conformance-script }}
@@ -224,6 +244,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm run build
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -272,6 +295,9 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
           node-version: ${{ inputs.node-version }}
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - name: Pack and inspect tarball contents
         shell: bash
         working-directory: ${{ inputs.working-directory }}

@@ -58,6 +58,10 @@ jobs:
           ref: ${{ job.workflow_sha }}
           path: .governance-tools
 
+      - name: Isolate governance tooling
+        shell: bash
+        run: mv .governance-tools "$RUNNER_TEMP/governance-tools"
+
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -85,7 +89,7 @@ jobs:
       - name: Build diagnostic report
         if: steps.validate.outcome == 'failure'
         run: |
-          node .governance-tools/scripts/format-governance-violations.mjs \
+          node "$RUNNER_TEMP/governance-tools/scripts/format-governance-violations.mjs" \
             < /tmp/issue-validate.json > /tmp/issue-governance-report.md
 
       - name: Mark invalid Issue

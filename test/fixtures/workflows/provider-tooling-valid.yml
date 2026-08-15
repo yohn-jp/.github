@@ -15,5 +15,8 @@ jobs:
       - uses: ./.provider-tools/.github/actions/setup-node-pnpm
         with:
           node-version: "22"
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
   nested-reusable-workflow:
     uses: ./.github/workflows/metadata-validation.yml
