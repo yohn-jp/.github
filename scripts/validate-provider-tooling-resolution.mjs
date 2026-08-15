@@ -211,18 +211,35 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
         }
       }
 
-      const setupStep = steps.find(
+      const setupStepIndex = steps.findIndex(
         (candidate) =>
           typeof candidate?.uses === "string" &&
           candidate.uses.startsWith("pnpm/action-setup") &&
           typeof candidate.with?.package_json_file === "string",
       );
-      if (setupStep) {
+      if (setupStepIndex >= 0) {
+        const setupStep = steps[setupStepIndex];
         const packageJsonFile = String(setupStep.with.package_json_file);
-        if (!/runner\.temp|\$RUNNER_TEMP/.test(packageJsonFile) || !packageJsonFile.includes("metadata-tools")) {
+        const usesMovedProviderPackage =
+          /runner\.temp|\$RUNNER_TEMP/.test(packageJsonFile) && packageJsonFile.includes("metadata-tools");
+        const usesWorkspaceShim = packageJsonFile === ".provider-pnpm/package.json";
+        if (!usesMovedProviderPackage && !usesWorkspaceShim) {
           errors.push(
             `${where}: pnpm setup must read package_json_file from the moved metadata-tools directory under runner.temp`,
           );
+        }
+        if (usesWorkspaceShim) {
+          const shimMoveIndex = steps.findIndex(
+            (candidate, candidateIndex) =>
+              candidateIndex > setupStepIndex &&
+              typeof candidate?.run === "string" &&
+              /\bmv\s+\.provider-pnpm\s+[\"']?\$RUNNER_TEMP\/provider-pnpm-metadata/.test(candidate.run),
+          );
+          if (shimMoveIndex < 0) {
+            errors.push(
+              `${where}: provider pnpm metadata shim must leave the consumer workspace before provider install`,
+            );
+          }
         }
       }
     }
