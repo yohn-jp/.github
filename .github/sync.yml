@@ -170,6 +170,61 @@ yohn-jp/nawabari:
   - source: .github/inari/pull-requests/release.json
     dest: .github/inari/pull-requests/release.json
 
+# yohn-jp/wabachi: newly created repo (2026-08-16), still scaffolding
+# (README/TEMPLATE.md placeholders unfilled) — no divergent content to
+# protect. Already has its own workflow wrappers
+# (codeql/governance/issue-governance/publish.yml) hand-copied from an
+# older canonical revision; governance.yml/issue-governance.yml still pass
+# a `gh-inari-version` input that no longer exists on the reusable workflow
+# side, so every PR's Governance job currently fails with startup_failure
+# (same root cause fixed for gh-inari in Issue #36). Opted into the same
+# full set gh-inari gets — ISSUE_TEMPLATE, inari JSON, PR templates,
+# canonical workflow wrappers, and validate-action-pins.mjs — since it has
+# no existing scripts/validate-action-pins.mjs to replace. wabachi's own
+# .github/inari/pr-policy.yml is untouched: not a canonical path, this sync
+# doesn't reference it.
+yohn-jp/wabachi:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
+  - source: .github/inari/issues/bug.json
+    dest: .github/inari/issues/bug.json
+  - source: .github/inari/issues/feature.json
+    dest: .github/inari/issues/feature.json
+  - source: .github/inari/issues/architecture.json
+    dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/maintenance.json
+    dest: .github/inari/issues/maintenance.json
+  - source: .github/inari/issues/research.json
+    dest: .github/inari/issues/research.json
+  - source: .github/inari/pull-requests/default.json
+    dest: .github/inari/pull-requests/default.json
+  - source: .github/inari/pull-requests/release.json
+    dest: .github/inari/pull-requests/release.json
+  - source: templates/workflows/codeql.yml
+    dest: .github/workflows/codeql.yml
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
+  - source: templates/workflows/issue-governance.yml
+    dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/publish.yml
+    dest: .github/workflows/publish.yml
+  - source: scripts/validate-action-pins.mjs
+    dest: scripts/validate-action-pins.mjs
+
 # yohn-jp/mottainai: architecture.yml/maintenance.yml/research.yml/config.yml
 # are already byte-identical here (this repo's templates originated from
 # mottainai's). bug.yml/feature.yml differ only by this repo's added
