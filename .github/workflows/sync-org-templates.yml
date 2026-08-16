@@ -80,3 +80,9 @@ jobs:
           CONFIG_PATH: .github/sync.yml
           SKIP_PR: true
           COMMIT_PREFIX: "chore: sync org-managed files"
+          # Default COMMIT_EACH_FILE (true) makes the action create one
+          # commit per synced file per target repo — a single sync run
+          # against .github/sync.yml fans out into a dozen-plus commits on
+          # each target. false batches every changed file for a target into
+          # one commit instead.
+          COMMIT_EACH_FILE: false
