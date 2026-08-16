@@ -40,6 +40,8 @@ this task's "Actions can commit directly to main" requirement):
 | `.github/ISSUE_TEMPLATE/config.yml` | Issue template chooser configuration |
 | `.github/PULL_REQUEST_TEMPLATE/default.md` | Default PR template (general work) |
 | `.github/PULL_REQUEST_TEMPLATE/release.md` | Release PR template (no linked-Issue/scope sections) |
+| `templates/workflows/*.yml` → `.github/workflows/*.yml` | Opt-in: canonical thin wrapper files (`codeql.yml`, `governance.yml`, `issue-governance.yml`, `publish.yml`) that call this repository's reusable workflows. Only listed per-target in `.github/sync.yml` for repositories whose `with:` values match the canonical file exactly — see `docs/typescript-cli-ci.md`. |
+| `scripts/validate-action-pins.mjs` | Opt-in: the canonical Action-pin governance validator, replacing a consumer's own drifted copy. |
 
 `.github/sync.yml` explicitly lists every target `owner/repo` and which
 files it receives — there is no automatic org-wide or topic-based
@@ -49,10 +51,17 @@ that file.
 ## What is NOT distributed
 
 - **GitHub Actions workflows** (`.github/workflows/*.yml`) are never
-  inherited implicitly. Every consumer repository must explicitly
-  reference this repository's reusable workflows via `uses:
+  inherited implicitly by GitHub itself. Every consumer repository must
+  explicitly reference this repository's reusable workflows via `uses:
   yohn-jp/.github/.github/workflows/<name>.yml@main` in its own
-  workflow files. See the versioning note below.
+  workflow files. See the versioning note below. This is separate from
+  the explicit `.github/sync.yml` mechanism above: a repository may
+  additionally opt in to having the thin wrapper file itself (the file
+  containing that `uses:` line) kept in sync from `templates/workflows/`,
+  so it doesn't have to hand-maintain that wrapper — but nothing here
+  changes GitHub's own lack of implicit workflow inheritance, and `ci.yml`
+  (the CI wrapper) is not yet part of that sync set (see
+  `docs/typescript-cli-ci.md`).
 - **Composite/other Actions** under `.github/actions/` are likewise only
   available to a consumer if it explicitly references them by
   `owner/repo/path@ref`.

@@ -1,0 +1,11 @@
+name: Issue Governance
+on:
+  issues:
+    types: [opened, edited, reopened]
+jobs:
+  validate-issue:
+    uses: yohn-jp/.github/.github/workflows/issue-governance.yml@main
+  extra-local-check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: node scripts/validate-issue.mjs
