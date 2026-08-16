@@ -113,6 +113,58 @@ workflow callers intentionally use `@main` so the organization authority is
 updated centrally. The metadata validator rejects both a SHA-pinned
 `yohn-jp/.github` reusable workflow and any moving ref on a third-party Action.
 
+## Keeping the wrapper file and governance script in sync
+
+A consumer repository's `.github/workflows/ci.yml` (etc.) and its
+Action-pin governance script are hand-copied once at bootstrap and, absent
+this mechanism, silently drift from the organization's canonical version —
+see Issue #36 for the incident that motivated this.
+
+A repository can opt in to having some of these files kept in sync by
+adding entries to its block in `yohn-jp/.github`'s `.github/sync.yml`,
+pointing at the canonical source under `templates/workflows/` and
+`scripts/validate-action-pins.mjs`:
+
+```yaml
+yohn-jp/<your-repo>:
+  - source: templates/workflows/codeql.yml
+    dest: .github/workflows/codeql.yml
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
+  - source: templates/workflows/issue-governance.yml
+    dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/publish.yml
+    dest: .github/workflows/publish.yml
+  - source: scripts/validate-action-pins.mjs
+    dest: scripts/validate-action-pins.mjs
+```
+
+This pushes directly to your default branch with no PR/review gate
+(`SKIP_PR: true`, same as Issue/PR template sync) the moment any of these
+files change in `yohn-jp/.github`. Before opting in:
+
+- Verify your existing wrapper's `with:` values match the canonical
+  file's (the canonical files omit any input that already equals the
+  reusable workflow's own default) — opting in overwrites repo-specific
+  `with:` customization on the next sync.
+- If you invoke the Action-pin validator under a different script/file
+  name (e.g. `scripts/validate-actions.mjs` via a `governance:actions`
+  package.json script), update that wiring to point at
+  `scripts/validate-action-pins.mjs` and remove the old file — syncing
+  the canonical file in alone does not rename or rewire an existing
+  invocation.
+- If your own validator has repository-specific checks beyond Action-pin
+  validation, confirm the canonical script already covers them (or
+  propose the addition upstream) before deleting your copy; a silent
+  swap can drop a check without either the sync workflow or your CI
+  reporting it as a regression.
+
+**`ci.yml` is not yet syncable.** Its `committed-dist` (and, for
+non-default working directories, `working-directory`) input is a real
+per-repository divergence with no safe canonical default — syncing it
+verbatim would clobber that customization. It stays hand-maintained per
+consumer until per-target templating or an org-wide policy resolves that.
+
 ## How this workflow is itself validated
 
 `.github/workflows/self-test-typescript-cli-ci.yml` calls

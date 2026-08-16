@@ -1,7 +1,9 @@
 name: Sync org templates
 
-# Distributes this repository's Issue Forms and PR templates
-# (.github/ISSUE_TEMPLATE/*.yml, .github/PULL_REQUEST_TEMPLATE/*.md) to the
+# Distributes this repository's Issue Forms, PR templates
+# (.github/ISSUE_TEMPLATE/*.yml, .github/PULL_REQUEST_TEMPLATE/*.md),
+# opt-in workflow wrappers (templates/workflows/*.yml), and the opt-in
+# Action-pin governance script (scripts/validate-action-pins.mjs) to the
 # repositories listed in .github/sync.yml, pushing directly to each
 # target's default branch. See docs/github-metadata-inheritance.md — this
 # workflow is the org's only distribution path for these files; GitHub's
@@ -15,6 +17,8 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
       - ".github/sync.yml"
+      - "templates/workflows/**"
+      - "scripts/validate-action-pins.mjs"
   workflow_dispatch: {}
 
 permissions:
@@ -74,4 +78,4 @@ jobs:
           GIT_USERNAME: yohn-jp-template-sync[bot]
           CONFIG_PATH: .github/sync.yml
           SKIP_PR: true
-          COMMIT_PREFIX: "chore: sync org-managed Issue/PR templates"
+          COMMIT_PREFIX: "chore: sync org-managed files"

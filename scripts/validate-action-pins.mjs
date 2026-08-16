@@ -9,6 +9,12 @@
 // A moving ref (branch or tag, e.g. `@v4`) is rejected for third-party actions.
 // The organization-owned reusable workflows intentionally follow `@main`, so
 // the shared authority is updated for all consumers at one explicit branch.
+//
+// Also validates that a workflow calling this organization's
+// issue-governance.yml (Issue contract validation) doesn't locally
+// re-implement that same semantic check — generalized from
+// yohn-jp/gh-inari's validateIssueGovernanceWorkflow so every consumer of
+// the shared governance workflow gets the same duplication guard.
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -18,6 +24,8 @@ import yaml from "js-yaml";
 const SHA_PIN = /@[0-9a-f]{40}$/;
 const DOCKER_DIGEST_PIN = /@sha256:[0-9a-f]{64}$/;
 const ORG_REUSABLE_WORKFLOW = /^yohn-jp\/\.github\/\.github\/workflows\/[^@]+@([^@]+)$/u;
+const ORG_ISSUE_GOVERNANCE_WORKFLOW = "yohn-jp/.github/.github/workflows/issue-governance.yml@main";
+const LOCAL_ISSUE_VALIDATION_SCRIPT = /scripts\/validate-issue\.mjs/u;
 
 /**
  * @param {unknown} node parsed YAML (sub)tree
@@ -85,6 +93,29 @@ export function validateActionPins(node, sourceLabel) {
 }
 
 /**
+ * Rejects a workflow that delegates Issue governance to this organization's
+ * shared issue-governance.yml while also locally re-implementing that same
+ * semantic check — the two would drift, and gh-inari's own
+ * scripts/validate-issue.mjs is the single authority for Issue contract
+ * validation (see docs/governance.md).
+ *
+ * @param {string} raw unparsed workflow YAML source
+ * @param {string} sourceLabel path used in error messages
+ * @returns {string[]} errors
+ */
+export function validateIssueGovernanceDelegation(raw, sourceLabel) {
+  if (!raw.includes(`uses: ${ORG_ISSUE_GOVERNANCE_WORKFLOW}`)) {
+    return [];
+  }
+  if (LOCAL_ISSUE_VALIDATION_SCRIPT.test(raw)) {
+    return [
+      `${sourceLabel}: delegates to ${ORG_ISSUE_GOVERNANCE_WORKFLOW} but also references scripts/validate-issue.mjs locally; Issue contract validation must not be duplicated`,
+    ];
+  }
+  return [];
+}
+
+/**
  * @param {string} filePath
  * @returns {string[]} errors
  */
@@ -96,7 +127,10 @@ export function validateActionPinsFile(filePath) {
   } catch (cause) {
     return [`${filePath}: invalid YAML: ${cause.message}`];
   }
-  return validateActionPins(doc, filePath);
+  return [
+    ...validateActionPins(doc, filePath),
+    ...validateIssueGovernanceDelegation(raw, filePath),
+  ];
 }
 
 function isMain() {
