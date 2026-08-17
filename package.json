@@ -12,10 +12,14 @@
     "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
     "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
-    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution"
+    "validate:inari-format": "node scripts/validate-inari-format.mjs",
+    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:inari-format"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "devDependencies": {
+    "prettier": "3.9.6"
+  }
 }
