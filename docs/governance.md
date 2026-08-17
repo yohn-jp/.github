@@ -8,25 +8,32 @@ what makes an Issue or PR valid.
 
 ## Who owns what
 
-**`yohn-jp/gh-inari` is the single semantic authority for Issue/PR content
-contracts.** It compiles a repository's native Issue Forms and PR
-templates into a typed contract, validates structured input against it,
-and is the only place that logic is implemented. These two workflows never
-reimplement that logic; they *invoke* it, via the published `gh-inari` npm
-CLI:
+**The consumer's synchronized `.github/inari/**` snapshot is the contract
+source of truth.** `yohn-jp/.github` owns the canonical definitions and
+synchronizes them together with a deterministic manifest containing the
+snapshot revision and per-file digests. The reusable workflows check out
+the shared adapters, but run them with the consumer checkout as their root;
+the adapters therefore compile and validate the snapshot actually present in
+that consumer.
+
+**`yohn-jp/gh-inari` remains the shared semantic implementation.** It
+compiles the local snapshot's Issue Forms and PR templates into typed
+contracts and validates the rendered artifacts. The workflow adapters only
+own event plumbing and candidate selection; they do not duplicate required
+headings or field rules. They invoke the published `gh-inari` package:
 
 ```sh
 gh-inari pr validate <number> --repository <owner>/<repo> [--template <id>]
 gh-inari issue validate <number> --repository <owner>/<repo> [--template <id>]
 ```
 
-Both workflows install `gh-inari@latest`. `gh-inari` is an organization-owned
-tool (`yohn-jp/gh-inari`), not a third-party dependency, so it follows the
-same "always latest" policy as other `yohn-jp`-owned tooling: a new release
-should reach every consumer without a manual version bump here. This is
-distinct from the SHA-pinning policy for third-party Actions (see
-`scripts/validate-action-pins.mjs`), which exists specifically to bound
-supply-chain risk from repositories this organization does not control.
+The workflows install the organization-owned `gh-inari@latest` compiler in
+an isolated temporary directory. Updating that implementation does not alter
+which governance revision a consumer enforces: the local snapshot and its
+manifest remain the input. This is distinct from the SHA-pinning policy for
+third-party Actions (see `scripts/validate-action-pins.mjs`), which exists
+specifically to bound supply-chain risk from repositories this organization
+does not control.
 
 **Branch-name validation is owned directly by `.github/workflows/pr-governance.yml`**
 (via `scripts/validate-branch-name.mjs`), because gh-inari's own scope is
@@ -100,17 +107,19 @@ not duplicate it, to avoid the two drifting out of sync.
   already uses for itself.
 
 This mirrors `yohn-jp/gh-inari`'s own `.github/workflows/governance.yml`
-and `issue-governance.yml` (which validate gh-inari's own Issues/PRs using
-its local, non-public scripts, since it's gh-inari's own source). The
-public-CLI version here is what every *other* repository should use — no
-repository other than `gh-inari` itself should vendor a copy of its
-internal `scripts/validate-pr.mjs` / `scripts/validate-issue.mjs`.
+and `issue-governance.yml`. The reusable workflows here check out the
+provider-owned adapters at the exact workflow revision and execute them
+against the consumer snapshot. A consumer does not need an independent
+validator implementation; Nawabari's migration additionally synchronizes
+the adapters over its former local entry points so the old hard-coded copy
+cannot remain a second structural authority.
 
 ## Migration note for repositories with existing local scripts
 
 A repository currently running its own copy of branch-name/PR/Issue
 validation scripts can switch to these reusable workflows without a
 functional gap: the branch-name default matches the existing convention,
-and gh-inari's CLI implements the same contract semantics its internal
-scripts do. Once switched, delete the local scripts — keeping both is the
-"second authority" this issue exists to avoid, even temporarily.
+and the shared adapters compile the local snapshot through gh-inari. Once
+switched, remove any obsolete local workflow entry point or let the sync
+contract replace it with the shared adapter; keeping independent required
+heading rules is the "second authority" this issue exists to avoid.

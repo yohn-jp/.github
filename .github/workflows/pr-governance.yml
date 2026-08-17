@@ -1,10 +1,10 @@
 name: PR governance
 
 # Reusable baseline PR governance: branch-name validation (owned here) and
-# PR contract validation delegated to the published gh-inari CLI, the
-# organization's single semantic authority for Issue/PR content contracts
-# (see docs/governance.md). This workflow enforces or invokes that
-# authority; it never redefines PR contract semantics independently.
+# PR contract validation delegated to the published gh-inari compiler. The
+# adapter is checked out from this repository, while its root is the
+# consumer checkout, so contract compilation reads the consumer's
+# synchronized .github/inari snapshot and native templates.
 on:
   workflow_call:
     inputs:
@@ -73,31 +73,31 @@ jobs:
         run: node "$RUNNER_TEMP/governance-tools/scripts/validate-branch-name.mjs" --branch "$HEAD_REF"
 
   validate-pr-contract:
-    name: Validate PR contract (gh-inari)
+    name: Validate PR contract (Inari snapshot)
     if: github.event_name == 'pull_request' && !inputs.skip-pr-contract-check
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
 
-      - name: Install gh-inari
-        run: npm install --global gh-inari@latest
+      - name: Install shared governance validator
+        working-directory: ${{ runner.temp }}/governance-tools
+        run: npm install --no-save --omit=dev gh-inari@latest
+
+      - name: Validate synchronized governance snapshot
+        run: node "$RUNNER_TEMP/governance-tools/scripts/generate-inari-manifest.mjs" --check
 
       - name: Validate PR contract
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TEMPLATE: ${{ inputs.pr-template }}
         run: |
           set -euo pipefail
-          args=(pr validate "$PR_NUMBER" --repository "$GH_REPO")
+          args=("$RUNNER_TEMP/governance-tools/scripts/validate-pr.mjs" --event "$GITHUB_EVENT_PATH")
           if [ -n "$PR_TEMPLATE" ]; then
             args+=(--template "$PR_TEMPLATE")
           fi
-          gh-inari "${args[@]}"
+          node "${args[@]}"

@@ -13,7 +13,8 @@
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
     "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
     "validate:inari-format": "node scripts/validate-inari-format.mjs",
-    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:inari-format"
+    "validate:inari-manifest": "node scripts/generate-inari-manifest.mjs --check",
+    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:inari-format && npm run validate:inari-manifest"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

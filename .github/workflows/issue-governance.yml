@@ -1,10 +1,9 @@
 name: Issue governance
 
-# Reusable baseline Issue governance: delegates Issue contract validation
-# to the published gh-inari CLI (the organization's single semantic
-# authority for Issue/PR content contracts; see docs/governance.md), then
-# owns only the GitHub-side plumbing: labeling/commenting on violation and
-# clearing that state once the Issue is corrected. Mirrors
+# Reusable baseline Issue governance: the shared adapter invokes gh-inari's
+# compiler against the consumer's synchronized .github/inari snapshot, then
+# this workflow owns only the GitHub-side plumbing: labeling/commenting on
+# violation and clearing that state once the Issue is corrected. Mirrors
 # yohn-jp/gh-inari's own issue-governance.yml: Issues have no CI check to
 # fail against, so a label + comment is the violation signal instead of a
 # red status check.
@@ -34,7 +33,7 @@ permissions:
 
 jobs:
   validate-issue:
-    name: Validate Issue contract (gh-inari)
+    name: Validate Issue contract (Inari snapshot)
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
     permissions:
@@ -60,8 +59,12 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install gh-inari
-        run: npm install --global gh-inari@latest
+      - name: Install shared governance validator
+        working-directory: ${{ runner.temp }}/governance-tools
+        run: npm install --no-save --omit=dev gh-inari@latest
+
+      - name: Validate synchronized governance snapshot
+        run: node "$RUNNER_TEMP/governance-tools/scripts/generate-inari-manifest.mjs" --check
 
       - name: Validate Issue contract
         id: validate
@@ -71,11 +74,11 @@ jobs:
           ISSUE_TEMPLATE: ${{ inputs.issue-template }}
         run: |
           set -euo pipefail
-          args=(issue validate "$ISSUE_NUMBER" --repository "$GH_REPO")
+          args=("$RUNNER_TEMP/governance-tools/scripts/validate-issue.mjs" --event "$GITHUB_EVENT_PATH")
           if [ -n "$ISSUE_TEMPLATE" ]; then
             args+=(--template "$ISSUE_TEMPLATE")
           fi
-          gh-inari "${args[@]}" | tee /tmp/issue-validate.json
+          node "${args[@]}" | tee /tmp/issue-validate.json
 
       - name: Build diagnostic report
         if: steps.validate.outcome == 'failure'
