@@ -82,6 +82,9 @@ jobs:
       - name: Validate Inari JSON formatting
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-inari-format.mjs"
 
+      - name: Validate Inari snapshot provenance
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/generate-inari-manifest.mjs" --check
+
       - name: Install gh-inari
         run: npm install --global gh-inari@latest
 

@@ -1,6 +1,7 @@
 name: Sync org templates
 
-# Distributes this repository's Issue Forms, PR templates
+# Distributes this repository's Issue Forms, PR templates, machine-readable
+# Inari governance snapshot, and shared governance adapters
 # (.github/ISSUE_TEMPLATE/*.yml, .github/PULL_REQUEST_TEMPLATE/*.md),
 # opt-in workflow wrappers (templates/workflows/*.yml), and the opt-in
 # Action-pin governance script (scripts/validate-action-pins.mjs) to the
@@ -16,9 +17,13 @@ on:
     paths:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
+      - ".github/inari/**"
       - ".github/sync.yml"
       - "templates/workflows/**"
       - "scripts/validate-action-pins.mjs"
+      - "scripts/generate-inari-manifest.mjs"
+      - "scripts/validate-pr.mjs"
+      - "scripts/validate-issue.mjs"
   workflow_dispatch: {}
 
 permissions:
@@ -35,6 +40,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Generate Inari snapshot manifest
+        run: node scripts/generate-inari-manifest.mjs
 
       - name: Create GitHub App token
         id: app-token
