@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "kind": "issue",
+  "id": "example",
+  "labels": [
+    "example"
+  ]
+}
