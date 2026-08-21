@@ -40,10 +40,11 @@ does not control.
 explicitly Issue/PR *content* governance — it does not validate branch
 names. Owning this here does not create a competing authority over
 anything gh-inari already owns; it fills a gap next to it. The default
-pattern (`^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$`)
-generalizes the convention `gh-inari`'s own repository already enforces on
-itself, configurable via the `branch-name-pattern` and `branch-name-exempt`
-inputs for repositories with real naming differences.
+pattern (`^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$`) remains
+Issue-bound. The separate `release/<semver>` class is accepted without an
+Issue; malformed `release/*` names fail closed. `branch-name-pattern` and
+`branch-name-exempt` remain available for ordinary consumer-specific naming
+differences, but cannot authorize a malformed release branch.
 
 ## Consuming these workflows
 
@@ -85,7 +86,36 @@ pin a specific template rather than rely on gh-inari's deterministic
 auto-detection (required for repositories using gh-inari's multi-template
 PR policy). See the `on: workflow_call: inputs:` block in each workflow
 file for the full, current input list — this document intentionally does
-not duplicate it, to avoid the two drifting out of sync.
+not duplicate it, to avoid the two drifting out of sync. For PRs, branch
+classification takes precedence: a `release/<semver>` head ref explicitly
+selects the `release` contract, so it does not depend on generic
+multi-template matching.
+
+## Release PR path
+
+Release preparation is operational packaging of already-reviewed changes and
+does not require a synthetic Issue:
+
+```text
+release/<semver> -> release PR contract -> merge
+  -> immutable v<semver> GitHub Release -> publish workflow
+```
+
+For a release head branch, the shared adapter deterministically selects the
+canonical `release` contract before validating the body. `Tracking` remains
+optional and is informational; it is never an authorization prerequisite. The
+release path contains no linked-Issue fetch or linked-Issue contract
+validation. Ordinary `feat|fix|docs|refactor|test|chore/<issue>-<slug>` PRs
+retain their existing Issue-bound branch and default-contract governance.
+
+Mottainai keeps its repository-specific ordinary-PR quality gates and their
+linked-Issue validation. Those gates already exclude `release/*`; its synced
+`release-governance.yml` wrapper routes only release-prefixed PRs to the same
+shared release contract, without adding an Issue fetch.
+
+The publish workflows are outside this routing change. They continue to verify
+the immutable release tag, resolved commit, package version, and exact packed
+tarball before publish.
 
 ## Why PRs and Issues are enforced differently
 

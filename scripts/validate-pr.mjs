@@ -8,6 +8,7 @@ import {
   validateRequiredMetadataString
 } from "gh-inari/artifact";
 import { compileLocalGovernedContract } from "gh-inari/governance";
+import { resolvePullRequestTemplate } from "./pr-contract-routing.mjs";
 
 const REPOSITORY_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -23,15 +24,32 @@ export async function validatePullRequest({
   title,
   body,
   root = REPOSITORY_ROOT,
-  template
+  template,
+  branch
 }) {
-  const contracts = await candidateContracts(root, template);
+  const routing = resolvePullRequestTemplate({ branch, template });
+  if (routing.errors.length > 0) {
+    const violations = routing.errors.map((message) => ({
+      code: "GOVERNANCE_RELEASE_BRANCH_INVALID",
+      path: "$.pull_request.head.ref",
+      message
+    }));
+    return {
+      valid: false,
+      branchClassification: routing.classification,
+      violations,
+      errors: violations.map((violation) => violation.message)
+    };
+  }
+
+  const contracts = await candidateContracts(root, routing.template);
   const outcomes = contracts.map((contract) => ({
     contract,
     result: validateExistingPullRequestArtifact(contract, body)
   }));
   const valid = outcomes.filter(({ result }) => result.valid);
-  if (valid.length === 1) return report(valid[0], title);
+  if (valid.length === 1)
+    return report(valid[0], title, routing.classification);
   if (valid.length > 1) {
     return report(
       {
@@ -49,7 +67,8 @@ export async function validatePullRequest({
           ]
         }
       },
-      title
+      title,
+      routing.classification
     );
   }
 
@@ -78,7 +97,7 @@ export async function validatePullRequest({
       ]
     };
   }
-  return report(selected, title);
+  return report(selected, title, routing.classification);
 }
 
 async function candidateContracts(root, template) {
@@ -98,13 +117,14 @@ async function candidateContracts(root, template) {
   );
 }
 
-function report(outcome, title) {
+function report(outcome, title, branchClassification) {
   const violations = [...outcome.result.violations];
   const titleViolation = validateRequiredMetadataString(title, "title");
   if (titleViolation !== undefined) violations.unshift(titleViolation);
   return {
     valid: violations.length === 0,
     contract: outcome.contract,
+    branchClassification,
     result: outcome.result,
     violations,
     errors: violations.map((violation) => violation.message)
@@ -123,12 +143,16 @@ async function main() {
   const templateIndex = process.argv.indexOf("--template");
   const template =
     templateIndex === -1 ? undefined : process.argv[templateIndex + 1];
+  const branchIndex = process.argv.indexOf("--branch");
   const pullRequest = event.pull_request;
+  const branch =
+    branchIndex === -1 ? pullRequest.head?.ref : process.argv[branchIndex + 1];
   const result = await validatePullRequest({
     title: pullRequest.title ?? "",
     body: pullRequest.body ?? "",
     root: process.cwd(),
-    template
+    template,
+    branch
   });
   console.log(
     JSON.stringify({
@@ -136,6 +160,9 @@ async function main() {
       ...(result.contract === undefined
         ? {}
         : { template: result.contract.templateIdentity }),
+      ...(result.branchClassification === undefined
+        ? {}
+        : { branchClassification: result.branchClassification }),
       ...(result.result === undefined
         ? {}
         : { classification: result.result.classification }),

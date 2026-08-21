@@ -105,6 +105,11 @@ yohn-jp/gh-makami:
     dest: .github/inari/pull-requests/release.json
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  # Roll the organization-owned PR governance caller from the historical
+  # pinned revision to the canonical @main rollout path. Other workflow
+  # wrappers remain opt-in until their consumer-specific inputs are aligned.
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
 
 yohn-jp/suzukuri:
   - source: .github/ISSUE_TEMPLATE/config.yml
@@ -139,6 +144,10 @@ yohn-jp/suzukuri:
     dest: .github/inari/pull-requests/release.json
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  # Same explicit rollout as gh-makami: the release governance caller must not
+  # remain on the stale pinned provider revision.
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
 
 # yohn-jp/nawabari: bug.yml/feature.yml there use an older, differently
 # structured field set (e.g. "reproduction"/"proposal" instead of this
@@ -184,6 +193,10 @@ yohn-jp/nawabari:
     dest: .github/workflows/issue-governance.yml
   - source: scripts/validate-pr.mjs
     dest: scripts/validate-pr.mjs
+  - source: scripts/pr-contract-routing.mjs
+    dest: scripts/pr-contract-routing.mjs
+  - source: scripts/release-branch.mjs
+    dest: scripts/release-branch.mjs
   - source: scripts/validate-issue.mjs
     dest: scripts/validate-issue.mjs
 
@@ -283,3 +296,8 @@ yohn-jp/mottainai:
     dest: .github/inari/pull-requests/release.json
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  # Preserve Mottainai's repository-specific ordinary-PR quality gates while
+  # adding a canonical release-only path. Its existing governance workflow
+  # already excludes release/* before the linked-Issue fetch step.
+  - source: templates/workflows/release-governance.yml
+    dest: .github/workflows/release-governance.yml

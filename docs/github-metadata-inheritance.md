@@ -40,7 +40,7 @@ this task's "Actions can commit directly to main" requirement):
 | `.github/ISSUE_TEMPLATE/config.yml` | Issue template chooser configuration |
 | `.github/PULL_REQUEST_TEMPLATE/default.md` | Default PR template (general work) |
 | `.github/PULL_REQUEST_TEMPLATE/release.md` | Release PR template (no linked-Issue/scope sections) |
-| `templates/workflows/*.yml` → `.github/workflows/*.yml` | Opt-in: canonical thin wrapper files (`codeql.yml`, `governance.yml`, `issue-governance.yml`, `publish.yml`) that call this repository's reusable workflows. Only listed per-target in `.github/sync.yml` for repositories whose `with:` values match the canonical file exactly — see `docs/typescript-cli-ci.md`. |
+| `templates/workflows/*.yml` → `.github/workflows/*.yml` | Opt-in: canonical wrapper files (`codeql.yml`, `governance.yml`, `issue-governance.yml`, `publish.yml`, and the release-only `release-governance.yml`) that call this repository's reusable workflows. Only listed per-target in `.github/sync.yml` for repositories whose `with:` values match the canonical file exactly, or whose repository-specific ordinary governance is intentionally preserved — see `docs/typescript-cli-ci.md` and `docs/governance.md`. |
 | `scripts/validate-action-pins.mjs` | Opt-in: the canonical Action-pin governance validator, replacing a consumer's own drifted copy. |
 
 `.github/sync.yml` explicitly lists every target `owner/repo` and which
@@ -143,3 +143,16 @@ Third-party workflows/actions in those consumers must remain full
 commit-SHA-pinned, and this distinction is enforced by the same validator
 described above. Updating the shared organization authority is therefore a
 central change on `yohn-jp/.github`; consumer callers stay thin.
+
+The release-governance rollout follows the same explicit distribution path.
+The standard `governance.yml` wrapper is synced to consumers that use the
+shared PR gate; `gh-makami` and `suzukuri` are explicitly mapped to that
+wrapper so their stale pinned PR-governance SHA is replaced by `@main`.
+Mottainai is mapped to the canonical release-only wrapper while its ordinary
+governance workflow remains repository-specific. Nawabari receives the
+routing helper alongside its synced validator so the copied adapter has no
+unresolved local dependency. After this change reaches `.github` `main`, the
+`sync-org-templates` workflow must run (automatically for the listed paths or
+manually via `workflow_dispatch`); its direct, batched consumer commits are
+the rollout completion evidence. A consumer snapshot is not considered
+aligned merely because the canonical source changed.
