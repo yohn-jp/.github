@@ -67,6 +67,18 @@ export function classifyBranchName(branch, options = {}) {
       ]
     };
   }
+
+  // release/<semver> is a canonical branch class independent from the
+  // consumer-configured ordinary branch-name-pattern. It must be classified
+  // before that pattern is length-checked or compiled, so a malformed or
+  // overlong ordinary pattern can never reject a valid release branch, and a
+  // broad/exempting ordinary pattern can never authorize a malformed one.
+  // This fail-closed precedence is intentional: release/* is not
+  // overridable via branch-name-exempt or branch-name-pattern.
+  if (branch.startsWith("release/")) {
+    return classifyReleaseBranch(branch);
+  }
+
   if (pattern.length > MAX_PATTERN_LENGTH) {
     return {
       kind: "ordinary",
@@ -89,10 +101,6 @@ export function classifyBranchName(branch, options = {}) {
         `configured branch-name-pattern is not a valid regular expression: ${cause.message}`
       ]
     };
-  }
-
-  if (branch.startsWith("release/")) {
-    return classifyReleaseBranch(branch);
   }
 
   if (exempt.includes(branch)) {

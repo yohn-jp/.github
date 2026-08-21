@@ -93,3 +93,44 @@ test("an invalid configured pattern fails closed with a clear diagnostic", () =>
   assert.equal(errors.length, 1);
   assert.match(errors[0], /is not a valid regular expression/);
 });
+
+test("a valid release branch passes even with a malformed configured ordinary pattern", () => {
+  assert.deepEqual(
+    validateBranchName("release/0.5.1", { pattern: "[invalid" }),
+    []
+  );
+  assert.equal(
+    classifyBranchName("release/0.5.1", { pattern: "[invalid" }).kind,
+    "release"
+  );
+});
+
+test("a valid release branch passes even with an overlong configured ordinary pattern", () => {
+  assert.deepEqual(
+    validateBranchName("release/0.5.1", {
+      pattern: `^(${"a|".repeat(150)}z)$`
+    }),
+    []
+  );
+});
+
+test("a malformed release branch is rejected as invalid-release even with a broad configured ordinary pattern", () => {
+  const result = classifyBranchName("release/foo", { pattern: ".*" });
+  assert.equal(result.kind, "invalid-release");
+  assert.equal(result.valid, false);
+  assert.match(result.errors[0], /must match release\/<semver>/);
+});
+
+test("a malformed release branch is rejected as invalid-release even with a malformed configured ordinary pattern", () => {
+  const result = classifyBranchName("release/foo", { pattern: "[invalid" });
+  assert.equal(result.kind, "invalid-release");
+  assert.match(result.errors[0], /must match release\/<semver>/);
+});
+
+test("release prefix cannot be overridden by branch-name-exempt", () => {
+  const errors = validateBranchName("release/foo", {
+    exempt: ["release/foo"]
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /must match release\/<semver>/);
+});
