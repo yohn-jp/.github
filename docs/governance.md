@@ -49,8 +49,8 @@ differences, but cannot authorize a malformed release branch.
 ## `@main` is a live, mutable authority
 
 Reusable-workflow callers in this document and in synced wrappers
-(`templates/workflows/governance.yml`, `release-governance.yml`, and this
-repository's own `typescript-cli-ci.yml` guidance) intentionally reference
+(`templates/workflows/governance.yml` and this repository's own
+`typescript-cli-ci.yml` guidance) intentionally reference
 `yohn-jp/.github/.github/workflows/*.yml@main`, not a pinned commit SHA. This
 is a deliberate, organization-level trust boundary and is **not** the same
 kind of reference as the commit-SHA pinning `scripts/validate-action-pins.mjs`
@@ -142,24 +142,27 @@ validation. Ordinary `feat|fix|docs|refactor|test|chore/<issue>-<slug>` PRs
 retain their existing Issue-bound branch and default-contract governance.
 
 Mottainai keeps its repository-specific ordinary-PR quality gates and their
-linked-Issue validation. Those gates already exclude `release/*`; its synced
-`release-governance.yml` wrapper routes only release-prefixed PRs to the same
-shared release contract, without adding an Issue fetch. This composition is
-covered by `test/integration/mottainai-consumer-composition.test.mjs`, which
-evaluates the real job-level `if:` gating from a frozen copy of Mottainai's
-own `governance.yml` together with the canonical `release-governance.yml`
-against both an ordinary and a release branch — this reproduces the
-composition logic, but does not itself run on `yohn-jp/mottainai`'s Actions
-runners. After this change reaches `.github` `main` and `sync-org-templates`
-lands `release-governance.yml` on `yohn-jp/mottainai`, confirm on that
-repository directly:
+linked-Issue validation, alongside product-specific CI
+(`standards-self-check`), in a single, repository-owned
+`.github/workflows/governance.yml` — not synced from `templates/workflows/`,
+because it is not byte-identical to the generic canonical wrapper (see
+`.github/sync.yml`). That same file adds a `validate-release` job that calls
+the canonical `pr-governance.yml@main` reusable workflow directly for
+`release/*` head refs, with no Issue fetch. Mottainai therefore has exactly
+one PR-governance caller/path, not separate ordinary and release governance
+workflows (Issue #49). This composition is covered by
+`test/integration/mottainai-consumer-composition.test.mjs`, which evaluates
+the real job-level `if:` gating from a frozen copy of Mottainai's own
+`governance.yml` against both an ordinary and a release branch — this
+reproduces the composition logic, but does not itself run on
+`yohn-jp/mottainai`'s Actions runners. Confirm on that repository directly
+after this change lands there:
 
-- open a throwaway `feat/<issue>-x` PR: existing `governance.yml` jobs run
-  (including the linked-Issue fetch), and `release-governance.yml`'s
-  `validate-release` job shows as skipped, not merely absent;
-- open a throwaway `release/<semver>` PR: `governance.yml`'s
-  `standards-self-check` and `validate-pr` jobs show as skipped,
-  `release-governance.yml`'s `validate-release` job runs and resolves the
+- open a throwaway `feat/<issue>-x` PR: `standards-self-check` and
+  `validate-pr` run (including the linked-Issue fetch), and `validate-release`
+  shows as skipped, not merely absent;
+- open a throwaway `release/<semver>` PR: `standards-self-check` and
+  `validate-pr` show as skipped, `validate-release` runs and resolves the
   `release` contract, and no step in that run fetches or validates a linked
   Issue.
 

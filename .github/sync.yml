@@ -296,8 +296,9 @@ yohn-jp/mottainai:
     dest: .github/inari/pull-requests/release.json
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
-  # Preserve Mottainai's repository-specific ordinary-PR quality gates while
-  # adding a canonical release-only path. Its existing governance workflow
-  # already excludes release/* before the linked-Issue fetch step.
-  - source: templates/workflows/release-governance.yml
-    dest: .github/workflows/release-governance.yml
+  # Mottainai's .github/workflows/governance.yml is repository-owned (it
+  # carries product-specific standards-self-check/semantic-dogfood jobs
+  # alongside a validate-release job that calls the canonical
+  # pr-governance.yml@main for release/* — see Issue #49). It is not synced
+  # from templates/workflows/ like the other consumers' governance.yml,
+  # because it is not byte-identical to the generic canonical wrapper.
