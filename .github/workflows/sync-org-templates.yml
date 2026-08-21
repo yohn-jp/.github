@@ -23,6 +23,8 @@ on:
       - "scripts/validate-action-pins.mjs"
       - "scripts/generate-inari-manifest.mjs"
       - "scripts/validate-pr.mjs"
+      - "scripts/pr-contract-routing.mjs"
+      - "scripts/release-branch.mjs"
       - "scripts/validate-issue.mjs"
   workflow_dispatch: {}
 

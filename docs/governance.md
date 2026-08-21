@@ -40,10 +40,44 @@ does not control.
 explicitly Issue/PR *content* governance — it does not validate branch
 names. Owning this here does not create a competing authority over
 anything gh-inari already owns; it fills a gap next to it. The default
-pattern (`^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$`)
-generalizes the convention `gh-inari`'s own repository already enforces on
-itself, configurable via the `branch-name-pattern` and `branch-name-exempt`
-inputs for repositories with real naming differences.
+pattern (`^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$`) remains
+Issue-bound. The separate `release/<semver>` class is accepted without an
+Issue; malformed `release/*` names fail closed. `branch-name-pattern` and
+`branch-name-exempt` remain available for ordinary consumer-specific naming
+differences, but cannot authorize a malformed release branch.
+
+## `@main` is a live, mutable authority
+
+Reusable-workflow callers in this document and in synced wrappers
+(`templates/workflows/governance.yml`, `release-governance.yml`, and this
+repository's own `typescript-cli-ci.yml` guidance) intentionally reference
+`yohn-jp/.github/.github/workflows/*.yml@main`, not a pinned commit SHA. This
+is a deliberate, organization-level trust boundary and is **not** the same
+kind of reference as the commit-SHA pinning `scripts/validate-action-pins.mjs`
+enforces for third-party Actions/workflows:
+
+- Third-party SHA pinning exists to bound supply-chain risk from code this
+  organization does not control; a moving ref there is a governance
+  violation.
+- `yohn-jp/.github@main` is code this organization owns and operates. Callers
+  intentionally track it live so that a fix or contract change (for example,
+  this release-branch precedence fix) reaches every consumer's next PR run
+  without a second, per-consumer bump. `scripts/validate-action-pins.mjs`
+  requires this specific reference to stay unpinned for exactly that reason.
+
+**This means the reusable-workflow *engine* a consumer's PR run actually
+executes can be newer than what any point-in-time reading of this repository
+shows, and does not move in lockstep with that consumer's synced
+`.github/inari/**` snapshot.** The snapshot (Issue Form / PR template
+content, `manifest.json` digests) only changes when `.github/sync.yml`'s
+rollout runs and commits to the consumer; the `@main` reusable-workflow
+*logic* changes the moment this repository's `main` moves, independent of
+that sync. A consumer can therefore be running last week's content snapshot
+against today's workflow logic. This divergence is expected and is not
+silently hidden: it is the direct, accepted consequence of choosing `@main`
+live authority over pinning, and consumers relying on exact reproducibility
+of governance *behavior* (not just content) should treat `.github`'s commit
+history, not their own snapshot commit, as the source of truth for what ran.
 
 ## Consuming these workflows
 
@@ -85,7 +119,53 @@ pin a specific template rather than rely on gh-inari's deterministic
 auto-detection (required for repositories using gh-inari's multi-template
 PR policy). See the `on: workflow_call: inputs:` block in each workflow
 file for the full, current input list — this document intentionally does
-not duplicate it, to avoid the two drifting out of sync.
+not duplicate it, to avoid the two drifting out of sync. For PRs, branch
+classification takes precedence: a `release/<semver>` head ref explicitly
+selects the `release` contract, so it does not depend on generic
+multi-template matching.
+
+## Release PR path
+
+Release preparation is operational packaging of already-reviewed changes and
+does not require a synthetic Issue:
+
+```text
+release/<semver> -> release PR contract -> merge
+  -> immutable v<semver> GitHub Release -> publish workflow
+```
+
+For a release head branch, the shared adapter deterministically selects the
+canonical `release` contract before validating the body. `Tracking` remains
+optional and is informational; it is never an authorization prerequisite. The
+release path contains no linked-Issue fetch or linked-Issue contract
+validation. Ordinary `feat|fix|docs|refactor|test|chore/<issue>-<slug>` PRs
+retain their existing Issue-bound branch and default-contract governance.
+
+Mottainai keeps its repository-specific ordinary-PR quality gates and their
+linked-Issue validation. Those gates already exclude `release/*`; its synced
+`release-governance.yml` wrapper routes only release-prefixed PRs to the same
+shared release contract, without adding an Issue fetch. This composition is
+covered by `test/integration/mottainai-consumer-composition.test.mjs`, which
+evaluates the real job-level `if:` gating from a frozen copy of Mottainai's
+own `governance.yml` together with the canonical `release-governance.yml`
+against both an ordinary and a release branch — this reproduces the
+composition logic, but does not itself run on `yohn-jp/mottainai`'s Actions
+runners. After this change reaches `.github` `main` and `sync-org-templates`
+lands `release-governance.yml` on `yohn-jp/mottainai`, confirm on that
+repository directly:
+
+- open a throwaway `feat/<issue>-x` PR: existing `governance.yml` jobs run
+  (including the linked-Issue fetch), and `release-governance.yml`'s
+  `validate-release` job shows as skipped, not merely absent;
+- open a throwaway `release/<semver>` PR: `governance.yml`'s
+  `standards-self-check` and `validate-pr` jobs show as skipped,
+  `release-governance.yml`'s `validate-release` job runs and resolves the
+  `release` contract, and no step in that run fetches or validates a linked
+  Issue.
+
+The publish workflows are outside this routing change. They continue to verify
+the immutable release tag, resolved commit, package version, and exact packed
+tarball before publish.
 
 ## Why PRs and Issues are enforced differently
 
