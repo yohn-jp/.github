@@ -3,24 +3,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 
-// These fixtures are a real, frozen copy of yohn-jp/mottainai's own
-// `.github/workflows/governance.yml` plus this PR's canonical
-// `templates/workflows/release-governance.yml`. Mottainai cannot be driven as
-// a live GitHub Actions consumer from inside this PR's CI, so this
-// reconstructs the actual job-level `if` gating both workflows apply and
-// evaluates it against the two PR shapes the release-governance rollout must
-// distinguish. It is not a substitute for a real consumer smoke run — see
-// docs/governance.md and the PR description for what merge-then-sync must
-// still confirm on yohn-jp/mottainai itself.
+// This fixture is a frozen copy of yohn-jp/mottainai's single, canonical
+// `.github/workflows/governance.yml` (Issue #49: one PR-governance caller,
+// not separate ordinary and release governance workflows). Mottainai cannot
+// be driven as a live GitHub Actions consumer from inside this PR's CI, so
+// this reconstructs the actual job-level `if` gating and evaluates it
+// against the two PR shapes governance must distinguish. It is not a
+// substitute for a real consumer smoke run — see docs/governance.md and the
+// PR description for what merge-then-sync must still confirm on
+// yohn-jp/mottainai itself.
 
 const governanceWorkflow = yaml.load(
   readFileSync("test/fixtures/mottainai-consumer/governance.yml", "utf8")
-);
-const releaseGovernanceWorkflow = yaml.load(
-  readFileSync(
-    "test/fixtures/mottainai-consumer/release-governance.yml",
-    "utf8"
-  )
 );
 
 /**
@@ -65,7 +59,7 @@ function jobIf(workflow, jobName) {
   return workflow.jobs[jobName].if;
 }
 
-test("mottainai fixture: ordinary feat/123-x runs existing governance and skips the release-only path", () => {
+test("mottainai fixture: ordinary feat/123-x runs existing governance and skips the release-only job", () => {
   const context = contextFor("feat/123-x");
 
   assert.equal(
@@ -79,13 +73,13 @@ test("mottainai fixture: ordinary feat/123-x runs existing governance and skips 
     "existing ordinary governance (validate-pr, including linked-Issue fetch) must run"
   );
   assert.equal(
-    evaluateIf(jobIf(releaseGovernanceWorkflow, "validate-release"), context),
+    evaluateIf(jobIf(governanceWorkflow, "validate-release"), context),
     false,
-    "release-only path must not run for an ordinary branch"
+    "release-only job must not run for an ordinary branch"
   );
 });
 
-test("mottainai fixture: release/0.2.1 skips ordinary linked-Issue governance and runs release-governance only", () => {
+test("mottainai fixture: release/0.2.1 skips ordinary linked-Issue governance and runs validate-release only", () => {
   const context = contextFor("release/0.2.1");
 
   assert.equal(
@@ -99,9 +93,9 @@ test("mottainai fixture: release/0.2.1 skips ordinary linked-Issue governance an
     "ordinary linked-Issue governance (validate-pr) must be skipped for a release branch"
   );
   assert.equal(
-    evaluateIf(jobIf(releaseGovernanceWorkflow, "validate-release"), context),
+    evaluateIf(jobIf(governanceWorkflow, "validate-release"), context),
     true,
-    "release-governance must run for a release branch"
+    "validate-release must run for a release branch"
   );
 });
 
@@ -112,8 +106,15 @@ test("mottainai fixture: ordinary governance.yml contains the linked-Issue fetch
   assert.match(fetchStep.run, /gh issue view/);
 });
 
-test("mottainai fixture: release-governance.yml selects the canonical release contract via the shared reusable workflow, with no local Issue fetch", () => {
-  const job = releaseGovernanceWorkflow.jobs["validate-release"];
+test("mottainai fixture: validate-release selects the canonical release contract via the shared reusable workflow, with no local Issue fetch", () => {
+  const job = governanceWorkflow.jobs["validate-release"];
   assert.equal(job.uses, "yohn-jp/.github/.github/workflows/pr-governance.yml@main");
   assert.equal(JSON.stringify(job).includes("gh issue view"), false);
+});
+
+test("mottainai fixture: single workflow file owns both ordinary and release governance", () => {
+  assert.deepEqual(
+    Object.keys(governanceWorkflow.jobs).sort(),
+    ["standards-self-check", "validate-pr", "validate-release"].sort()
+  );
 });
