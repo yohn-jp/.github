@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "prettier": {
+    "endOfLine": "lf",
+    "printWidth": 120,
+    "semi": true,
+    "singleQuote": false,
+    "tabWidth": 2,
+    "trailingComma": "all",
+    "useTabs": false
+  },
+  "files": [
+    "scripts/pr-contract-routing.mjs",
+    "scripts/release-branch.mjs",
+    "scripts/validate-issue.mjs",
+    "scripts/validate-pr.mjs"
+  ],
+  "profiles": {
+    "nawabari": {
+      "prettier": {
+        "endOfLine": "lf",
+        "printWidth": 120,
+        "semi": true,
+        "singleQuote": false,
+        "tabWidth": 2,
+        "trailingComma": "all",
+        "useTabs": false
+      }
+    }
+  },
+  "consumers": {
+    "yohn-jp/nawabari": "nawabari"
+  }
+}

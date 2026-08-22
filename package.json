@@ -12,10 +12,11 @@
     "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
     "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
+    "validate:sync-script-format": "node scripts/validate-synced-script-format.mjs",
     "validate:inari-format": "node scripts/validate-inari-format.mjs",
     "validate:inari-manifest": "node scripts/generate-inari-manifest.mjs --check",
     "test:governance:integration": "node --test test/integration/*.test.mjs",
-    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:inari-format && npm run validate:inari-manifest"
+    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:sync-script-format && npm run validate:inari-format && npm run validate:inari-manifest"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
