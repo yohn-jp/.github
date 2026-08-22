@@ -79,6 +79,9 @@ jobs:
       - name: Validate provider tooling cross-repository resolution
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-provider-tooling-resolution.mjs"
 
+      - name: Validate synchronized governance script formatting
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-synced-script-format.mjs"
+
       - name: Validate Inari JSON formatting
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-inari-format.mjs"
 
