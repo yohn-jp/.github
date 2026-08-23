@@ -51,17 +51,27 @@ See [`docs/npm-publish.md`](docs/npm-publish.md) for
 packed-tarball smoke testing across a Node-version matrix, and idempotent
 publishing via npm Trusted Publishing (OIDC) — no long-lived npm token.
 
-## Public issue dashboard
+## Developer portal and public work dashboard
 
-The read-only cross-repository dashboard is defined in `dashboard/`. Its
-source list is [`dashboard/repositories.json`](dashboard/repositories.json),
-and `pnpm run dashboard:build` generates the disposable `site/` Pages artifact.
+`portal/` defines the static landing page for `https://dev.yohn.jp/`, including
+the product responsibility map and concise product boundaries. The read-only
+cross-repository dashboard remains defined in `dashboard/`, with source
+repositories configured in
+[`dashboard/repositories.json`](dashboard/repositories.json).
+
+`pnpm run dashboard:build` generates the disposable `site/` Pages artifact:
+portal assets at the root, the issue dashboard under `site/work/`, and generated
+issue data under `site/work/data/`. `portal/CNAME` is copied to the artifact
+root so the intended `dev.yohn.jp` custom domain remains explicit in repository
+source and published output. Repository Pages settings and DNS remain external
+configuration.
 
 [`dashboard-pages.yml`](.github/workflows/dashboard-pages.yml) builds and
-deploys the artifact on changes to the dashboard, on a schedule, or by manual
-dispatch. The build uses the Actions token for GitHub's public REST API; the
-browser receives only the generated JSON. Partial and failed source requests
-remain visible in the dashboard status banner and repository summary.
+deploys the portal on relevant changes, on a schedule, or by manual dispatch.
+The build uses the Actions token only while collecting public GitHub REST data;
+browser assets receive no GitHub credential. Partial and failed source requests
+remain visible in the work dashboard rather than being presented as complete.
 
-Enable GitHub Pages with **GitHub Actions** as the source once in repository
-settings. The workflow owns subsequent builds and deployments.
+Configure GitHub Pages with **GitHub Actions** as the source and set the
+repository custom domain to `dev.yohn.jp`. DNS should point that subdomain at
+the GitHub Pages host for the organization.
