@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Developer portal for yohn-jp products, architecture, and public work"
+    />
+    <link rel="canonical" href="https://dev.yohn.jp/" />
+    <title>yohn-jp · Developer portal</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="shell nav" aria-label="Primary navigation">
+        <a class="brand" href="./" aria-label="yohn-jp developer portal home">
+          <span class="brand-mark">Y</span>
+          <span>yohn-jp <small>developer portal</small></span>
+        </a>
+        <div class="nav-links">
+          <a href="#architecture">Architecture</a>
+          <a href="#products">Products</a>
+          <a href="./work/">Open work</a>
+          <a href="https://github.com/yohn-jp" rel="noreferrer">GitHub</a>
+        </div>
+      </nav>
+
+      <div class="shell hero-copy">
+        <p class="eyebrow">dev.yohn.jp</p>
+        <h1>Governed tools for AI-assisted software development.</h1>
+        <p class="lede">
+          yohn-jp separates orchestration, Git isolation, GitHub governance,
+          bounded context, and code semantics into explicit product boundaries.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="./work/">Explore open work</a>
+          <a class="button secondary" href="#architecture">See architecture</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="architecture" class="shell section" aria-labelledby="architecture-heading">
+        <div class="section-heading">
+          <p class="eyebrow">Responsibility map</p>
+          <h2 id="architecture-heading">One system, explicit ownership boundaries</h2>
+          <p>
+            Integration seams show where products cooperate. They do not move
+            source-of-truth ownership between products.
+          </p>
+        </div>
+
+        <div class="diagram-frame">
+          <svg
+            class="architecture-diagram"
+            viewBox="0 0 1200 560"
+            role="img"
+            aria-labelledby="architecture-title architecture-description"
+          >
+            <title id="architecture-title">yohn-jp product responsibility map</title>
+            <desc id="architecture-description">
+              Mottainai coordinates agent work. Inari owns GitHub governance,
+              Nawabari owns Git session isolation, Suzukuri owns bounded semantic
+              views, and Wabachi owns code-semantic analysis.
+            </desc>
+
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" class="diagram-arrow" />
+              </marker>
+            </defs>
+
+            <rect x="420" y="28" width="360" height="118" rx="24" class="diagram-node primary-node" />
+            <text x="600" y="70" text-anchor="middle" class="diagram-kicker">ORCHESTRATION</text>
+            <text x="600" y="106" text-anchor="middle" class="diagram-title">Mottainai</text>
+            <text x="600" y="132" text-anchor="middle" class="diagram-copy">bounded agent work · workflow state</text>
+
+            <rect x="55" y="246" width="300" height="132" rx="22" class="diagram-node" />
+            <text x="205" y="286" text-anchor="middle" class="diagram-kicker">GITHUB GOVERNANCE</text>
+            <text x="205" y="322" text-anchor="middle" class="diagram-title">Inari</text>
+            <text x="205" y="350" text-anchor="middle" class="diagram-copy">Issue / PR contracts · metadata</text>
+
+            <rect x="450" y="246" width="300" height="132" rx="22" class="diagram-node" />
+            <text x="600" y="286" text-anchor="middle" class="diagram-kicker">GIT RUNTIME</text>
+            <text x="600" y="322" text-anchor="middle" class="diagram-title">Nawabari</text>
+            <text x="600" y="350" text-anchor="middle" class="diagram-copy">sessions · worktrees · claims</text>
+
+            <rect x="845" y="246" width="300" height="132" rx="22" class="diagram-node" />
+            <text x="995" y="286" text-anchor="middle" class="diagram-kicker">SEMANTIC VIEWS</text>
+            <text x="995" y="322" text-anchor="middle" class="diagram-title">Suzukuri</text>
+            <text x="995" y="350" text-anchor="middle" class="diagram-copy">bounded context for agents</text>
+
+            <rect x="845" y="438" width="300" height="96" rx="22" class="diagram-node secondary-node" />
+            <text x="995" y="474" text-anchor="middle" class="diagram-kicker">CODE SEMANTICS</text>
+            <text x="995" y="508" text-anchor="middle" class="diagram-title">Wabachi</text>
+
+            <path d="M 510 146 C 430 188, 340 204, 260 246" class="diagram-edge" marker-end="url(#arrow)" />
+            <text x="382" y="196" text-anchor="middle" class="diagram-label">GitHub contract</text>
+
+            <path d="M 600 146 L 600 246" class="diagram-edge" marker-end="url(#arrow)" />
+            <text x="635" y="202" class="diagram-label">Git session</text>
+
+            <path d="M 690 146 C 770 188, 860 204, 940 246" class="diagram-edge" marker-end="url(#arrow)" />
+            <text x="818" y="196" text-anchor="middle" class="diagram-label">bounded context</text>
+
+            <path d="M 995 438 L 995 378" class="diagram-edge subtle-edge" marker-end="url(#arrow)" />
+            <text x="1024" y="414" class="diagram-label">analysis</text>
+          </svg>
+        </div>
+      </section>
+
+      <section id="products" class="shell section" aria-labelledby="products-heading">
+        <div class="section-heading">
+          <p class="eyebrow">Products</p>
+          <h2 id="products-heading">Focused tools, narrow contracts</h2>
+          <p>
+            Each product owns one layer. Repository documentation remains the
+            detailed authority for installation, APIs, and operational contracts.
+          </p>
+        </div>
+
+        <div class="product-grid">
+          <article class="product-card">
+            <span class="product-role">Orchestration</span>
+            <h3>Mottainai</h3>
+            <p>
+              Coordinates bounded coding-agent work and workflow state. Does not
+              own low-level Git isolation or GitHub metadata rules.
+            </p>
+            <a href="https://github.com/yohn-jp/mottainai" rel="noreferrer">Repository</a>
+          </article>
+
+          <article class="product-card">
+            <span class="product-role">Git runtime</span>
+            <h3>Nawabari</h3>
+            <p>
+              Owns worktrees, branches, resource claims, session isolation, and
+              integration safety for concurrent work.
+            </p>
+            <a href="https://github.com/yohn-jp/nawabari" rel="noreferrer">Repository</a>
+          </article>
+
+          <article class="product-card">
+            <span class="product-role">GitHub governance</span>
+            <h3>Inari</h3>
+            <p>
+              Owns canonical Issue and PR templates, structured metadata,
+              validation, and deterministic GitHub-side governance.
+            </p>
+            <a href="https://github.com/yohn-jp/gh-inari" rel="noreferrer">Repository</a>
+          </article>
+
+          <article class="product-card">
+            <span class="product-role">Semantic views</span>
+            <h3>Suzukuri</h3>
+            <p>
+              Turns source, issues, pull requests, and review material into
+              bounded semantic views for agents and humans.
+            </p>
+            <a href="https://github.com/yohn-jp/suzukuri" rel="noreferrer">Repository</a>
+          </article>
+
+          <article class="product-card">
+            <span class="product-role">Code semantics</span>
+            <h3>Wabachi</h3>
+            <p>
+              Analyzes code structure and semantic relationships without owning
+              workflow state, Git isolation, or GitHub governance.
+            </p>
+            <a href="https://github.com/yohn-jp/wabachi" rel="noreferrer">Repository</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="shell work-callout" aria-labelledby="work-heading">
+        <div>
+          <p class="eyebrow">Live public work</p>
+          <h2 id="work-heading">See what is open across yohn-jp</h2>
+          <p>
+            Dashboard is a read-only projection of public GitHub Issues. GitHub
+            remains source of truth.
+          </p>
+        </div>
+        <a class="button primary" href="./work/">Open work dashboard</a>
+      </section>
+    </main>
+
+    <footer class="shell footer">
+      <span>dev.yohn.jp · yohn-jp developer portal</span>
+      <a href="https://github.com/yohn-jp/.github" rel="noreferrer">Portal source</a>
+    </footer>
+  </body>
+</html>

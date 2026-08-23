@@ -1,9 +1,10 @@
-name: Issue dashboard Pages
+name: Developer portal Pages
 
 on:
   push:
     branches: [main]
     paths:
+      - "portal/**"
       - "dashboard/**"
       - "scripts/build-dashboard.mjs"
       - "scripts/dashboard-data.mjs"
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build dashboard
+    name: Build portal
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -36,7 +37,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Generate dashboard data and site
+      - name: Generate portal and dashboard data
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/build-dashboard.mjs
@@ -50,7 +51,7 @@ jobs:
           path: site
 
   deploy:
-    name: Deploy dashboard
+    name: Deploy portal
     needs: build
     runs-on: ubuntu-latest
     permissions:

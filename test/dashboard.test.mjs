@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { buildDashboard } from "../scripts/build-dashboard.mjs";
 import {
   collectDashboardData,
   normalizeIssue,
@@ -139,9 +142,95 @@ test("marks rate-limited repositories partial and excludes pull requests", async
 });
 
 test("browser assets contain no GitHub API credential path", async () => {
-  const app = await readFile("dashboard/app.js", "utf8");
-  assert.doesNotMatch(
-    app,
-    /api\.github\.com|Authorization|GITHUB_TOKEN|GH_TOKEN/
+  for (const path of ["portal/index.html", "portal/styles.css", "dashboard/app.js"]) {
+    const asset = await readFile(path, "utf8");
+    assert.doesNotMatch(
+      asset,
+      /api\.github\.com|Authorization|GITHUB_TOKEN|GH_TOKEN/
+    );
+  }
+});
+
+test("build publishes portal root, CNAME, and dashboard under work", async () => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), "yohn-jp-portal-"));
+  const outputDirectory = join(temporaryDirectory, "site");
+  const configPath = join(temporaryDirectory, "repositories.json");
+  await writeFile(
+    configPath,
+    JSON.stringify({ organization: "yohn-jp", repositories: ["example"] })
   );
+
+  const fetchImpl = async (url, options) => {
+    assert.equal(options.headers.Authorization, "Bearer build-token");
+    if (url.endsWith("/repos/yohn-jp/example")) {
+      return response({
+        id: 1,
+        name: "example",
+        full_name: "yohn-jp/example",
+        html_url: "https://github.com/yohn-jp/example",
+        visibility: "public"
+      });
+    }
+    if (url.includes("/repos/yohn-jp/example/issues")) {
+      return response([
+        {
+          id: 11,
+          number: 1,
+          title: "Portal issue",
+          html_url: "https://github.com/yohn-jp/example/issues/1",
+          state: "open",
+          labels: [],
+          assignees: [],
+          updated_at: "2026-08-23T00:00:00Z"
+        }
+      ]);
+    }
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  try {
+    await buildDashboard({
+      outputDirectory,
+      configPath,
+      fetchImpl,
+      token: "build-token",
+      now: () => new Date("2026-08-23T03:00:00Z")
+    });
+
+    const rootIndex = await readFile(join(outputDirectory, "index.html"), "utf8");
+    const cname = await readFile(join(outputDirectory, "CNAME"), "utf8");
+    const workIndex = await readFile(
+      join(outputDirectory, "work", "index.html"),
+      "utf8"
+    );
+    const workApp = await readFile(
+      join(outputDirectory, "work", "app.js"),
+      "utf8"
+    );
+    const data = JSON.parse(
+      await readFile(
+        join(outputDirectory, "work", "data", "dashboard.json"),
+        "utf8"
+      )
+    );
+
+    assert.equal(cname.trim(), "dev.yohn.jp");
+    assert.match(rootIndex, /https:\/\/dev\.yohn\.jp\//);
+    assert.match(rootIndex, /href="\.\/work\/"/);
+    for (const product of [
+      "Mottainai",
+      "Nawabari",
+      "Inari",
+      "Suzukuri",
+      "Wabachi"
+    ]) {
+      assert.match(rootIndex, new RegExp(product));
+    }
+    assert.match(workIndex, /href="\.\.\/"/);
+    assert.match(workApp, /fetch\("\.\/data\/dashboard\.json"/);
+    assert.equal(data.metrics.issueCount, 1);
+    assert.equal(data.issues[0].title, "Portal issue");
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 });
