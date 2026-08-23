@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "products": [
+    {
+      "id": "mottainai",
+      "why": "Coding agents often inherit orchestration through prompts, shell fragments, ad-hoc polling, and unbounded tool output. Mottainai turns that ambient behavior into an explicit runtime: one place to coordinate bounded work, preserve evidence, and route operations to the authority that actually owns them.",
+      "core": [
+        {
+          "title": "Managed agent sessions",
+          "body": "Task start/run and Manager surfaces coordinate durable coding-agent work, including concurrent sessions, bounded scope preview, needs-attention state, and controlled terminal interaction. Zellij can provide terminal transport, but Mottainai owns orchestration state rather than terminal persistence itself."
+        },
+        {
+          "title": "Governed repository execution",
+          "body": "Task meaning and workflow policy stay in Mottainai. Physical worktree, branch, session, resource-claim, commit, push, and cleanup authority stays behind Nawabari. Governed Issue and pull-request mutation stays behind Inari. Missing companion authority fails closed instead of becoming an implicit direct fallback."
+        },
+        {
+          "title": "Bounded context runtime",
+          "body": "Raw tool and process results can be retained as full local evidence while models receive deterministic summaries, facts, diagnostics, metrics, and retrieval references under byte/token budgets. Producer or parse failures are represented as failures, not as genuine empty results."
+        },
+        {
+          "title": "MCP gateway and managed processes",
+          "body": "Mottainai exposes a standard MCP stdio boundary, can aggregate upstream MCP tools, and provides finite managed-process handles so waiting and result retention do not require repeated model polling turns."
+        }
+      ],
+      "maturity": "Mottainai is pre-1.0 and in active dogfood. Its authority split is deliberate, while Manager, local Runtime, companion contracts, and operational ergonomics continue to harden across minor releases."
+    },
+    {
+      "id": "nawabari",
+      "why": "Parallel coding agents need a physical repository ownership model that does not depend on GitHub, an orchestrator, or prompt discipline. Nawabari makes local session identity, worktree ownership, mutable branches, claims, and destructive cleanup explicit and machine-verifiable.",
+      "core": [
+        {
+          "title": "Standalone machine contract",
+          "body": "Nawabari exposes versioned capability and JSON result contracts that work without GitHub, Mottainai, an LLM, or network access. Session identities, failure codes, result schemas, and recovery actions are machine-facing integration surfaces rather than conventions hidden in human output."
+        },
+        {
+          "title": "Session and resource ownership",
+          "body": "Each active session owns one dedicated worktree and mutable branch. Versioned read, write, and exclusive-write resource claims describe caller-declared access authority, with conflict semantics, generation/CAS checks, atomic replacement, transitions, and explicit release operations."
+        },
+        {
+          "title": "Evidence and Git mutation",
+          "body": "Session-addressed checkpoints, repository snapshots, bounded diffs, commit, and push operations revalidate repository/worktree/branch identity and expose exact evidence. Nawabari does not attach Issue meaning or orchestration semantics to those physical observations."
+        },
+        {
+          "title": "Conservative reconciliation and cleanup",
+          "body": "Close, doctor, and garbage collection prefer retaining recoverable state over guessing that work is disposable or integrated. Explicit discard is the sole destructive abandonment path and revalidates ownership immediately before physical Git mutation."
+        },
+        {
+          "title": "Optional protected execution",
+          "body": "On supported Linux hosts, protected session execution can place the owned worktree inside a bubblewrap-based filesystem/process boundary. Capability detection is explicit and fail-closed; unsupported protection never silently falls back while claiming isolation."
+        }
+      ],
+      "maturity": "Nawabari is an active standalone runtime with a broad machine contract. Its default boundary is ownership/authorization rather than a universal OS sandbox; protected execution is an explicit additional Linux capability."
+    },
+    {
+      "id": "inari",
+      "why": "Repository governance becomes unreliable when agents repeatedly reconstruct Markdown templates and policy rules from prose. Inari compiles repository-native Issue Forms and pull-request templates into typed semantic contracts so structured intent can be validated before any GitHub mutation occurs.",
+      "core": [
+        {
+          "title": "Native templates as governance input",
+          "body": "Inari discovers supported repository-native Issue and pull-request templates, compiles their structure plus small policy overlays where native Markdown lacks semantics, and exposes deterministic machine-readable schemas. It does not require a proprietary replacement issue body format."
+        },
+        {
+          "title": "Validate, render, then mutate",
+          "body": "Create paths validate semantic JSON, render canonical Markdown, parse and revalidate the exact rendered artifact, then pass an opaque validated-rendered capability into the GitHub mutation adapter. Invalid, stale, ambiguous, or round-trip-inconsistent state fails before mutation."
+        },
+        {
+          "title": "Existing-artifact governance",
+          "body": "Canonical get/check/explain/edit/normalize/sync surfaces reconstruct supported semantic values from existing Issues and pull requests. Unsupported or ambiguous artifacts stay unavailable rather than being guessed into a convenient shape."
+        },
+        {
+          "title": "Strict superset of gh",
+          "body": "The `inari` executable governs only the Issue/PR/template surfaces it owns. Other commands pass through to the real GitHub CLI with original argv and exit status, so callers do not need a second ad-hoc routing table."
+        }
+      ],
+      "maturity": "Inari is an active governance CLI and library boundary. Its contract is intentionally narrow: it governs repository-defined Issue/PR artifacts and mutations, not generic GitHub search, review summarization, or physical Git state."
+    },
+    {
+      "id": "suzukuri",
+      "why": "Raw source and tool output are often too large for a consumer context, but naive truncation destroys meaning and hides what was lost. Suzukuri makes projection explicit: the caller chooses an adapter and semantic view, and the engine must either preserve required meaning inside a hard budget or fail visibly.",
+      "core": [
+        {
+          "title": "Explicit projection core",
+          "body": "Adapters decode a declared source family, semantic contracts define what a view may claim, views choose bounded meaning, and renderers project the result. Adapter/view selection is caller-driven; parse failure never silently switches to a weaker fallback."
+        },
+        {
+          "title": "Repository-local profiles",
+          "body": "Versioned profile documents bind source expectations, adapter, view, hard UTF-8 budget, and renderer into reusable named projections. Profiles describe projection intent but do not contain source data or infer a task."
+        },
+        {
+          "title": "Provenance and loss semantics",
+          "body": "Every projection can carry component identities, source provenance, deterministic digest, completeness, and machine-readable loss metadata. Required meaning that cannot fit returns an explicit budget failure rather than a falsely complete view."
+        },
+        {
+          "title": "Finite semantic support",
+          "body": "Git diffs/status, test results, diagnostics, TypeScript source, repository profiles, and an explicitly weak generic-text adapter are separate supported families. Unsupported producers or languages fail validation instead of widening claims implicitly."
+        }
+      ],
+      "maturity": "Suzukuri is an active v0 semantic-view engine with deterministic conformance and package evidence. It is intentionally not an orchestrator, persistent semantic database, network service, or model-driven interpretation layer."
+    },
+    {
+      "id": "wabachi",
+      "why": "A repository semantic authority cannot treat whichever compiler, indexer, graph, or model emits the richest output as canonical truth. Wabachi is exploring a provenance-first authority model where immutable producer evidence is retained, comparable observations are correlated explicitly, ambiguity remains visible, and only a later admission boundary can create durable canonical declarations.",
+      "core": [
+        {
+          "title": "Immutable provider evidence",
+          "body": "The current programme pins repository revisions and provider identities, executes heterogeneous deterministic producers through a common boundary, and retains provider-native output separately from normalized representations so later schema work does not require destructive re-interpretation."
+        },
+        {
+          "title": "Correlation with explicit ambiguity",
+          "body": "Provider-native symbols may describe the same logical entity differently. Wabachi's planned correlation model records matched, probable, ambiguous, and unmatched outcomes with deterministic evidence instead of guessing away uncertainty to improve apparent coverage."
+        },
+        {
+          "title": "Minimal provenance-preserving facts",
+          "body": "Comparable observations can be normalized into a small versioned fact envelope while keeping producer, revision, source location, derivation authority, and references to native evidence. Normalization is evidence organization, not automatic canonical admission."
+        },
+        {
+          "title": "Semantic authority beyond provider matrices",
+          "body": "Provider coverage/overlap/disagreement matrices are evaluation tooling, not the final product model. Architecture work separates regenerable evidence and derived state from proposed claims and durable admitted declarations, with explicit freshness, mutation, identity, and completeness contracts still under design."
+        }
+      ],
+      "maturity": "Wabachi is early-stage architecture and provider-evidence work. Its public README is still placeholder-level; current authoritative intent is primarily captured in architecture/tracking Issues such as #5 and #24. The portal therefore describes the programme and boundary, not a finished CLI or stable semantic schema."
+    }
+  ]
+}
