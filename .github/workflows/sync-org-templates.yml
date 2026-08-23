@@ -1,20 +1,15 @@
 name: Sync org templates
 
 # Distributes this repository's Issue Forms, PR templates, machine-readable
-# Inari governance snapshot, and shared governance adapters
-# (.github/ISSUE_TEMPLATE/*.yml, .github/PULL_REQUEST_TEMPLATE/*.md),
-# opt-in workflow wrappers (templates/workflows/*.yml), and the opt-in
-# Action-pin governance script (scripts/validate-action-pins.mjs) to the
-# repositories listed in .github/sync.yml, pushing directly to each
-# target's default branch. See docs/github-metadata-inheritance.md — this
-# workflow is the org's only distribution path for these files; GitHub's
-# own implicit community-health file inheritance does not apply once PR
-# templates live under PULL_REQUEST_TEMPLATE/ instead of a single
-# pull_request_template.md.
+# Inari governance snapshot, shared agent instructions, and shared governance
+# adapters to the repositories listed in .github/sync.yml, pushing directly to
+# each target's default branch. See docs/github-metadata-inheritance.md.
 on:
   push:
     branches: [main]
     paths:
+      - "AGENTS.md"
+      - "CLAUDE.md"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
       - ".github/inari/**"
@@ -65,6 +60,7 @@ jobs:
             nawabari
             mottainai
             wabachi
+            open-code-review-chatgpt
 
       - name: Sync templates to org repositories
         uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
