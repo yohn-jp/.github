@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Open issue dashboard for public yohn-jp repositories"
+    />
+    <title>yohn-jp · Open work</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <div>
+          <p class="eyebrow">yohn-jp / public work</p>
+          <h1>Open work dashboard</h1>
+          <p class="lede">
+            A read-only view of open issues across configured public
+            repositories.
+          </p>
+        </div>
+        <p id="generated-at" class="generated-at">Loading snapshot…</p>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section
+        id="dataset-status"
+        class="status-banner"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></section>
+
+      <section aria-labelledby="summary-heading">
+        <div class="section-heading">
+          <p class="eyebrow">At a glance</p>
+          <h2 id="summary-heading">Open-work distribution</h2>
+        </div>
+        <div id="metrics" class="metrics" aria-live="polite"></div>
+        <div id="repository-summary" class="repository-summary"></div>
+      </section>
+
+      <section class="issue-section" aria-labelledby="issues-heading">
+        <div class="section-heading issue-heading">
+          <div>
+            <p class="eyebrow">Normalized issue list</p>
+            <h2 id="issues-heading">Open issues</h2>
+          </div>
+          <p id="issue-count" class="result-count"></p>
+        </div>
+        <div class="filters">
+          <label>
+            Repository
+            <select id="repository-filter">
+              <option value="">All repositories</option>
+            </select>
+          </label>
+          <label class="search-label">
+            Search
+            <input
+              id="issue-search"
+              type="search"
+              placeholder="Title, label, assignee…"
+              autocomplete="off"
+            />
+          </label>
+        </div>
+        <div class="table-frame">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Repository</th>
+                <th scope="col">Issue</th>
+                <th scope="col">Status / metadata</th>
+                <th scope="col">Last update</th>
+              </tr>
+            </thead>
+            <tbody id="issue-list">
+              <tr>
+                <td colspan="4" class="empty-state">Loading issues…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer shell">
+      <span>GitHub remains the source of truth.</span>
+      <a href="https://github.com/yohn-jp/.github/issues" rel="noreferrer"
+        >Open repository issues</a
+      >
+    </footer>
+  </body>
+</html>

@@ -50,3 +50,18 @@ See [`docs/npm-publish.md`](docs/npm-publish.md) for
 `.github/workflows/npm-publish.yml`: release-tag/version verification,
 packed-tarball smoke testing across a Node-version matrix, and idempotent
 publishing via npm Trusted Publishing (OIDC) — no long-lived npm token.
+
+## Public issue dashboard
+
+The read-only cross-repository dashboard is defined in `dashboard/`. Its
+source list is [`dashboard/repositories.json`](dashboard/repositories.json),
+and `pnpm run dashboard:build` generates the disposable `site/` Pages artifact.
+
+[`dashboard-pages.yml`](.github/workflows/dashboard-pages.yml) builds and
+deploys the artifact on changes to the dashboard, on a schedule, or by manual
+dispatch. The build uses the Actions token for GitHub's public REST API; the
+browser receives only the generated JSON. Partial and failed source requests
+remain visible in the dashboard status banner and repository summary.
+
+Enable GitHub Pages with **GitHub Actions** as the source once in repository
+settings. The workflow owns subsequent builds and deployments.
