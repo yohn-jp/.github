@@ -1,0 +1,64 @@
+name: Merge portal stack
+
+on:
+  push:
+    branches:
+      - ops/merge-portal-stack
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    name: Merge stacked portal PRs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge stack asynchronously
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_PR: "89"
+          TARGET_SHA: "1a8433e92df12f4788812a705a67efc05ac074ba"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response="$({ gh api \
+            --method PUT \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "/repos/${GITHUB_REPOSITORY}/pulls/${TARGET_PR}/merge-async" \
+            -f merge_method=squash \
+            -f merge_action=default \
+            -f sha="${TARGET_SHA}"; } 2>&1)"
+          printf '%s\n' "$response"
+
+          status="$(jq -r '.status // empty' <<<"$response")"
+          if [[ "$status" == "merged" ]]; then
+            exit 0
+          fi
+
+          uuid="$(jq -r '.details.uuid // empty' <<<"$response")"
+          if [[ -z "$uuid" ]]; then
+            echo "merge-async response did not include request UUID" >&2
+            exit 1
+          fi
+
+          for _ in {1..60}; do
+            sleep 5
+            result="$(gh api \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              "/repos/${GITHUB_REPOSITORY}/pulls/${TARGET_PR}/merge-async/${uuid}")"
+            printf '%s\n' "$result"
+            status="$(jq -r '.status // empty' <<<"$result")"
+            case "$status" in
+              merged)
+                exit 0
+                ;;
+              failed|error|cancelled)
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "Timed out waiting for stacked merge" >&2
+          exit 1
