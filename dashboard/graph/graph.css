@@ -1,0 +1,259 @@
+.graph-hero {
+  padding-block: 80px 55px;
+}
+
+.graph-hero h1 {
+  margin: 0;
+  font-size: clamp(3.2rem, 7vw, 6rem);
+  letter-spacing: -0.065em;
+  line-height: 0.95;
+}
+
+.graph-hero > p:last-child {
+  max-width: 760px;
+  margin: 24px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.graph-content {
+  padding-bottom: 100px;
+}
+
+.graph-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.7fr) auto 1fr;
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 60px;
+  padding-block: 18px;
+  border-block: 1px solid var(--line-strong);
+}
+
+.graph-toolbar label:not(.checkbox-control) {
+  display: grid;
+  gap: 6px;
+}
+
+.graph-toolbar label > span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.graph-toolbar select {
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding-inline: 12px;
+}
+
+.checkbox-control {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.checkbox-control input {
+  width: 17px;
+  height: 17px;
+}
+
+.graph-count {
+  align-self: center;
+  justify-self: end;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.graph-summary {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.45fr) minmax(0, 1.55fr);
+  gap: 44px;
+  margin-bottom: 60px;
+}
+
+.graph-summary h2 {
+  margin: 0;
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+}
+
+.blocker-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line-strong);
+}
+
+.blocker-list li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 13px 0;
+}
+
+.blocker-rank {
+  color: #9ca2ab;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.blocker-link {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blocker-count {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.graph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 20px;
+  align-items: start;
+}
+
+.graph-canvas-frame {
+  min-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.dependency-graph {
+  display: block;
+  min-width: 100%;
+  min-height: 420px;
+}
+
+.graph-edge {
+  fill: none;
+  stroke: #adb2bb;
+  stroke-width: 1.4;
+}
+
+.graph-edge.cross-repository {
+  stroke-dasharray: 5 4;
+}
+
+.graph-node {
+  cursor: pointer;
+}
+
+.graph-node rect {
+  fill: #fff;
+  stroke: #cfd3da;
+  stroke-width: 1;
+}
+
+.graph-node.blocked rect {
+  stroke: #c78f21;
+  stroke-width: 2;
+}
+
+.graph-node.cycle rect {
+  stroke: #b84d47;
+  stroke-dasharray: 5 3;
+}
+
+.graph-node.external rect {
+  fill: #f1f0ec;
+  stroke-dasharray: 4 3;
+}
+
+.graph-node:focus rect,
+.graph-node:hover rect {
+  stroke: #111318;
+  stroke-width: 2;
+}
+
+.graph-node-repo {
+  fill: #767c86;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.graph-node-title {
+  fill: #151820;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.graph-node-state {
+  fill: #7a8089;
+  font-size: 9px;
+}
+
+.node-detail {
+  position: sticky;
+  top: 96px;
+  min-height: 250px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 22px;
+}
+
+.node-detail h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.node-detail p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.node-detail-meta {
+  margin-block: 16px;
+  padding-block: 12px;
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.node-detail a {
+  font-weight: 800;
+}
+
+.graph-empty {
+  grid-column: 1 / -1;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: 50px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 850px) {
+  .graph-toolbar,
+  .graph-summary,
+  .graph-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-count {
+    justify-self: start;
+  }
+
+  .node-detail {
+    position: static;
+  }
+}

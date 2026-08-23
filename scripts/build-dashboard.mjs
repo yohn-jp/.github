@@ -6,22 +6,20 @@ import { fileURLToPath } from "node:url";
 import { collectDashboardData } from "./dashboard-data.mjs";
 import { loadProductCatalog } from "./product-catalog.mjs";
 import { loadProductDetails } from "./product-details.mjs";
-import {
-  renderPortalHome,
-  renderProductOverviewPage
-} from "./render-portal.mjs";
+import { renderPortalHome, renderProductOverviewPage } from "./render-portal.mjs";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
 const PORTAL_DIRECTORY = join(REPOSITORY_ROOT, "portal");
 const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
+const GRAPH_DIRECTORY = join(DASHBOARD_DIRECTORY, "graph");
 
 const PORTAL_COPY_FILES = ["styles.css", "product.css", "CNAME"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
+const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];
 
 export async function buildDashboard({
-  outputDirectory = process.env.DASHBOARD_OUTPUT ??
-    join(REPOSITORY_ROOT, "site"),
+  outputDirectory = process.env.DASHBOARD_OUTPUT ?? join(REPOSITORY_ROOT, "site"),
   configPath = join(DASHBOARD_DIRECTORY, "repositories.json"),
   catalogPath = join(PORTAL_DIRECTORY, "products.json"),
   detailsPath = join(PORTAL_DIRECTORY, "product-details.json"),
@@ -39,53 +37,43 @@ export async function buildDashboard({
     collectDashboardData({ config, fetchImpl, token, now }),
     loadProductDetails(detailsPath, productCatalog)
   ]);
-  const detailsById = new Map(
-    productDetails.products.map((detail) => [detail.id, detail])
-  );
+  const detailsById = new Map(productDetails.products.map((detail) => [detail.id, detail]));
   const portalDataDirectory = join(outputDirectory, "data");
   const productDirectory = join(outputDirectory, "products");
   const workDirectory = join(outputDirectory, "work");
   const workDataDirectory = join(workDirectory, "data");
+  const graphOutputDirectory = join(workDirectory, "graph");
   await Promise.all([
     mkdir(portalDataDirectory, { recursive: true }),
     mkdir(productDirectory, { recursive: true }),
-    mkdir(workDataDirectory, { recursive: true })
+    mkdir(workDataDirectory, { recursive: true }),
+    mkdir(graphOutputDirectory, { recursive: true })
   ]);
 
   for (const file of PORTAL_COPY_FILES) {
     await copyFile(join(PORTAL_DIRECTORY, file), join(outputDirectory, file));
   }
-  await writeFile(
-    join(outputDirectory, "index.html"),
-    renderPortalHome(portalTemplate, productCatalog)
-  );
+  await writeFile(join(outputDirectory, "index.html"), renderPortalHome(portalTemplate, productCatalog));
 
   for (const product of productCatalog.products) {
     const directory = join(productDirectory, product.id);
     await mkdir(directory, { recursive: true });
     await writeFile(
       join(directory, "index.html"),
-      renderProductOverviewPage(
-        product,
-        productCatalog,
-        detailsById.get(product.id)
-      )
+      renderProductOverviewPage(product, productCatalog, detailsById.get(product.id))
     );
   }
 
   for (const file of DASHBOARD_FILES) {
     await copyFile(join(DASHBOARD_DIRECTORY, file), join(workDirectory, file));
   }
+  for (const file of GRAPH_FILES) {
+    await copyFile(join(GRAPH_DIRECTORY, file), join(graphOutputDirectory, file));
+  }
 
   await Promise.all([
-    writeFile(
-      join(portalDataDirectory, "products.json"),
-      `${JSON.stringify(productCatalog, null, 2)}\n`
-    ),
-    writeFile(
-      join(workDataDirectory, "dashboard.json"),
-      `${JSON.stringify(data, null, 2)}\n`
-    )
+    writeFile(join(portalDataDirectory, "products.json"), `${JSON.stringify(productCatalog, null, 2)}\n`),
+    writeFile(join(workDataDirectory, "dashboard.json"), `${JSON.stringify(data, null, 2)}\n`)
   ]);
   return data;
 }
@@ -97,6 +85,6 @@ function isMain() {
 if (isMain()) {
   const data = await buildDashboard();
   console.log(
-    `Portal generated: ${data.status} (${data.metrics.issueCount} issues, ${data.metrics.failedRepositories} repository failures)`
+    `Portal generated: ${data.status} (${data.metrics.issueCount} issues, ${data.metrics.failedRepositories} repository failures, ${data.metrics.dependencyEdges ?? 0} dependency edges)`
   );
 }
