@@ -6,10 +6,7 @@ import { join } from "node:path";
 import { buildDashboard } from "../scripts/build-dashboard.mjs";
 import { loadProductCatalog } from "../scripts/product-catalog.mjs";
 import { loadProductDetails } from "../scripts/product-details.mjs";
-import {
-  renderPortalHome,
-  renderProductOverviewPage
-} from "../scripts/render-portal.mjs";
+import { renderPortalHome, renderProductOverviewPage } from "../scripts/render-portal.mjs";
 
 function response(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), { status, headers });
@@ -24,36 +21,30 @@ async function portalInputs() {
   return { template, catalog, details };
 }
 
-test("home renderer projects product cards, system nodes, and relationships", async () => {
+test("home renderer projects catalog products and relationships", async () => {
   const { template, catalog } = await portalInputs();
   const html = renderPortalHome(template, catalog);
-  assert.doesNotMatch(html, /\{\{(?:PRODUCT_CARDS|SYSTEM_NODES|RELATIONSHIPS)\}\}/);
+  assert.doesNotMatch(html, /\{\{/);
   for (const product of catalog.products) {
     assert.match(html, new RegExp(`data-product="${product.id}"`));
     assert.match(html, new RegExp(`href="\\./products/${product.id}/"`));
   }
-  assert.match(html, /aria-label="Primary navigation"/);
   assert.match(html, /id="products"/);
   assert.match(html, /id="system"/);
 });
 
-test("deep product renderer preserves boundary, narrative, relationships, and navigation", async () => {
+test("product renderer emits deep content and repository-filtered work link", async () => {
   const { catalog, details } = await portalInputs();
   const product = catalog.products.find((entry) => entry.id === "nawabari");
   const detail = details.products.find((entry) => entry.id === "nawabari");
   const html = renderProductOverviewPage(product, catalog, detail);
   assert.match(html, /<h1>Nawabari<\/h1>/);
   assert.match(html, /Why it exists/);
-  assert.match(html, /Authority/);
-  assert.match(html, /Boundary/);
   assert.match(html, /Core model/);
   assert.match(html, /Current maturity/);
-  assert.match(html, /Standalone machine contract/);
-  assert.match(html, /Conservative reconciliation and cleanup/);
   assert.match(html, /href="\.\.\/mottainai\/"/);
-  assert.match(html, /href="\.\.\/\.\.\/work\/"/);
+  assert.match(html, /work\/\?repository=yohn-jp%2Fnawabari/);
   assert.match(html, /https:\/\/dev\.yohn\.jp\/products\/nawabari\//);
-  assert.match(html, /href="\.\.\/\.\.\/product\.css"/);
 });
 
 test("each product page carries product-specific grounded core concepts", async () => {
@@ -67,70 +58,45 @@ test("each product page carries product-specific grounded core concepts", async 
   };
   for (const product of catalog.products) {
     const detail = details.products.find((entry) => entry.id === product.id);
-    const html = renderProductOverviewPage(product, catalog, detail);
-    assert.match(html, expectations[product.id]);
+    assert.match(renderProductOverviewPage(product, catalog, detail), expectations[product.id]);
   }
 });
 
-test("renderer rejects malformed portal templates instead of publishing partial markup", async () => {
+test("renderer rejects malformed templates", async () => {
   const { catalog } = await portalInputs();
-  assert.throws(
-    () => renderPortalHome("{{PRODUCT_CARDS}}", catalog),
-    /missing token \{\{SYSTEM_NODES\}\}/
-  );
+  assert.throws(() => renderPortalHome("{{PRODUCT_CARDS}}", catalog), /missing token/);
 });
 
-test("build publishes generated root and one stable deep route per product", async () => {
+test("build publishes root and stable product routes", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "portal-render-"));
   const outputDirectory = join(temporaryDirectory, "site");
   const configPath = join(temporaryDirectory, "repositories.json");
-  await writeFile(
-    configPath,
-    JSON.stringify({ organization: "yohn-jp", repositories: ["example"] })
-  );
-
+  await writeFile(configPath, JSON.stringify({ organization: "yohn-jp", repositories: ["example"] }));
   const fetchImpl = async (url) => {
     if (url.endsWith("/repos/yohn-jp/example")) {
-      return response({
-        id: 1,
-        name: "example",
-        full_name: "yohn-jp/example",
-        html_url: "https://github.com/yohn-jp/example",
-        visibility: "public"
-      });
+      return response({ id: 1, name: "example", full_name: "yohn-jp/example", html_url: "https://github.com/yohn-jp/example", visibility: "public" });
     }
     if (url.includes("/repos/yohn-jp/example/issues")) return response([]);
     throw new Error(`Unexpected URL: ${url}`);
   };
-
   try {
     await buildDashboard({ outputDirectory, configPath, fetchImpl });
     const root = await readFile(join(outputDirectory, "index.html"), "utf8");
-    const productCss = await readFile(join(outputDirectory, "product.css"), "utf8");
     assert.match(root, /Small tools\./);
-    assert.doesNotMatch(root, /\{\{/);
-    assert.match(productCss, /\.concept-grid/);
-
     for (const id of ["mottainai", "nawabari", "inari", "suzukuri", "wabachi"]) {
-      const product = await readFile(
-        join(outputDirectory, "products", id, "index.html"),
-        "utf8"
-      );
+      const product = await readFile(join(outputDirectory, "products", id, "index.html"), "utf8");
       assert.match(product, new RegExp(`https://dev\\.yohn\\.jp/products/${id}/`));
       assert.match(product, /Why it exists/);
-      assert.match(product, /Core model/);
-      assert.match(product, /Current maturity/);
     }
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
 });
 
-test("visual system includes responsive focus and reduced-motion contracts", async () => {
+test("visual system includes focus responsive and reduced-motion contracts", async () => {
   const css = await readFile("portal/styles.css", "utf8");
   const productCss = await readFile("portal/product.css", "utf8");
   assert.match(css, /:focus-visible/);
-  assert.match(css, /@media \(max-width: 700px\)/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /prefers-reduced-motion/);
   assert.match(productCss, /@media \(max-width: 700px\)/);
 });

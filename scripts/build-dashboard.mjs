@@ -17,7 +17,7 @@ const PORTAL_DIRECTORY = join(REPOSITORY_ROOT, "portal");
 const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 
 const PORTAL_COPY_FILES = ["styles.css", "product.css", "CNAME"];
-const DASHBOARD_FILES = ["index.html", "styles.css", "app.js"];
+const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 
 export async function buildDashboard({
   outputDirectory = process.env.DASHBOARD_OUTPUT ??
