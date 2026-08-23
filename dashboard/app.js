@@ -81,17 +81,22 @@ function showStatus(dashboard) {
   const unavailableLinks = dashboard.metrics.pullRequestDataUnavailable ?? 0;
   const errors = dashboard.errors ?? [];
   elements.status.hidden = false;
+  if (status === "complete") {
+    elements.status.className = "status-inline complete";
+    elements.status.replaceChildren(
+      node(
+        "p",
+        "status-detail",
+        `Snapshot complete · ${dashboard.metrics.repositoryCount} repositories loaded`
+      )
+    );
+    return;
+  }
+
   elements.status.className = `status-banner ${status}`;
-  const detail =
-    status === "complete"
-      ? `${dashboard.metrics.issueCount} open issues and ${dashboard.metrics.linkedPullRequests ?? 0} authoritative linked pull requests loaded from ${dashboard.metrics.repositoryCount} repositories.`
-      : `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded; ${unavailableLinks} issues have unavailable or partial PR linkage. Treat this view as incomplete.`;
+  const detail = `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded; ${unavailableLinks} issues have unavailable or partial PR linkage. Treat this view as incomplete.`;
   elements.status.replaceChildren(
-    node(
-      "p",
-      "status-title",
-      status === "complete" ? "Snapshot complete" : `Snapshot ${status}`
-    ),
+    node("p", "status-title", `Snapshot ${status}`),
     node("p", "status-detail", detail)
   );
   if (errors.length > 0) {
@@ -368,18 +373,24 @@ function renderIssue(issue) {
   issueMain.append(title, renderPullRequests(issue));
 
   const classification = classifyIssue(issue);
-  const stateLabel = classification.needsAttention
-    ? "Needs attention"
-    : classification.inProgress
-      ? "In progress"
-      : classification.ready
-        ? "Ready / unstarted"
-        : `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`;
+  const primaryState = classification.inProgress
+    ? { className: "progress", label: "In progress" }
+    : classification.ready
+      ? { className: "ready", label: "Ready / unstarted" }
+      : {
+          className: "state",
+          label: `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`
+        };
   const state = node(
     "span",
-    `work-state ${classification.needsAttention ? "attention" : classification.inProgress ? "progress" : classification.ready ? "ready" : "state"}`,
-    stateLabel
+    `work-state ${primaryState.className}`,
+    primaryState.label
   );
+  const stateGroup = node("div", "work-state-group");
+  stateGroup.append(state);
+  if (classification.needsAttention) {
+    stateGroup.append(node("span", "attention-signal", "Needs attention"));
+  }
 
   const metadata = node("div", "issue-meta");
   if (issue.type) metadata.append(node("span", "metadata-item", issue.type));
@@ -413,7 +424,7 @@ function renderIssue(issue) {
   issueHeader.append(identity, age);
   const issueSide = node("aside", "issue-side");
   issueSide.setAttribute("aria-label", "Issue status and metadata");
-  issueSide.append(state, metadata);
+  issueSide.append(stateGroup, metadata);
   row.append(issueMain, issueHeader, issueSide);
   return row;
 }

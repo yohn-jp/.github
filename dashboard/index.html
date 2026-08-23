@@ -29,35 +29,33 @@
       </nav>
     </header>
 
-    <main>
-      <section class="shell work-hero" aria-labelledby="work-title">
-        <div class="work-hero-copy">
-          <p class="eyebrow">Public work · live projection</p>
-          <h1 id="work-title">
-            What is open.<br /><span>What needs attention.</span>
-          </h1>
+    <main class="shell work-content">
+      <header class="work-header" aria-labelledby="work-title">
+        <div class="work-heading">
+          <p class="eyebrow">Public work · GitHub projection</p>
+          <h1 id="work-title">Open work</h1>
           <p class="work-lede">
-            A read-only daily view of public GitHub Issues. GitHub remains the
-            source of truth; product pages explain responsibility.
+            Read-only daily view. GitHub remains the source of truth.
           </p>
         </div>
-        <aside class="snapshot-card" aria-label="Snapshot freshness">
-          <p class="snapshot-label">Work snapshot</p>
-          <p id="generated-at" class="generated-at">Loading snapshot…</p>
-          <p
-            id="snapshot-freshness"
-            class="snapshot-freshness"
-            aria-live="polite"
-          >
-            Checking for the latest snapshot…
-          </p>
+        <div class="snapshot-controls" aria-label="Snapshot freshness">
+          <div>
+            <p id="generated-at" class="generated-at">Loading snapshot…</p>
+            <p
+              id="snapshot-freshness"
+              class="snapshot-freshness"
+              aria-live="polite"
+            >
+              Checking for the latest snapshot…
+            </p>
+          </div>
           <button id="refresh-dashboard" class="refresh-button" type="button">
             Refresh now
           </button>
-        </aside>
-      </section>
+        </div>
+      </header>
 
-      <div class="shell work-content">
+      <div class="work-surface">
         <section
           id="dataset-status"
           class="status-banner"
@@ -66,26 +64,13 @@
           hidden
         ></section>
 
-        <section class="work-summary" aria-labelledby="summary-heading">
-          <div class="work-section-head">
-            <div>
-              <p class="eyebrow">Daily surface</p>
-              <h2 id="summary-heading">Open work</h2>
-            </div>
-            <p>
-              Start with the current issue view below. Counts are generated from
-              public GitHub evidence.
-            </p>
-          </div>
+        <section class="work-summary" aria-label="Essential work metrics">
           <div id="metrics" class="metrics" aria-live="polite"></div>
         </section>
 
         <section class="issue-section" aria-labelledby="issues-heading">
-          <div class="work-section-head issue-heading">
-            <div>
-              <p class="eyebrow">Issue index</p>
-              <h2 id="issues-heading">Open issues</h2>
-            </div>
+          <div class="issue-heading">
+            <h2 id="issues-heading">Open issues</h2>
             <p id="issue-count" class="result-count" aria-live="polite"></p>
           </div>
           <div class="filters" aria-label="Issue filters">

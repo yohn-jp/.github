@@ -81,7 +81,7 @@ export function classifyIssue(issue) {
   return {
     needsAttention: reasons.length > 0,
     inProgress: complete && openPullRequest,
-    ready: complete && linkage.items.length === 0 && reasons.length === 0,
+    ready: complete && linkage.items.length === 0,
     reasons: [...new Set(reasons)]
   };
 }
