@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - ops/merge-portal-stack
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/merge-portal-stack.yml
 
 permissions:
   contents: write
