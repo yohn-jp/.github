@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDashboardData } from "./dashboard-data.mjs";
+import { loadProductCatalog } from "./product-catalog.mjs";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
@@ -17,15 +18,23 @@ export async function buildDashboard({
   outputDirectory = process.env.DASHBOARD_OUTPUT ??
     join(REPOSITORY_ROOT, "site"),
   configPath = join(DASHBOARD_DIRECTORY, "repositories.json"),
+  catalogPath = join(PORTAL_DIRECTORY, "products.json"),
   fetchImpl = globalThis.fetch,
   token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? "",
   now
 } = {}) {
-  const config = JSON.parse(await readFile(configPath, "utf8"));
+  const [config, productCatalog] = await Promise.all([
+    readFile(configPath, "utf8").then(JSON.parse),
+    loadProductCatalog(catalogPath)
+  ]);
   const data = await collectDashboardData({ config, fetchImpl, token, now });
+  const portalDataDirectory = join(outputDirectory, "data");
   const workDirectory = join(outputDirectory, "work");
-  const dataDirectory = join(workDirectory, "data");
-  await mkdir(dataDirectory, { recursive: true });
+  const workDataDirectory = join(workDirectory, "data");
+  await Promise.all([
+    mkdir(portalDataDirectory, { recursive: true }),
+    mkdir(workDataDirectory, { recursive: true })
+  ]);
 
   for (const file of PORTAL_FILES) {
     await copyFile(join(PORTAL_DIRECTORY, file), join(outputDirectory, file));
@@ -35,10 +44,16 @@ export async function buildDashboard({
     await copyFile(join(DASHBOARD_DIRECTORY, file), join(workDirectory, file));
   }
 
-  await writeFile(
-    join(dataDirectory, "dashboard.json"),
-    `${JSON.stringify(data, null, 2)}\n`
-  );
+  await Promise.all([
+    writeFile(
+      join(portalDataDirectory, "products.json"),
+      `${JSON.stringify(productCatalog, null, 2)}\n`
+    ),
+    writeFile(
+      join(workDataDirectory, "dashboard.json"),
+      `${JSON.stringify(data, null, 2)}\n`
+    )
+  ]);
   return data;
 }
 

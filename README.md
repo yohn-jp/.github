@@ -59,12 +59,21 @@ cross-repository dashboard remains defined in `dashboard/`, with source
 repositories configured in
 [`dashboard/repositories.json`](dashboard/repositories.json).
 
+[`portal/products.json`](portal/products.json) is the versioned source for
+product metadata repeated across the portal: stable product identity, role,
+repository, concise summary/status, responsibility boundaries, and typed
+cross-product relationships. `scripts/product-catalog.mjs` validates this file
+and the Pages build fails on malformed, duplicate, self-referential, or unknown
+relationship data. Repository READMEs and docs remain authoritative for actual
+CLI/API/release behavior; the portal catalog is a curated navigation and
+responsibility projection, not a replacement documentation authority.
+
 `pnpm run dashboard:build` generates the disposable `site/` Pages artifact:
-portal assets at the root, the issue dashboard under `site/work/`, and generated
-issue data under `site/work/data/`. `portal/CNAME` is copied to the artifact
-root so the intended `dev.yohn.jp` custom domain remains explicit in repository
-source and published output. Repository Pages settings and DNS remain external
-configuration.
+portal assets at the root, validated product data under `site/data/`, the issue
+dashboard under `site/work/`, and generated issue data under
+`site/work/data/`. `portal/CNAME` is copied to the artifact root so the intended
+`dev.yohn.jp` custom domain remains explicit in repository source and published
+output. Repository Pages settings and DNS remain external configuration.
 
 [`dashboard-pages.yml`](.github/workflows/dashboard-pages.yml) builds and
 deploys the portal on relevant changes, on a schedule, or by manual dispatch.
