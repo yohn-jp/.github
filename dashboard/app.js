@@ -1,8 +1,16 @@
 import {
   buildProductRepositoryIndex,
   buildWorkQuery,
+  classifyIssue,
+  issueMatchesView,
   resolveRepositoryFilter,
-  resolveSearchFilter
+  resolveSearchFilter,
+  resolveSort,
+  resolveView,
+  sortIssues,
+  supportsCreatedAt,
+  WORK_SORTS,
+  WORK_VIEWS
 } from "./work-model.js";
 
 const SNAPSHOT_REFRESH_INTERVAL_MS = 60_000;
@@ -10,8 +18,10 @@ const SNAPSHOT_REFRESH_INTERVAL_MS = 60_000;
 const state = {
   dashboard: null,
   productByRepository: new Map(),
+  view: "recent",
   repository: "",
   search: "",
+  sort: "updated",
   initialized: false,
   refreshTimer: null,
   refreshInFlight: null,
@@ -26,7 +36,9 @@ const elements = {
   refreshButton: document.querySelector("#refresh-dashboard"),
   metrics: document.querySelector("#metrics"),
   repositorySummary: document.querySelector("#repository-summary"),
+  viewFilter: document.querySelector("#view-filter"),
   repositoryFilter: document.querySelector("#repository-filter"),
+  sortFilter: document.querySelector("#sort-filter"),
   issueSearch: document.querySelector("#issue-search"),
   issueCount: document.querySelector("#issue-count"),
   issueList: document.querySelector("#issue-list")
@@ -222,6 +234,36 @@ function renderRepositoryFilter(dashboard) {
   elements.repositoryFilter.value = state.repository;
 }
 
+function renderViewFilter() {
+  if (!elements.viewFilter) return;
+  elements.viewFilter.replaceChildren(
+    ...WORK_VIEWS.map(({ id, label }) => {
+      const option = node("option", "", label);
+      option.value = id;
+      return option;
+    })
+  );
+  elements.viewFilter.value = state.view;
+}
+
+function renderSortFilter(issues) {
+  if (!elements.sortFilter) return;
+  const createdSupported = supportsCreatedAt(issues);
+  elements.sortFilter.replaceChildren(
+    ...WORK_SORTS.map(({ id, label }) => {
+      const option = node("option", "", label);
+      option.value = id;
+      if (id === "created" && !createdSupported) {
+        option.disabled = true;
+        option.textContent = `${label} (unavailable)`;
+      }
+      return option;
+    })
+  );
+  if (state.sort === "created" && !createdSupported) state.sort = "updated";
+  elements.sortFilter.value = state.sort;
+}
+
 function pullRequestsForIssue(issue) {
   return issue.relationships?.pullRequests?.items ?? [];
 }
@@ -333,6 +375,14 @@ function renderIssue(issue) {
   if (issue.assignee) {
     metadata.append(node("span", "pill", `@${issue.assignee.login}`));
   }
+  const classification = classifyIssue(issue);
+  if (classification.needsAttention) {
+    metadata.append(node("span", "pill attention", "Needs attention"));
+  } else if (classification.inProgress) {
+    metadata.append(node("span", "pill progress", "In progress"));
+  } else if (classification.ready) {
+    metadata.append(node("span", "pill ready", "Ready / unstarted"));
+  }
   metadataCell.append(metadata);
 
   const updatedCell = node("td");
@@ -344,8 +394,13 @@ function renderIssue(issue) {
 }
 
 function renderIssues() {
-  const issues = state.dashboard.issues.filter(issueMatches);
-  elements.issueCount.textContent = `${issues.length} of ${state.dashboard.issues.length} issues`;
+  const viewIssues = state.dashboard.issues.filter((issue) =>
+    issueMatchesView(issue, state.view)
+  );
+  const issues = sortIssues(viewIssues.filter(issueMatches), state.sort);
+  elements.issueCount.textContent = `${issues.length} of ${viewIssues.length} issues in ${
+    WORK_VIEWS.find(({ id }) => id === state.view)?.label ?? "All"
+  }`;
   if (issues.length === 0) {
     const row = node("tr");
     const empty = node(
@@ -363,8 +418,10 @@ function renderIssues() {
 
 function syncUrl() {
   const query = buildWorkQuery({
+    view: state.view,
     repository: state.repository,
-    search: state.search
+    search: state.search,
+    sort: state.sort
   });
   history.replaceState(
     null,
@@ -420,11 +477,13 @@ function applyDashboard(dashboard, productCatalog) {
   state.dashboard = dashboard;
   if (productIndex) state.productByRepository = productIndex;
   if (!state.initialized) {
+    state.view = resolveView(location.search);
     state.repository = resolveRepositoryFilter(
       location.search,
       dashboard.repositories
     );
     state.search = resolveSearchFilter(location.search);
+    state.sort = resolveSort(location.search, dashboard.issues);
     state.initialized = true;
   }
   elements.issueSearch.value = state.search;
@@ -435,7 +494,9 @@ function applyDashboard(dashboard, productCatalog) {
   showStatus(dashboard);
   renderMetrics(dashboard);
   renderRepositorySummary(dashboard);
+  renderViewFilter();
   renderRepositoryFilter(dashboard);
+  renderSortFilter(dashboard.issues);
   renderIssues();
   renderFreshness();
 }
@@ -510,6 +571,18 @@ function startPolling() {
 
 elements.repositoryFilter.addEventListener("change", (event) => {
   state.repository = event.target.value;
+  syncUrl();
+  renderIssues();
+});
+
+elements.viewFilter?.addEventListener("change", (event) => {
+  state.view = event.target.value;
+  syncUrl();
+  renderIssues();
+});
+
+elements.sortFilter?.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   syncUrl();
   renderIssues();
 });
