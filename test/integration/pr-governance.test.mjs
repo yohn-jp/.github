@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { validatePullRequest } from "../../scripts/validate-pr.mjs";
 import { validateBranchName } from "../../scripts/validate-branch-name.mjs";
 
@@ -14,11 +16,11 @@ const defaultBody = await readFile(
   "utf8"
 );
 
-function pullRequest(branch, body) {
+function pullRequest(branch, body, requestRoot = root) {
   return {
     title: "feat(core): deliver governed change",
     body,
-    root,
+    root: requestRoot,
     branch
   };
 }
@@ -39,6 +41,37 @@ test("release/1.0.0 uses the same release contract", async () => {
     pullRequest("release/1.0.0", releaseBody)
   );
   assert.equal(result.valid, true);
+  assert.equal(result.contract.templateIdentity.id, "release");
+});
+
+test("release contract ignores an ordinary default-template policy", async (t) => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "pr-governance-release-"));
+  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
+
+  await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });
+  await cp(
+    path.join(root, ".github", "PULL_REQUEST_TEMPLATE"),
+    path.join(fixtureRoot, ".github", "PULL_REQUEST_TEMPLATE"),
+    { recursive: true }
+  );
+  await writeFile(
+    path.join(fixtureRoot, ".github", "inari", "pr-policy.yml"),
+    [
+      "version: 1",
+      "template: default",
+      "sections:",
+      "  - section: summary",
+      "    required: true",
+      ""
+    ].join("\n"),
+    "utf8"
+  );
+
+  const result = await validatePullRequest(
+    pullRequest("release/0.8.0", releaseBody, fixtureRoot)
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.branchClassification, "release");
   assert.equal(result.contract.templateIdentity.id, "release");
 });
 
