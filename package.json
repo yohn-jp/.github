@@ -8,7 +8,9 @@
     "node": ">=20"
   },
   "scripts": {
+    "dashboard:build": "node scripts/build-dashboard.mjs",
     "test": "node --test test/*.test.mjs",
+    "test:dashboard": "node --test test/dashboard.test.mjs",
     "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
     "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
