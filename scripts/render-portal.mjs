@@ -11,10 +11,13 @@ function productPath(id, prefix = "./") {
   return `${prefix}products/${encodeURIComponent(id)}/`;
 }
 
+function repositoryFullName(product) {
+  const url = new URL(product.repository);
+  return url.pathname.split("/").filter(Boolean).join("/");
+}
+
 function list(items, className = "boundary-list") {
-  return `<ul class="${className}">${items
-    .map((item) => `<li>${escapeHtml(item)}</li>`)
-    .join("")}</ul>`;
+  return `<ul class="${className}">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
 function renderProductCard(product) {
@@ -45,9 +48,7 @@ function renderSystemNode(product) {
 function renderRelationships(catalog) {
   const byId = new Map(catalog.products.map((product) => [product.id, product]));
   return catalog.products
-    .flatMap((source) =>
-      source.relationships.map((relation) => ({ source, relation, target: byId.get(relation.product) }))
-    )
+    .flatMap((source) => source.relationships.map((relation) => ({ source, relation, target: byId.get(relation.product) })))
     .map(({ source, relation, target }) => `<li>
   <a href="${productPath(source.id)}">${escapeHtml(source.name)}</a>
   <span>${escapeHtml(relation.label)}</span>
@@ -92,6 +93,7 @@ export function renderProductOverviewPage(product, catalog, detail) {
       return `<li><span>${escapeHtml(relation.label)}</span><a href="../${escapeHtml(target.id)}/">${escapeHtml(target.name)}</a></li>`;
     })
     .join("");
+  const workHref = `../../work/?repository=${encodeURIComponent(repositoryFullName(product))}`;
 
   return `<!doctype html>
 <html lang="en">
@@ -108,7 +110,7 @@ export function renderProductOverviewPage(product, catalog, detail) {
     <header class="site-nav-wrap">
       <nav class="shell site-nav" aria-label="Primary navigation">
         <a class="brand" href="../../"><span class="brand-slash">/</span><span>yohn.dev</span></a>
-        <div class="nav-links"><a href="../../#products">Products</a><a href="../../#system">System</a><a href="../../work/">Work</a></div>
+        <div class="nav-links"><a href="../../#products">Products</a><a href="../../#system">System</a><a href="${workHref}">Work</a></div>
       </nav>
     </header>
     <main>
@@ -120,12 +122,7 @@ export function renderProductOverviewPage(product, catalog, detail) {
         <div class="product-meta"><span>${escapeHtml(product.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">Repository ↗</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">Documentation ↗</a></div>
       </section>
 
-      <section class="product-why-wrap">
-        <div class="shell product-why">
-          <p class="eyebrow">Why it exists</p>
-          <p class="why-copy">${escapeHtml(detail.why)}</p>
-        </div>
-      </section>
+      <section class="product-why-wrap"><div class="shell product-why"><p class="eyebrow">Why it exists</p><p class="why-copy">${escapeHtml(detail.why)}</p></div></section>
 
       <section class="shell boundary-grid" aria-label="Product responsibility boundary">
         <article class="boundary-panel"><p class="eyebrow">Owns</p><h2>Authority</h2>${list(product.owns)}</article>
@@ -133,23 +130,14 @@ export function renderProductOverviewPage(product, catalog, detail) {
       </section>
 
       <section class="shell concept-section" aria-labelledby="concepts-${escapeHtml(product.id)}">
-        <div class="section-head compact-head">
-          <div><p class="eyebrow">Core model</p><h2 id="concepts-${escapeHtml(product.id)}">How ${escapeHtml(product.name)} works</h2></div>
-          <p>Operational detail stays in repository documentation. These are the concepts that define the product boundary.</p>
-        </div>
+        <div class="section-head compact-head"><div><p class="eyebrow">Core model</p><h2 id="concepts-${escapeHtml(product.id)}">How ${escapeHtml(product.name)} works</h2></div><p>Operational detail stays in repository documentation. These are the concepts that define the product boundary.</p></div>
         <div class="concept-grid">${renderCoreSections(detail)}</div>
       </section>
 
-      <section class="maturity-wrap">
-        <div class="shell maturity-block">
-          <p class="eyebrow">Current maturity</p>
-          <h2>${escapeHtml(product.status)}</h2>
-          <p>${escapeHtml(detail.maturity)}</p>
-        </div>
-      </section>
+      <section class="maturity-wrap"><div class="shell maturity-block"><p class="eyebrow">Current maturity</p><h2>${escapeHtml(product.status)}</h2><p>${escapeHtml(detail.maturity)}</p></div></section>
 
       <section class="shell product-relations"><p class="eyebrow">Relationships</p><h2>Fits into a larger system</h2><ul>${relationships}</ul></section>
-      <section class="shell product-next"><div><p class="eyebrow">Public work</p><h2>Follow implementation in GitHub</h2><p>Live work remains a read-only projection. GitHub is source of truth.</p></div><a class="button dark" href="../../work/">Open work dashboard</a></section>
+      <section class="shell product-next"><div><p class="eyebrow">Public work</p><h2>Follow ${escapeHtml(product.name)} implementation</h2><p>Open work is pre-filtered to this product repository. GitHub remains source of truth.</p></div><a class="button dark" href="${workHref}">Open ${escapeHtml(product.name)} work</a></section>
     </main>
     <footer class="shell footer"><span>dev.yohn.jp</span><a href="../../">Portal home</a></footer>
   </body>
