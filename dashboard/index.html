@@ -31,7 +31,11 @@
           <h1 id="work-title">What is open.<br /><span>What needs attention.</span></h1>
           <p class="work-lede">A read-only view over public GitHub Issues. Product pages explain responsibility; this surface shows current work without becoming another workflow authority.</p>
         </div>
-        <p id="generated-at" class="generated-at">Loading snapshot…</p>
+        <div class="snapshot-controls" aria-label="Snapshot freshness">
+          <p id="generated-at" class="generated-at">Loading snapshot…</p>
+          <p id="snapshot-freshness" class="snapshot-freshness" aria-live="polite">Checking for the latest snapshot…</p>
+          <button id="refresh-dashboard" class="refresh-button" type="button">Refresh now</button>
+        </div>
       </section>
 
       <div class="shell work-content">

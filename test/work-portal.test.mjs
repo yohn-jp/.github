@@ -53,8 +53,15 @@ test("work UI shares portal visual system and loads product projection without c
   assert.match(html, /href="\.\.\/styles\.css"/);
   assert.match(html, /type="module" src="\.\/app\.js"/);
   assert.match(html, /aria-current="page"/);
+  assert.match(html, /id="refresh-dashboard"/);
+  assert.match(html, /id="snapshot-freshness"/);
   assert.match(app, /fetch\("\.\/data\/dashboard\.json"/);
   assert.match(app, /fetch\("\.\.\/data\/products\.json"/);
+  assert.match(app, /cache: "no-store"/);
+  assert.match(app, /SNAPSHOT_REFRESH_INTERVAL_MS = 60_000/);
+  assert.match(app, /document\.visibilityState/);
+  assert.match(app, /dashboard\.generatedAt !== state\.dashboard\.generatedAt/);
+  assert.match(app, /last valid snapshot remains visible/);
   assert.match(app, /\.\.\/products\/\$\{encodeURIComponent\(product\.id\)\}\//);
   assert.match(model, /URLSearchParams/);
   assert.match(css, /\.work-hero/);
