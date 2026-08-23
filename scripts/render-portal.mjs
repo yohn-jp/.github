@@ -109,7 +109,7 @@ export function renderProductOverviewPage(product, catalog, detail) {
   <body class="product-page">
     <header class="site-nav-wrap">
       <nav class="shell site-nav" aria-label="Primary navigation">
-        <a class="brand" href="../../"><span class="brand-slash">/</span><span>yohn.dev</span></a>
+        <a class="brand" href="../../" aria-label="yohn-jp developer portal home"><span class="brand-slash">/</span><span>yohn-jp</span></a>
         <div class="nav-links"><a href="../../#products">Products</a><a href="../../#system">System</a><a href="${workHref}">Work</a></div>
       </nav>
     </header>
