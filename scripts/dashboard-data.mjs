@@ -1,7 +1,7 @@
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 
-export const DASHBOARD_SCHEMA_VERSION = 2;
+export const DASHBOARD_SCHEMA_VERSION = 3;
 
 function getHeader(headers, name) {
   if (!headers) return null;
@@ -101,6 +101,7 @@ export function normalizeIssue(issue, repository) {
     url: issue.html_url,
     state: issue.state,
     stateReason: issue.state_reason ?? null,
+    createdAt: issue.created_at ?? null,
     labels: Array.isArray(issue.labels) ? issue.labels.map(normalizeLabel) : [],
     type: normalizeType(issue),
     milestone: normalizeMilestone(issue.milestone),

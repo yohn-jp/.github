@@ -251,7 +251,7 @@
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(220px, 0.75fr) minmax(300px, 1.25fr);
+  grid-template-columns: minmax(150px, 0.7fr) minmax(210px, 0.95fr) minmax(150px, 0.7fr) minmax(260px, 1.35fr);
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -407,6 +407,24 @@ tbody tr:last-child td {
   color: #45631e;
 }
 
+.pill.attention {
+  border-color: #e2c880;
+  background: #fff5d7;
+  color: #805e16;
+}
+
+.pill.progress {
+  border-color: #b9d7a8;
+  background: #edf7e8;
+  color: #3d6b2e;
+}
+
+.pill.ready {
+  border-color: #c9ccd2;
+  background: #f3f4f5;
+  color: #5d626b;
+}
+
 .updated {
   color: var(--muted);
   font-size: 0.76rem;
@@ -432,6 +450,10 @@ tbody tr:last-child td {
 
   .metric-card:nth-child(4) {
     border-top: 1px solid var(--line);
+  }
+
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

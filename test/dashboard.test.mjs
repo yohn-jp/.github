@@ -31,6 +31,7 @@ test("normalizes repository and issue metadata while keeping extensible relation
       html_url: "https://github.com/yohn-jp/example/issues/4",
       state: "open",
       state_reason: "reopened",
+      created_at: "2026-08-20T01:02:03Z",
       labels: [{ name: "enhancement", color: "a2eeef" }],
       type: { name: "Feature" },
       milestone: {
@@ -47,6 +48,7 @@ test("normalizes repository and issue metadata while keeping extensible relation
   assert.equal(issue.repository.fullName, "yohn-jp/example");
   assert.equal(issue.number, 4);
   assert.equal(issue.stateReason, "reopened");
+  assert.equal(issue.createdAt, "2026-08-20T01:02:03Z");
   assert.deepEqual(issue.labels, [{ name: "enhancement", color: "a2eeef" }]);
   assert.equal(issue.type, "Feature");
   assert.equal(issue.milestone.title, "v1");
