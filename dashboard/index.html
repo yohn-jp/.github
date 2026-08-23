@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Open work across public yohn-jp repositories" />
+    <meta
+      name="description"
+      content="Open work across public yohn-jp repositories"
+    />
     <link rel="canonical" href="https://dev.yohn.jp/work/" />
     <title>Open work · yohn-jp</title>
     <link rel="stylesheet" href="../styles.css" />
@@ -13,7 +16,9 @@
   <body class="work-page">
     <header class="site-nav-wrap">
       <nav class="shell site-nav" aria-label="Primary navigation">
-        <a class="brand" href="../" aria-label="yohn-jp developer portal home"><span class="brand-slash">/</span><span>yohn-jp</span></a>
+        <a class="brand" href="../" aria-label="yohn-jp developer portal home"
+          ><span class="brand-slash">/</span><span>yohn-jp</span></a
+        >
         <div class="nav-links">
           <a href="../#products">Products</a>
           <a href="../#system">System</a>
@@ -24,53 +29,112 @@
       </nav>
     </header>
 
-    <main>
-      <section class="shell work-hero" aria-labelledby="work-title">
-        <div>
-          <p class="eyebrow">Public work · live projection</p>
-          <h1 id="work-title">What is open.<br /><span>What needs attention.</span></h1>
-          <p class="work-lede">A read-only view over public GitHub Issues. Product pages explain responsibility; this surface shows current work without becoming another workflow authority.</p>
+    <main class="shell work-content">
+      <header class="work-header" aria-labelledby="work-title">
+        <div class="work-heading">
+          <p class="eyebrow">Public work · GitHub projection</p>
+          <h1 id="work-title">Open work</h1>
+          <p class="work-lede">
+            Read-only daily view. GitHub remains the source of truth.
+          </p>
         </div>
         <div class="snapshot-controls" aria-label="Snapshot freshness">
-          <p id="generated-at" class="generated-at">Loading snapshot…</p>
-          <p id="snapshot-freshness" class="snapshot-freshness" aria-live="polite">Checking for the latest snapshot…</p>
-          <button id="refresh-dashboard" class="refresh-button" type="button">Refresh now</button>
-        </div>
-      </section>
-
-      <div class="shell work-content">
-        <section id="dataset-status" class="status-banner" role="status" aria-live="polite" hidden></section>
-
-        <section aria-labelledby="summary-heading">
-          <div class="work-section-head">
-            <div><p class="eyebrow">At a glance</p><h2 id="summary-heading">Open-work distribution</h2></div>
-            <p>Repository counts stay tied to generated GitHub evidence. Cataloged repositories link back to their product boundary. <a href="./graph/">View native dependency graph →</a></p>
+          <div>
+            <p id="generated-at" class="generated-at">Loading snapshot…</p>
+            <p
+              id="snapshot-freshness"
+              class="snapshot-freshness"
+              aria-live="polite"
+            >
+              Checking for the latest snapshot…
+            </p>
           </div>
+          <button id="refresh-dashboard" class="refresh-button" type="button">
+            Refresh now
+          </button>
+        </div>
+      </header>
+
+      <div class="work-surface">
+        <section
+          id="dataset-status"
+          class="status-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></section>
+
+        <section class="work-summary" aria-label="Essential work metrics">
           <div id="metrics" class="metrics" aria-live="polite"></div>
-          <div id="repository-summary" class="repository-summary"></div>
         </section>
 
         <section class="issue-section" aria-labelledby="issues-heading">
-          <div class="work-section-head issue-heading">
-            <div><p class="eyebrow">Issue index</p><h2 id="issues-heading">Open issues</h2></div>
-            <p id="issue-count" class="result-count"></p>
+          <div class="issue-heading">
+            <h2 id="issues-heading">Open issues</h2>
+            <p id="issue-count" class="result-count" aria-live="polite"></p>
           </div>
           <div class="filters" aria-label="Issue filters">
-            <label><span>View</span><select id="view-filter"></select></label>
-            <label><span>Repository</span><select id="repository-filter"><option value="">All repositories</option></select></label>
-            <label><span>Sort</span><select id="sort-filter"></select></label>
-            <label class="search-label"><span>Search</span><input id="issue-search" type="search" placeholder="Title, product, label, assignee…" autocomplete="off" /></label>
+            <label
+              ><span>View</span
+              ><select id="view-filter"></select
+            ></label>
+            <label
+              ><span>Repository</span
+              ><select id="repository-filter">
+                <option value="">All repositories</option>
+              </select></label
+            >
+            <label
+              ><span>Sort</span
+              ><select id="sort-filter"></select
+            ></label>
+            <label class="search-label"
+              ><span>Search</span
+              ><input
+                id="issue-search"
+                type="search"
+                placeholder="Title, product, label, assignee…"
+                autocomplete="off"
+            /></label>
           </div>
-          <div class="table-frame">
-            <table>
-              <thead><tr><th scope="col">Repository</th><th scope="col">Issue</th><th scope="col">Status / metadata</th><th scope="col">Last update</th></tr></thead>
-              <tbody id="issue-list"><tr><td colspan="4" class="empty-state">Loading issues…</td></tr></tbody>
-            </table>
+          <div
+            id="issue-list"
+            class="issue-list"
+            role="list"
+            aria-live="polite"
+          >
+            <p class="empty-state">Loading issues…</p>
           </div>
+        </section>
+
+        <section
+          class="distribution-section"
+          aria-labelledby="distribution-heading"
+        >
+          <div class="work-section-head">
+            <div>
+              <p class="eyebrow">Secondary view</p>
+              <h2 id="distribution-heading">Repository workload</h2>
+            </div>
+            <p>
+              Repository counts stay tied to generated GitHub evidence.
+              Cataloged repositories link back to their product boundary.
+              <a href="./graph/">View native dependency graph →</a>
+            </p>
+          </div>
+          <div id="repository-summary" class="repository-summary"></div>
         </section>
       </div>
     </main>
 
-    <footer class="shell footer"><span>GitHub remains source of truth.</span><div><a href="./graph/">Dependency graph</a><a href="../">Portal home</a><a href="https://github.com/yohn-jp/.github/issues" rel="noreferrer">Portal issues ↗</a></div></footer>
+    <footer class="shell footer">
+      <span>GitHub remains source of truth.</span>
+      <div>
+        <a href="./graph/">Dependency graph</a><a href="../">Portal home</a
+        ><a href="https://github.com/yohn-jp/.github/issues" rel="noreferrer"
+          >Portal issues ↗</a
+        >
+      </div>
+    </footer>
   </body>
 </html>

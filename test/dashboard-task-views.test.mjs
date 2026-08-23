@@ -36,13 +36,32 @@ test("classifies only complete authoritative linkage as in-progress or ready", (
   const unavailable = issue(3, {
     linkage: { status: "partial", items: [] }
   });
+  const activeWithHistory = issue(4, {
+    linkage: {
+      status: "complete",
+      items: [{ state: "closed" }, { state: "open" }, { state: "merged" }]
+    }
+  });
+  const readyWithAttention = issue(5, {
+    dependencies: {
+      status: "complete",
+      blockedBy: [{ repository: { fullName: "yohn-jp/other" }, number: 8 }],
+      blocking: []
+    }
+  });
 
   assert.equal(classifyIssue(inProgress).inProgress, true);
   assert.equal(classifyIssue(inProgress).ready, false);
   assert.equal(classifyIssue(ready).ready, true);
   assert.equal(classifyIssue(unavailable).needsAttention, true);
   assert.equal(classifyIssue(unavailable).ready, false);
+  assert.equal(classifyIssue(activeWithHistory).inProgress, true);
+  assert.equal(classifyIssue(activeWithHistory).needsAttention, true);
+  assert.equal(classifyIssue(readyWithAttention).ready, true);
+  assert.equal(classifyIssue(readyWithAttention).needsAttention, true);
   assert.equal(issueMatchesView(inProgress, "in-progress"), true);
+  assert.equal(issueMatchesView(activeWithHistory, "in-progress"), true);
+  assert.equal(issueMatchesView(activeWithHistory, "attention"), true);
   assert.equal(issueMatchesView(ready, "ready"), true);
   assert.equal(issueMatchesView(unavailable, "attention"), true);
 });

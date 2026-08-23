@@ -81,17 +81,22 @@ function showStatus(dashboard) {
   const unavailableLinks = dashboard.metrics.pullRequestDataUnavailable ?? 0;
   const errors = dashboard.errors ?? [];
   elements.status.hidden = false;
+  if (status === "complete") {
+    elements.status.className = "status-inline complete";
+    elements.status.replaceChildren(
+      node(
+        "p",
+        "status-detail",
+        `Snapshot complete · ${dashboard.metrics.repositoryCount} repositories loaded`
+      )
+    );
+    return;
+  }
+
   elements.status.className = `status-banner ${status}`;
-  const detail =
-    status === "complete"
-      ? `${dashboard.metrics.issueCount} open issues and ${dashboard.metrics.linkedPullRequests ?? 0} authoritative linked pull requests loaded from ${dashboard.metrics.repositoryCount} repositories.`
-      : `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded; ${unavailableLinks} issues have unavailable or partial PR linkage. Treat this view as incomplete.`;
+  const detail = `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded; ${unavailableLinks} issues have unavailable or partial PR linkage. Treat this view as incomplete.`;
   elements.status.replaceChildren(
-    node(
-      "p",
-      "status-title",
-      status === "complete" ? "Snapshot complete" : `Snapshot ${status}`
-    ),
+    node("p", "status-title", `Snapshot ${status}`),
     node("p", "status-detail", detail)
   );
   if (errors.length > 0) {
@@ -130,6 +135,27 @@ function formatSnapshotAge(value) {
     return `${ageMinutes} minute${ageMinutes === 1 ? "" : "s"} old`;
   const ageHours = Math.floor(ageMinutes / 60);
   return `${ageHours} hour${ageHours === 1 ? "" : "s"} old`;
+}
+
+function formatRelativeAge(value) {
+  const timestamp = new Date(value).valueOf();
+  if (Number.isNaN(timestamp)) return "Update age unknown";
+  const difference = Date.now() - timestamp;
+  if (difference < 0) return "Updated in the future";
+  const seconds = Math.floor(difference / 1000);
+  if (seconds < 60) return "Updated just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Updated ${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Updated ${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Updated ${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `Updated ${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `Updated ${months}mo ago`;
+  const years = Math.floor(days / 365);
+  return `Updated ${years}y ago`;
 }
 
 function renderFreshness() {
@@ -189,9 +215,7 @@ function renderRepositorySummary(dashboard) {
       );
       const identity = node("div", "repo-identity");
       if (product) identity.append(productLink(product, "repo-product"));
-      identity.append(
-        link(repository.url, repository.fullName, "repo-github")
-      );
+      identity.append(link(repository.url, repository.fullName, "repo-github"));
       const bar = node("div", "repo-bar");
       const fill = node("div", "repo-bar-fill");
       fill.style.width = `${Math.max(
@@ -223,9 +247,7 @@ function renderRepositoryFilter(dashboard) {
     const option = node(
       "option",
       "",
-      product
-        ? `${product.name} · ${repository.fullName}`
-        : repository.fullName
+      product ? `${product.name} · ${repository.fullName}` : repository.fullName
     );
     option.value = repository.fullName;
     return option;
@@ -328,68 +350,82 @@ function renderPullRequests(issue) {
       pullRequest.state === "closed"
         ? "closed without merge"
         : pullRequest.state;
-    item.append(
-      title,
-      node("span", "pr-meta", `${repository} · ${status}`)
-    );
+    item.append(title, node("span", "pr-meta", `${repository} · ${status}`));
     container.append(item);
   }
   return container;
 }
 
 function renderIssue(issue) {
-  const row = node("tr");
+  const row = node("article", "issue-row");
+  row.setAttribute("role", "listitem");
   const product = productForRepository(issue.repository.fullName);
-  const repositoryCell = node("td");
   const identity = node("div", "issue-repository");
   if (product) identity.append(productLink(product, "issue-product"));
   identity.append(
     link(issue.repository.url, issue.repository.fullName, "issue-repo")
   );
-  repositoryCell.append(identity);
-
-  const issueCell = node("td");
-  issueCell.append(
-    link(issue.url, `#${issue.number} ${issue.title}`, "issue-link"),
-    renderPullRequests(issue)
+  const title = node("h3", "issue-title");
+  title.append(
+    link(issue.url, `#${issue.number} ${issue.title}`, "issue-link")
   );
+  const issueMain = node("div", "issue-main");
+  issueMain.append(title, renderPullRequests(issue));
 
-  const metadataCell = node("td");
+  const classification = classifyIssue(issue);
+  const primaryState = classification.inProgress
+    ? { className: "progress", label: "In progress" }
+    : classification.ready
+      ? { className: "ready", label: "Ready / unstarted" }
+      : {
+          className: "state",
+          label: `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`
+        };
+  const state = node(
+    "span",
+    `work-state ${primaryState.className}`,
+    primaryState.label
+  );
+  const stateGroup = node("div", "work-state-group");
+  stateGroup.append(state);
+  if (classification.needsAttention) {
+    stateGroup.append(node("span", "attention-signal", "Needs attention"));
+  }
+
   const metadata = node("div", "issue-meta");
-  metadata.append(
-    node(
-      "span",
-      "pill state",
-      `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`
-    )
-  );
-  if (issue.type) metadata.append(node("span", "pill", issue.type));
-  for (const label of issue.labels) {
-    metadata.append(node("span", "pill", label.name));
+  if (issue.type) metadata.append(node("span", "metadata-item", issue.type));
+  for (const label of issue.labels.slice(0, 3)) {
+    metadata.append(node("span", "metadata-item", label.name));
+  }
+  if (issue.labels.length > 3) {
+    metadata.append(
+      node("span", "metadata-item", `+${issue.labels.length - 3} labels`)
+    );
   }
   if (issue.milestone) {
     metadata.append(
-      node("span", "pill", `Milestone: ${issue.milestone.title}`)
+      node("span", "metadata-item", `Milestone: ${issue.milestone.title}`)
     );
   }
   if (issue.assignee) {
-    metadata.append(node("span", "pill", `@${issue.assignee.login}`));
+    metadata.append(node("span", "metadata-item", `@${issue.assignee.login}`));
   }
-  const classification = classifyIssue(issue);
-  if (classification.needsAttention) {
-    metadata.append(node("span", "pill attention", "Needs attention"));
-  } else if (classification.inProgress) {
-    metadata.append(node("span", "pill progress", "In progress"));
-  } else if (classification.ready) {
-    metadata.append(node("span", "pill ready", "Ready / unstarted"));
-  }
-  metadataCell.append(metadata);
-
-  const updatedCell = node("td");
-  const updated = node("time", "updated", formatDate(issue.updatedAt));
+  const updated = node("time", "updated", formatRelativeAge(issue.updatedAt));
   updated.dateTime = issue.updatedAt;
-  updatedCell.append(updated);
-  row.append(repositoryCell, issueCell, metadataCell, updatedCell);
+  updated.title = formatDate(issue.updatedAt);
+  updated.setAttribute(
+    "aria-label",
+    `Last updated ${formatDate(issue.updatedAt)}`
+  );
+
+  const issueHeader = node("header", "issue-row-header");
+  const age = node("div", "issue-row-age");
+  age.append(updated);
+  issueHeader.append(identity, age);
+  const issueSide = node("aside", "issue-side");
+  issueSide.setAttribute("aria-label", "Issue status and metadata");
+  issueSide.append(stateGroup, metadata);
+  row.append(issueMain, issueHeader, issueSide);
   return row;
 }
 
@@ -402,15 +438,9 @@ function renderIssues() {
     WORK_VIEWS.find(({ id }) => id === state.view)?.label ?? "All"
   }`;
   if (issues.length === 0) {
-    const row = node("tr");
-    const empty = node(
-      "td",
-      "empty-state",
-      "No issues match current filters."
+    elements.issueList.replaceChildren(
+      node("p", "empty-state", "No issues match current filters.")
     );
-    empty.colSpan = 4;
-    row.append(empty);
-    elements.issueList.replaceChildren(row);
     return;
   }
   elements.issueList.replaceChildren(...issues.map(renderIssue));

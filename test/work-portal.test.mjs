@@ -68,6 +68,6 @@ test("work UI shares portal visual system and loads product projection without c
   assert.match(app, /issueMatchesView/);
   assert.match(app, /sortIssues/);
   assert.match(model, /URLSearchParams/);
-  assert.match(css, /\.work-hero/);
+  assert.match(css, /\.work-header/);
   assert.doesNotMatch(`${app}\n${model}`, /api\.github\.com|Authorization|GITHUB_TOKEN|GH_TOKEN/);
 });
