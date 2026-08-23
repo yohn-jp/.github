@@ -5,16 +5,25 @@ import {
   resolveSearchFilter
 } from "./work-model.js";
 
+const SNAPSHOT_REFRESH_INTERVAL_MS = 60_000;
+
 const state = {
   dashboard: null,
   productByRepository: new Map(),
   repository: "",
-  search: ""
+  search: "",
+  initialized: false,
+  refreshTimer: null,
+  refreshInFlight: null,
+  lastCheckedAt: null,
+  refreshError: null
 };
 
 const elements = {
   status: document.querySelector("#dataset-status"),
   generatedAt: document.querySelector("#generated-at"),
+  freshness: document.querySelector("#snapshot-freshness"),
+  refreshButton: document.querySelector("#refresh-dashboard"),
   metrics: document.querySelector("#metrics"),
   repositorySummary: document.querySelector("#repository-summary"),
   repositoryFilter: document.querySelector("#repository-filter"),
@@ -58,6 +67,7 @@ function productLink(product, className = "product-route") {
 function showStatus(dashboard) {
   const status = dashboard.status;
   const unavailableLinks = dashboard.metrics.pullRequestDataUnavailable ?? 0;
+  const errors = dashboard.errors ?? [];
   elements.status.hidden = false;
   elements.status.className = `status-banner ${status}`;
   const detail =
@@ -72,12 +82,12 @@ function showStatus(dashboard) {
     ),
     node("p", "status-detail", detail)
   );
-  if (dashboard.errors.length > 0) {
-    const errors = node("ul", "status-errors");
-    for (const error of dashboard.errors) {
+  if (errors.length > 0) {
+    const errorList = node("ul", "status-errors");
+    for (const error of errors) {
       const suffix = error.rateLimited ? " Rate limit reached." : "";
       const issue = error.issue ? `#${error.issue} ` : "";
-      errors.append(
+      errorList.append(
         node(
           "li",
           "",
@@ -85,7 +95,7 @@ function showStatus(dashboard) {
         )
       );
     }
-    elements.status.append(errors);
+    elements.status.append(errorList);
   }
 }
 
@@ -96,6 +106,42 @@ function formatDate(value, prefix = "") {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(date)}`;
+}
+
+function formatSnapshotAge(value) {
+  const timestamp = new Date(value).valueOf();
+  if (Number.isNaN(timestamp)) return "unknown age";
+  const ageSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (ageSeconds < 60) return "less than a minute old";
+  const ageMinutes = Math.floor(ageSeconds / 60);
+  if (ageMinutes < 60)
+    return `${ageMinutes} minute${ageMinutes === 1 ? "" : "s"} old`;
+  const ageHours = Math.floor(ageMinutes / 60);
+  return `${ageHours} hour${ageHours === 1 ? "" : "s"} old`;
+}
+
+function renderFreshness() {
+  if (!elements.freshness) return;
+  if (!state.dashboard) {
+    elements.freshness.textContent = state.lastCheckedAt
+      ? `Last checked ${formatDate(state.lastCheckedAt)} · No valid snapshot loaded.`
+      : "Checking for the latest snapshot…";
+    return;
+  }
+  const checked = state.lastCheckedAt
+    ? `Last checked ${formatDate(state.lastCheckedAt)}`
+    : "Not checked yet";
+  const freshness = `Snapshot is ${formatSnapshotAge(state.dashboard.generatedAt)}.`;
+  elements.freshness.textContent = state.refreshError
+    ? `${checked} · ${freshness} Refresh failed; showing the last valid data.`
+    : `${checked} · ${freshness}`;
+}
+
+function updateRefreshControl() {
+  if (!elements.refreshButton) return;
+  const active = Boolean(state.refreshInFlight);
+  elements.refreshButton.disabled = active;
+  elements.refreshButton.textContent = active ? "Refreshing…" : "Refresh now";
 }
 
 function renderMetrics(dashboard) {
@@ -328,6 +374,7 @@ function syncUrl() {
 }
 
 function showLoadError(error) {
+  state.refreshError = error;
   elements.generatedAt.textContent = "Snapshot unavailable";
   elements.status.hidden = false;
   elements.status.className = "status-banner load-error";
@@ -336,9 +383,29 @@ function showLoadError(error) {
     node(
       "p",
       "status-detail",
-      `${error.message}. No issue data is being presented.`
+      `${error.message}. No valid issue snapshot is available yet.`
     )
   );
+  renderFreshness();
+}
+
+function showRefreshError(error) {
+  state.refreshError = error;
+  if (!state.dashboard) {
+    showLoadError(error);
+    return;
+  }
+  elements.status.hidden = false;
+  elements.status.className = "status-banner stale";
+  elements.status.replaceChildren(
+    node("p", "status-title", "Snapshot refresh failed"),
+    node(
+      "p",
+      "status-detail",
+      `${error.message}. The last valid snapshot remains visible.`
+    )
+  );
+  renderFreshness();
 }
 
 async function jsonResponse(response, path) {
@@ -346,36 +413,99 @@ async function jsonResponse(response, path) {
   return response.json();
 }
 
-async function loadDashboard() {
-  try {
-    const [dashboardResponse, catalogResponse] = await Promise.all([
-      fetch("./data/dashboard.json", { cache: "no-store" }),
-      fetch("../data/products.json", { cache: "no-store" })
-    ]);
-    const [dashboard, productCatalog] = await Promise.all([
-      jsonResponse(dashboardResponse, "./data/dashboard.json"),
-      jsonResponse(catalogResponse, "../data/products.json")
-    ]);
-    state.dashboard = dashboard;
-    state.productByRepository = buildProductRepositoryIndex(productCatalog);
+function applyDashboard(dashboard, productCatalog) {
+  const productIndex = productCatalog
+    ? buildProductRepositoryIndex(productCatalog)
+    : null;
+  state.dashboard = dashboard;
+  if (productIndex) state.productByRepository = productIndex;
+  if (!state.initialized) {
     state.repository = resolveRepositoryFilter(
       location.search,
       dashboard.repositories
     );
     state.search = resolveSearchFilter(location.search);
-    elements.issueSearch.value = state.search;
-    elements.generatedAt.textContent = formatDate(
-      dashboard.generatedAt,
-      "Generated "
-    );
-    showStatus(dashboard);
-    renderMetrics(dashboard);
-    renderRepositorySummary(dashboard);
-    renderRepositoryFilter(dashboard);
-    renderIssues();
-  } catch (error) {
-    showLoadError(error);
+    state.initialized = true;
   }
+  elements.issueSearch.value = state.search;
+  elements.generatedAt.textContent = formatDate(
+    dashboard.generatedAt,
+    "Generated "
+  );
+  showStatus(dashboard);
+  renderMetrics(dashboard);
+  renderRepositorySummary(dashboard);
+  renderRepositoryFilter(dashboard);
+  renderIssues();
+  renderFreshness();
+}
+
+async function loadDashboard() {
+  if (state.refreshInFlight) return state.refreshInFlight;
+
+  state.lastCheckedAt = new Date();
+  renderFreshness();
+  updateRefreshControl();
+  const refresh = (async () => {
+    try {
+      const dashboardResponse = await fetch("./data/dashboard.json", {
+        cache: "no-store"
+      });
+      const dashboard = await jsonResponse(
+        dashboardResponse,
+        "./data/dashboard.json"
+      );
+      let productCatalog = null;
+      if (!state.dashboard) {
+        const catalogResponse = await fetch("../data/products.json", {
+          cache: "no-store"
+        });
+        productCatalog = await jsonResponse(
+          catalogResponse,
+          "../data/products.json"
+        );
+      }
+
+      const changed =
+        !state.dashboard ||
+        dashboard.generatedAt !== state.dashboard.generatedAt;
+      const hadError = Boolean(state.refreshError);
+      state.lastCheckedAt = new Date();
+      state.refreshError = null;
+      if (changed) {
+        applyDashboard(dashboard, productCatalog);
+      } else if (hadError) {
+        showStatus(state.dashboard);
+        renderFreshness();
+      } else {
+        renderFreshness();
+      }
+    } catch (error) {
+      state.lastCheckedAt = new Date();
+      showRefreshError(error);
+    } finally {
+      state.refreshInFlight = null;
+      updateRefreshControl();
+      renderFreshness();
+    }
+  })();
+  state.refreshInFlight = refresh;
+  updateRefreshControl();
+  return refresh;
+}
+
+function stopPolling() {
+  if (state.refreshTimer === null) return;
+  clearInterval(state.refreshTimer);
+  state.refreshTimer = null;
+}
+
+function startPolling() {
+  stopPolling();
+  if (document.visibilityState !== "visible") return;
+  state.refreshTimer = setInterval(() => {
+    void loadDashboard();
+  }, SNAPSHOT_REFRESH_INTERVAL_MS);
 }
 
 elements.repositoryFilter.addEventListener("change", (event) => {
@@ -390,4 +520,18 @@ elements.issueSearch.addEventListener("input", (event) => {
   renderIssues();
 });
 
-loadDashboard();
+elements.refreshButton?.addEventListener("click", () => {
+  void loadDashboard();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    void loadDashboard();
+    startPolling();
+  } else {
+    stopPolling();
+  }
+});
+
+void loadDashboard();
+startPolling();
