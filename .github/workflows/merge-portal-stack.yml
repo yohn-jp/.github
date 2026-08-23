@@ -19,11 +19,18 @@ jobs:
     name: Merge stacked portal PRs
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for target PR checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_PR: "89"
+        shell: bash
+        run: gh pr checks "$TARGET_PR" --repo "$GITHUB_REPOSITORY" --watch --fail-fast
+
       - name: Merge stack asynchronously
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_PR: "89"
-          TARGET_SHA: "1a8433e92df12f4788812a705a67efc05ac074ba"
+          TARGET_SHA: "469233079392f00a2ac9ad2d33cf2e38beb17a31"
         shell: bash
         run: |
           set -euo pipefail
