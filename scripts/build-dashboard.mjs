@@ -19,6 +19,12 @@ const PORTAL_COPY_FILES = ["styles.css", "product.css", "CNAME"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];
 
+export function resolvePortalCollectionToken(environment = process.env) {
+  return typeof environment.PORTAL_GITHUB_TOKEN === "string"
+    ? environment.PORTAL_GITHUB_TOKEN
+    : "";
+}
+
 export async function buildDashboard({
   outputDirectory = process.env.DASHBOARD_OUTPUT ?? join(REPOSITORY_ROOT, "site"),
   configPath = join(DASHBOARD_DIRECTORY, "repositories.json"),
@@ -26,7 +32,7 @@ export async function buildDashboard({
   detailsPath = join(PORTAL_DIRECTORY, "product-details.json"),
   portalTemplatePath = join(PORTAL_DIRECTORY, "index.html"),
   fetchImpl = globalThis.fetch,
-  token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? "",
+  token = resolvePortalCollectionToken(),
   now
 } = {}) {
   const [config, productCatalog, portalTemplate] = await Promise.all([
