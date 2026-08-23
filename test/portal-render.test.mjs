@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildDashboard } from "../scripts/build-dashboard.mjs";
 import { loadProductCatalog } from "../scripts/product-catalog.mjs";
+import { loadProductDetails } from "../scripts/product-details.mjs";
 import {
   renderPortalHome,
   renderProductOverviewPage
@@ -14,11 +15,17 @@ function response(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-test("home renderer projects product cards, system nodes, and relationships", async () => {
+async function portalInputs() {
   const [template, catalog] = await Promise.all([
     readFile("portal/index.html", "utf8"),
     loadProductCatalog("portal/products.json")
   ]);
+  const details = await loadProductDetails("portal/product-details.json", catalog);
+  return { template, catalog, details };
+}
+
+test("home renderer projects product cards, system nodes, and relationships", async () => {
+  const { template, catalog } = await portalInputs();
   const html = renderPortalHome(template, catalog);
   assert.doesNotMatch(html, /\{\{(?:PRODUCT_CARDS|SYSTEM_NODES|RELATIONSHIPS)\}\}/);
   for (const product of catalog.products) {
@@ -30,27 +37,50 @@ test("home renderer projects product cards, system nodes, and relationships", as
   assert.match(html, /id="system"/);
 });
 
-test("product overview renderer preserves catalog boundaries and internal navigation", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+test("deep product renderer preserves boundary, narrative, relationships, and navigation", async () => {
+  const { catalog, details } = await portalInputs();
   const product = catalog.products.find((entry) => entry.id === "nawabari");
-  const html = renderProductOverviewPage(product, catalog);
+  const detail = details.products.find((entry) => entry.id === "nawabari");
+  const html = renderProductOverviewPage(product, catalog, detail);
   assert.match(html, /<h1>Nawabari<\/h1>/);
+  assert.match(html, /Why it exists/);
   assert.match(html, /Authority/);
   assert.match(html, /Boundary/);
+  assert.match(html, /Core model/);
+  assert.match(html, /Current maturity/);
+  assert.match(html, /Standalone machine contract/);
+  assert.match(html, /Conservative reconciliation and cleanup/);
   assert.match(html, /href="\.\.\/mottainai\/"/);
   assert.match(html, /href="\.\.\/\.\.\/work\/"/);
   assert.match(html, /https:\/\/dev\.yohn\.jp\/products\/nawabari\//);
+  assert.match(html, /href="\.\.\/\.\.\/product\.css"/);
+});
+
+test("each product page carries product-specific grounded core concepts", async () => {
+  const { catalog, details } = await portalInputs();
+  const expectations = {
+    mottainai: /Bounded context runtime/,
+    nawabari: /Session and resource ownership/,
+    inari: /Validate, render, then mutate/,
+    suzukuri: /Provenance and loss semantics/,
+    wabachi: /Immutable provider evidence/
+  };
+  for (const product of catalog.products) {
+    const detail = details.products.find((entry) => entry.id === product.id);
+    const html = renderProductOverviewPage(product, catalog, detail);
+    assert.match(html, expectations[product.id]);
+  }
 });
 
 test("renderer rejects malformed portal templates instead of publishing partial markup", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const { catalog } = await portalInputs();
   assert.throws(
     () => renderPortalHome("{{PRODUCT_CARDS}}", catalog),
     /missing token \{\{SYSTEM_NODES\}\}/
   );
 });
 
-test("build publishes generated root and one stable route per product", async () => {
+test("build publishes generated root and one stable deep route per product", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "portal-render-"));
   const outputDirectory = join(temporaryDirectory, "site");
   const configPath = join(temporaryDirectory, "repositories.json");
@@ -76,8 +106,10 @@ test("build publishes generated root and one stable route per product", async ()
   try {
     await buildDashboard({ outputDirectory, configPath, fetchImpl });
     const root = await readFile(join(outputDirectory, "index.html"), "utf8");
+    const productCss = await readFile(join(outputDirectory, "product.css"), "utf8");
     assert.match(root, /Small tools\./);
     assert.doesNotMatch(root, /\{\{/);
+    assert.match(productCss, /\.concept-grid/);
 
     for (const id of ["mottainai", "nawabari", "inari", "suzukuri", "wabachi"]) {
       const product = await readFile(
@@ -85,6 +117,9 @@ test("build publishes generated root and one stable route per product", async ()
         "utf8"
       );
       assert.match(product, new RegExp(`https://dev\\.yohn\\.jp/products/${id}/`));
+      assert.match(product, /Why it exists/);
+      assert.match(product, /Core model/);
+      assert.match(product, /Current maturity/);
     }
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
@@ -93,7 +128,9 @@ test("build publishes generated root and one stable route per product", async ()
 
 test("visual system includes responsive focus and reduced-motion contracts", async () => {
   const css = await readFile("portal/styles.css", "utf8");
+  const productCss = await readFile("portal/product.css", "utf8");
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(max-width: 700px\)/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(productCss, /@media \(max-width: 700px\)/);
 });

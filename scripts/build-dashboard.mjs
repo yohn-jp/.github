@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDashboardData } from "./dashboard-data.mjs";
 import { loadProductCatalog } from "./product-catalog.mjs";
+import { loadProductDetails } from "./product-details.mjs";
 import {
   renderPortalHome,
   renderProductOverviewPage
@@ -15,7 +16,7 @@ const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
 const PORTAL_DIRECTORY = join(REPOSITORY_ROOT, "portal");
 const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 
-const PORTAL_COPY_FILES = ["styles.css", "CNAME"];
+const PORTAL_COPY_FILES = ["styles.css", "product.css", "CNAME"];
 const DASHBOARD_FILES = ["index.html", "styles.css", "app.js"];
 
 export async function buildDashboard({
@@ -23,6 +24,7 @@ export async function buildDashboard({
     join(REPOSITORY_ROOT, "site"),
   configPath = join(DASHBOARD_DIRECTORY, "repositories.json"),
   catalogPath = join(PORTAL_DIRECTORY, "products.json"),
+  detailsPath = join(PORTAL_DIRECTORY, "product-details.json"),
   portalTemplatePath = join(PORTAL_DIRECTORY, "index.html"),
   fetchImpl = globalThis.fetch,
   token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? "",
@@ -33,7 +35,13 @@ export async function buildDashboard({
     loadProductCatalog(catalogPath),
     readFile(portalTemplatePath, "utf8")
   ]);
-  const data = await collectDashboardData({ config, fetchImpl, token, now });
+  const [data, productDetails] = await Promise.all([
+    collectDashboardData({ config, fetchImpl, token, now }),
+    loadProductDetails(detailsPath, productCatalog)
+  ]);
+  const detailsById = new Map(
+    productDetails.products.map((detail) => [detail.id, detail])
+  );
   const portalDataDirectory = join(outputDirectory, "data");
   const productDirectory = join(outputDirectory, "products");
   const workDirectory = join(outputDirectory, "work");
@@ -57,7 +65,11 @@ export async function buildDashboard({
     await mkdir(directory, { recursive: true });
     await writeFile(
       join(directory, "index.html"),
-      renderProductOverviewPage(product, productCatalog)
+      renderProductOverviewPage(
+        product,
+        productCatalog,
+        detailsById.get(product.id)
+      )
     );
   }
 
