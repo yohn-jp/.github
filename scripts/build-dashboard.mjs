@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDashboardData } from "./dashboard-data.mjs";
+import { hydrateDashboardPullRequests } from "./pull-request-links.mjs";
 import { loadProductCatalog } from "./product-catalog.mjs";
 import { loadProductDetails } from "./product-details.mjs";
 import { renderPortalHome, renderProductOverviewPage } from "./render-portal.mjs";
@@ -33,11 +34,18 @@ export async function buildDashboard({
     loadProductCatalog(catalogPath),
     readFile(portalTemplatePath, "utf8")
   ]);
-  const [data, productDetails] = await Promise.all([
+  const [rawDashboard, productDetails] = await Promise.all([
     collectDashboardData({ config, fetchImpl, token, now }),
     loadProductDetails(detailsPath, productCatalog)
   ]);
-  const detailsById = new Map(productDetails.products.map((detail) => [detail.id, detail]));
+  const data = await hydrateDashboardPullRequests({
+    dashboard: rawDashboard,
+    fetchImpl,
+    token
+  });
+  const detailsById = new Map(
+    productDetails.products.map((detail) => [detail.id, detail])
+  );
   const portalDataDirectory = join(outputDirectory, "data");
   const productDirectory = join(outputDirectory, "products");
   const workDirectory = join(outputDirectory, "work");
@@ -53,14 +61,21 @@ export async function buildDashboard({
   for (const file of PORTAL_COPY_FILES) {
     await copyFile(join(PORTAL_DIRECTORY, file), join(outputDirectory, file));
   }
-  await writeFile(join(outputDirectory, "index.html"), renderPortalHome(portalTemplate, productCatalog));
+  await writeFile(
+    join(outputDirectory, "index.html"),
+    renderPortalHome(portalTemplate, productCatalog)
+  );
 
   for (const product of productCatalog.products) {
     const directory = join(productDirectory, product.id);
     await mkdir(directory, { recursive: true });
     await writeFile(
       join(directory, "index.html"),
-      renderProductOverviewPage(product, productCatalog, detailsById.get(product.id))
+      renderProductOverviewPage(
+        product,
+        productCatalog,
+        detailsById.get(product.id)
+      )
     );
   }
 
@@ -72,8 +87,14 @@ export async function buildDashboard({
   }
 
   await Promise.all([
-    writeFile(join(portalDataDirectory, "products.json"), `${JSON.stringify(productCatalog, null, 2)}\n`),
-    writeFile(join(workDataDirectory, "dashboard.json"), `${JSON.stringify(data, null, 2)}\n`)
+    writeFile(
+      join(portalDataDirectory, "products.json"),
+      `${JSON.stringify(productCatalog, null, 2)}\n`
+    ),
+    writeFile(
+      join(workDataDirectory, "dashboard.json"),
+      `${JSON.stringify(data, null, 2)}\n`
+    )
   ]);
   return data;
 }
@@ -85,6 +106,6 @@ function isMain() {
 if (isMain()) {
   const data = await buildDashboard();
   console.log(
-    `Portal generated: ${data.status} (${data.metrics.issueCount} issues, ${data.metrics.failedRepositories} repository failures, ${data.metrics.dependencyEdges ?? 0} dependency edges)`
+    `Portal generated: ${data.status} (${data.metrics.issueCount} issues, ${data.metrics.failedRepositories} repository failures, ${data.metrics.dependencyEdges ?? 0} dependency edges, ${data.metrics.linkedPullRequests ?? 0} linked pull requests)`
   );
 }

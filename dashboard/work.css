@@ -104,7 +104,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border-block: 1px solid var(--line-strong);
   margin-bottom: 40px;
 }
@@ -286,8 +286,58 @@ tbody tr:last-child td {
 
 .issue-link:hover,
 .repo-product:hover,
-.issue-product:hover {
+.issue-product:hover,
+.pr-title:hover {
   text-decoration: underline;
+}
+
+.issue-prs {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.issue-pr {
+  display: grid;
+  gap: 2px;
+  border-left: 3px solid #8d939d;
+  padding-left: 9px;
+}
+
+.issue-pr.open {
+  border-left-color: #4d8e32;
+}
+
+.issue-pr.merged {
+  border-left-color: #7652b8;
+}
+
+.issue-pr.closed {
+  border-left-color: #b85d55;
+}
+
+.pr-title {
+  width: fit-content;
+  color: #313640;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.pr-meta,
+.pr-linkage {
+  color: var(--muted);
+  font-size: 0.67rem;
+  line-height: 1.4;
+}
+
+.pr-linkage.unknown {
+  color: #9b711a;
+}
+
+.pr-linkage.unlinked {
+  color: #838993;
 }
 
 .issue-meta {
@@ -326,6 +376,22 @@ tbody tr:last-child td {
   text-align: center;
 }
 
+@media (max-width: 900px) {
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metric-card:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-left: 0;
+  }
+
+  .metric-card:nth-child(4) {
+    border-top: 1px solid var(--line);
+  }
+}
+
 @media (max-width: 800px) {
   .work-hero,
   .work-section-head {
@@ -360,8 +426,11 @@ tbody tr:last-child td {
   }
 
   .metric-card,
-  .metric-card + .metric-card {
+  .metric-card + .metric-card,
+  .metric-card:nth-child(3),
+  .metric-card:nth-child(4) {
     min-height: 100px;
+    border-top: 0;
     border-left: 0;
     border-bottom: 1px solid var(--line);
     padding: 22px 0;

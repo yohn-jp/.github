@@ -34,7 +34,9 @@ function htmlNode(tag, className, content) {
 
 function svgNode(tag, attributes = {}) {
   const node = document.createElementNS(SVG_NS, tag);
-  for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+  for (const [name, value] of Object.entries(attributes)) {
+    node.setAttribute(name, String(value));
+  }
   return node;
 }
 
@@ -46,19 +48,35 @@ function displayRepository(repository) {
   return productFor(repository)?.name ?? repository;
 }
 
+function isDependencyError(error) {
+  const stage = String(error?.stage ?? "");
+  return (
+    stage === "repository" ||
+    stage === "issues" ||
+    stage.startsWith("dependencies:")
+  );
+}
+
 function showStatus() {
   const unavailable = state.dashboard.metrics.dependencyDataUnavailable ?? 0;
-  const complete = state.dashboard.status === "complete" && unavailable === 0;
+  const dependencyErrors = (state.dashboard.errors ?? []).filter(
+    isDependencyError
+  ).length;
+  const complete = unavailable === 0 && dependencyErrors === 0;
   elements.status.hidden = false;
   elements.status.className = `status-banner ${complete ? "complete" : "partial"}`;
   elements.status.replaceChildren(
-    htmlNode("p", "status-title", complete ? "Dependency snapshot complete" : "Dependency snapshot incomplete"),
+    htmlNode(
+      "p",
+      "status-title",
+      complete ? "Dependency snapshot complete" : "Dependency snapshot incomplete"
+    ),
     htmlNode(
       "p",
       "status-detail",
       complete
         ? `${state.graph.edges.length} native dependency edges loaded.`
-        : `${state.graph.edges.length} known edges loaded; ${unavailable} issues have unavailable or partial dependency data.`
+        : `${state.graph.edges.length} known edges loaded; ${unavailable} issues have unavailable or partial dependency data and ${dependencyErrors} dependency-source errors were recorded.`
     )
   );
 }
@@ -71,7 +89,9 @@ function renderRepositoryFilter() {
     const option = htmlNode(
       "option",
       "",
-      product ? `${product.name} · ${repository.fullName}` : repository.fullName
+      product
+        ? `${product.name} · ${repository.fullName}`
+        : repository.fullName
     );
     option.value = repository.fullName;
     return option;
@@ -85,7 +105,9 @@ function renderBlockers(graph) {
     .sort((a, b) => b.outgoing - a.outgoing || a.key.localeCompare(b.key))
     .slice(0, 6);
   if (blockers.length === 0) {
-    elements.blockers.replaceChildren(htmlNode("li", "", "No blocking edges in current view."));
+    elements.blockers.replaceChildren(
+      htmlNode("li", "", "No blocking edges in current view.")
+    );
     return;
   }
   elements.blockers.replaceChildren(
@@ -93,9 +115,14 @@ function renderBlockers(graph) {
       const item = htmlNode("li");
       item.append(
         htmlNode("span", "blocker-rank", String(index + 1).padStart(2, "0")),
-        Object.assign(htmlNode("a", "blocker-link", `${displayRepository(blocker.repository)} #${blocker.number} · ${blocker.title}`), {
-          href: blocker.url
-        }),
+        Object.assign(
+          htmlNode(
+            "a",
+            "blocker-link",
+            `${displayRepository(blocker.repository)} #${blocker.number} · ${blocker.title}`
+          ),
+          { href: blocker.url }
+        ),
         htmlNode("span", "blocker-count", `${blocker.outgoing} blocked`)
       );
       return item;
@@ -106,19 +133,84 @@ function renderBlockers(graph) {
 function graphContext(node) {
   const incoming = state.graph.edges
     .filter((edge) => edge.target === node.key)
-    .map((edge) => state.graph.nodes.find((candidate) => candidate.key === edge.source))
+    .map((edge) =>
+      state.graph.nodes.find((candidate) => candidate.key === edge.source)
+    )
     .filter(Boolean);
   const outgoing = state.graph.edges
     .filter((edge) => edge.source === node.key)
-    .map((edge) => state.graph.nodes.find((candidate) => candidate.key === edge.target))
+    .map((edge) =>
+      state.graph.nodes.find((candidate) => candidate.key === edge.target)
+    )
     .filter(Boolean);
   return { incoming, outgoing };
+}
+
+function pullRequestStatus(pullRequest) {
+  return pullRequest.state === "closed"
+    ? "closed without merge"
+    : pullRequest.state;
+}
+
+function renderPullRequests(node) {
+  const section = htmlNode("div", "node-prs");
+  section.append(htmlNode("p", "node-prs-label", "Implementation"));
+
+  if (!node.openDataset) {
+    section.append(
+      htmlNode(
+        "p",
+        "node-prs-empty",
+        "PR linkage unavailable for dependency node outside current open-issue snapshot."
+      )
+    );
+    return section;
+  }
+
+  const linkage = node.pullRequests;
+  if (!linkage || linkage.status !== "complete") {
+    section.append(
+      htmlNode("p", "node-prs-empty", "PR linkage unavailable or partial.")
+    );
+    return section;
+  }
+  if (linkage.items.length === 0) {
+    section.append(
+      htmlNode("p", "node-prs-empty", "No authoritative linked PR.")
+    );
+    return section;
+  }
+
+  for (const pullRequest of linkage.items) {
+    const item = htmlNode("div", `node-pr ${pullRequest.state}`);
+    const anchor = htmlNode(
+      "a",
+      "node-pr-title",
+      `PR #${pullRequest.number} ${pullRequest.title}`
+    );
+    anchor.href = pullRequest.url;
+    anchor.rel = "noreferrer";
+    item.append(
+      anchor,
+      htmlNode(
+        "span",
+        "node-pr-meta",
+        `${pullRequest.repository.fullName} · ${pullRequestStatus(pullRequest)}`
+      )
+    );
+    section.append(item);
+  }
+  return section;
 }
 
 function renderDetail(node) {
   const { incoming, outgoing } = graphContext(node);
   const title = htmlNode("h3", "", `#${node.number} ${node.title}`);
-  const repository = htmlNode("p", "node-detail-meta", `${displayRepository(node.repository)} · ${node.repository} · ${node.state}`);
+  const repository = htmlNode(
+    "p",
+    "node-detail-meta",
+    `${displayRepository(node.repository)} · ${node.repository} · ${node.state}`
+  );
   const relation = htmlNode(
     "p",
     "",
@@ -132,6 +224,7 @@ function renderDetail(node) {
     title,
     repository,
     relation,
+    renderPullRequests(node),
     open
   );
 }
@@ -147,7 +240,9 @@ function appendMarker(svg) {
     markerHeight: 6,
     orient: "auto-start-reverse"
   });
-  marker.append(svgNode("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: "#8f959f" }));
+  marker.append(
+    svgNode("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: "#8f959f" })
+  );
   defs.append(marker);
   svg.append(defs);
 }
@@ -183,13 +278,32 @@ function renderSvg(layout) {
       role: "button",
       "aria-label": `${node.repository} issue ${node.number}: ${node.title}`
     });
-    group.append(svgNode("rect", { width: node.width, height: node.height, rx: 11 }));
-    const repo = svgNode("text", { x: 14, y: 19, class: "graph-node-repo" });
+    group.append(
+      svgNode("rect", { width: node.width, height: node.height, rx: 11 })
+    );
+    const repo = svgNode("text", {
+      x: 14,
+      y: 19,
+      class: "graph-node-repo"
+    });
     repo.textContent = `${displayRepository(node.repository)} · #${node.number}`;
-    const title = svgNode("text", { x: 14, y: 41, class: "graph-node-title" });
-    title.textContent = node.title.length > 34 ? `${node.title.slice(0, 33)}…` : node.title;
-    const status = svgNode("text", { x: 14, y: 60, class: "graph-node-state" });
-    status.textContent = `${node.state}${node.openDataset ? "" : " · outside open set"}${node.cycle ? " · cycle" : ""}`;
+    const title = svgNode("text", {
+      x: 14,
+      y: 41,
+      class: "graph-node-title"
+    });
+    title.textContent =
+      node.title.length > 34 ? `${node.title.slice(0, 33)}…` : node.title;
+    const status = svgNode("text", {
+      x: 14,
+      y: 60,
+      class: "graph-node-state"
+    });
+    const pullRequestCount =
+      node.pullRequests?.status === "complete"
+        ? node.pullRequests.items.length
+        : null;
+    status.textContent = `${node.state}${node.openDataset ? "" : " · outside open set"}${node.cycle ? " · cycle" : ""}${pullRequestCount ? ` · ${pullRequestCount} PR${pullRequestCount === 1 ? "" : "s"}` : ""}`;
     group.append(repo, title, status);
     group.addEventListener("click", () => renderDetail(node));
     group.addEventListener("keydown", (event) => {

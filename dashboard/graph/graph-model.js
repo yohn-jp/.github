@@ -11,7 +11,8 @@ function graphNode(issue, openDataset = true) {
     state: issue.state,
     url: issue.url,
     openDataset,
-    dependencies: issue.relationships?.dependencies ?? null
+    dependencies: issue.relationships?.dependencies ?? null,
+    pullRequests: issue.relationships?.pullRequests ?? null
   };
 }
 
@@ -28,16 +29,26 @@ export function buildDependencyGraph(dashboard) {
   for (const issue of dashboard.issues) ensure(issue, true);
 
   function addEdge(sourceRef, targetRef) {
-    const source = ensure(sourceRef, dashboard.issues.some((issue) => issueKey(issue) === issueKey(sourceRef)));
-    const target = ensure(targetRef, dashboard.issues.some((issue) => issueKey(issue) === issueKey(targetRef)));
+    const source = ensure(
+      sourceRef,
+      dashboard.issues.some((issue) => issueKey(issue) === issueKey(sourceRef))
+    );
+    const target = ensure(
+      targetRef,
+      dashboard.issues.some((issue) => issueKey(issue) === issueKey(targetRef))
+    );
     const key = `${source}->${target}`;
     if (!edges.has(key)) edges.set(key, { key, source, target });
   }
 
   for (const issue of dashboard.issues) {
     const dependencies = issue.relationships?.dependencies;
-    for (const blocker of dependencies?.blockedBy ?? []) addEdge(blocker, issue);
-    for (const blocked of dependencies?.blocking ?? []) addEdge(issue, blocked);
+    for (const blocker of dependencies?.blockedBy ?? []) {
+      addEdge(blocker, issue);
+    }
+    for (const blocked of dependencies?.blocking ?? []) {
+      addEdge(issue, blocked);
+    }
   }
 
   const incoming = new Map([...nodes.keys()].map((key) => [key, 0]));
@@ -53,15 +64,24 @@ export function buildDependencyGraph(dashboard) {
   }
 
   return {
-    nodes: [...nodes.values()].sort((a, b) => a.repository.localeCompare(b.repository) || a.number - b.number),
+    nodes: [...nodes.values()].sort(
+      (a, b) =>
+        a.repository.localeCompare(b.repository) || a.number - b.number
+    ),
     edges: [...edges.values()]
   };
 }
 
-export function filterDependencyGraph(graph, repository = "", includeDisconnected = false) {
+export function filterDependencyGraph(
+  graph,
+  repository = "",
+  includeDisconnected = false
+) {
   const selected = new Set();
   if (repository) {
-    for (const node of graph.nodes) if (node.repository === repository) selected.add(node.key);
+    for (const node of graph.nodes) {
+      if (node.repository === repository) selected.add(node.key);
+    }
     for (const edge of graph.edges) {
       if (selected.has(edge.source) || selected.has(edge.target)) {
         selected.add(edge.source);
@@ -74,16 +94,22 @@ export function filterDependencyGraph(graph, repository = "", includeDisconnecte
     }
   }
   if (includeDisconnected && repository) {
-    for (const node of graph.nodes) if (node.repository === repository) selected.add(node.key);
+    for (const node of graph.nodes) {
+      if (node.repository === repository) selected.add(node.key);
+    }
   }
   return {
     nodes: graph.nodes.filter((node) => selected.has(node.key)),
-    edges: graph.edges.filter((edge) => selected.has(edge.source) && selected.has(edge.target))
+    edges: graph.edges.filter(
+      (edge) => selected.has(edge.source) && selected.has(edge.target)
+    )
   };
 }
 
 export function layoutDependencyGraph(graph) {
-  const byKey = new Map(graph.nodes.map((node) => [node.key, { ...node, layer: 0, cycle: false }]));
+  const byKey = new Map(
+    graph.nodes.map((node) => [node.key, { ...node, layer: 0, cycle: false }])
+  );
   const indegree = new Map(graph.nodes.map((node) => [node.key, 0]));
   const outgoing = new Map(graph.nodes.map((node) => [node.key, []]));
   for (const edge of graph.edges) {
@@ -91,7 +117,9 @@ export function layoutDependencyGraph(graph) {
     outgoing.get(edge.source)?.push(edge.target);
   }
 
-  const queue = [...byKey.keys()].filter((key) => indegree.get(key) === 0).sort();
+  const queue = [...byKey.keys()]
+    .filter((key) => indegree.get(key) === 0)
+    .sort();
   const visited = new Set();
   while (queue.length) {
     const key = queue.shift();
@@ -106,7 +134,12 @@ export function layoutDependencyGraph(graph) {
     queue.sort();
   }
 
-  const maxAcyclicLayer = Math.max(0, ...[...byKey.values()].filter((node) => visited.has(node.key)).map((node) => node.layer));
+  const maxAcyclicLayer = Math.max(
+    0,
+    ...[...byKey.values()]
+      .filter((node) => visited.has(node.key))
+      .map((node) => node.layer)
+  );
   for (const node of byKey.values()) {
     if (!visited.has(node.key)) {
       node.cycle = true;
@@ -119,7 +152,12 @@ export function layoutDependencyGraph(graph) {
     if (!layers.has(node.layer)) layers.set(node.layer, []);
     layers.get(node.layer).push(node);
   }
-  for (const nodes of layers.values()) nodes.sort((a, b) => a.repository.localeCompare(b.repository) || a.number - b.number);
+  for (const nodes of layers.values()) {
+    nodes.sort(
+      (a, b) =>
+        a.repository.localeCompare(b.repository) || a.number - b.number
+    );
+  }
 
   const nodeWidth = 250;
   const nodeHeight = 72;
@@ -141,7 +179,13 @@ export function layoutDependencyGraph(graph) {
     sourceNode: positioned.get(edge.source),
     targetNode: positioned.get(edge.target)
   }));
-  const width = Math.max(360, ...nodes.map((node) => node.x + node.width + 24));
-  const height = Math.max(240, ...nodes.map((node) => node.y + node.height + 24));
+  const width = Math.max(
+    360,
+    ...nodes.map((node) => node.x + node.width + 24)
+  );
+  const height = Math.max(
+    240,
+    ...nodes.map((node) => node.y + node.height + 24)
+  );
   return { nodes, edges, width, height };
 }
