@@ -303,12 +303,12 @@ yohn-jp/mottainai:
   # from templates/workflows/ like the other consumers' governance.yml,
   # because it is not byte-identical to the generic canonical wrapper.
 
-# yohn-jp/open-code-review-chatgpt: new consumer. Keep its existing OCR
-# contract CI byte-for-byte under organization ownership while adopting the
-# shared agent instructions, Issue/PR/Inari contracts, and standard governance
-# wrappers. No publish wrapper yet: this repository is currently private=true
-# at the package level and has no release contract to synchronize.
-yohn-jp/open-code-review-chatgpt:
+# yohn-jp/majiwari: renamed from open-code-review-chatgpt. Keep its existing
+# OCR contract CI under organization ownership while adopting shared agent
+# instructions, Issue/PR/Inari contracts, CodeQL baseline, and governance
+# wrappers. No publish wrapper yet: this repository currently has no release
+# contract to synchronize.
+yohn-jp/majiwari:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
@@ -345,10 +345,12 @@ yohn-jp/open-code-review-chatgpt:
     dest: .github/inari/pull-requests/release.json
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
-  - source: templates/workflows/open-code-review-chatgpt-ci.yml
+  - source: templates/workflows/majiwari-ci.yml
     dest: .github/workflows/ci.yml
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
+  - source: .github/codeql/codeql-config.yml
+    dest: .github/codeql/codeql-config.yml
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
