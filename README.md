@@ -68,16 +68,26 @@ relationship data. Repository READMEs and docs remain authoritative for actual
 CLI/API/release behavior; the portal catalog is a curated navigation and
 responsibility projection, not a replacement documentation authority.
 
+The work read model keeps GitHub authoritative. Open Issue/repository metadata
+and native Issue dependency edges are collected from GitHub REST APIs. Issue to
+implementing/linked PR relationships come from GitHub GraphQL
+`Issue.closedByPullRequestsReferences` with closed PRs included, so open,
+merged, and closed-without-merge implementation states remain distinguishable.
+No dependency or implementation relationship is inferred from title or
+free-form Markdown. Missing or failed relationship reads remain explicit as
+unavailable/partial data.
+
 `pnpm run dashboard:build` generates the disposable `site/` Pages artifact:
 portal assets at the root, validated product data under `site/data/`, the issue
-dashboard under `site/work/`, and generated issue data under
-`site/work/data/`. `portal/CNAME` is copied to the artifact root so the intended
-`dev.yohn.jp` custom domain remains explicit in repository source and published
-output. Repository Pages settings and DNS remain external configuration.
+dashboard under `site/work/`, the native dependency graph under
+`site/work/graph/`, and generated work data under `site/work/data/`.
+`portal/CNAME` is copied to the artifact root so the intended `dev.yohn.jp`
+custom domain remains explicit in repository source and published output.
+Repository Pages settings and DNS remain external configuration.
 
 [`dashboard-pages.yml`](.github/workflows/dashboard-pages.yml) builds and
 deploys the portal on relevant changes, on a schedule, or by manual dispatch.
-The build uses the Actions token only while collecting public GitHub REST data;
+The build uses the Actions token only while collecting public GitHub data;
 browser assets receive no GitHub credential. Partial and failed source requests
 remain visible in the work dashboard rather than being presented as complete.
 

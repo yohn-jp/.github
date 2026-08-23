@@ -8,6 +8,8 @@ on:
       - "dashboard/**"
       - "scripts/build-dashboard.mjs"
       - "scripts/dashboard-data.mjs"
+      - "scripts/github-pr-links.mjs"
+      - "scripts/pull-request-links.mjs"
       - ".github/workflows/dashboard-pages.yml"
   schedule:
     - cron: "23 * * * *"

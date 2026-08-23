@@ -24,7 +24,9 @@ const elements = {
 };
 
 function text(value) {
-  return value === null || value === undefined || value === "" ? "—" : String(value);
+  return value === null || value === undefined || value === ""
+    ? "—"
+    : String(value);
 }
 
 function node(tag, className, content) {
@@ -46,28 +48,42 @@ function productForRepository(fullName) {
 }
 
 function productLink(product, className = "product-route") {
-  return link(`../products/${encodeURIComponent(product.id)}/`, product.name, className);
+  return link(
+    `../products/${encodeURIComponent(product.id)}/`,
+    product.name,
+    className
+  );
 }
 
 function showStatus(dashboard) {
   const status = dashboard.status;
+  const unavailableLinks = dashboard.metrics.pullRequestDataUnavailable ?? 0;
   elements.status.hidden = false;
   elements.status.className = `status-banner ${status}`;
+  const detail =
+    status === "complete"
+      ? `${dashboard.metrics.issueCount} open issues and ${dashboard.metrics.linkedPullRequests ?? 0} authoritative linked pull requests loaded from ${dashboard.metrics.repositoryCount} repositories.`
+      : `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded; ${unavailableLinks} issues have unavailable or partial PR linkage. Treat this view as incomplete.`;
   elements.status.replaceChildren(
-    node("p", "status-title", status === "complete" ? "Snapshot complete" : `Snapshot ${status}`),
     node(
       "p",
-      "status-detail",
-      status === "complete"
-        ? `${dashboard.metrics.issueCount} open issues loaded from ${dashboard.metrics.repositoryCount} repositories.`
-        : `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded. Treat this view as incomplete.`
-    )
+      "status-title",
+      status === "complete" ? "Snapshot complete" : `Snapshot ${status}`
+    ),
+    node("p", "status-detail", detail)
   );
   if (dashboard.errors.length > 0) {
     const errors = node("ul", "status-errors");
     for (const error of dashboard.errors) {
       const suffix = error.rateLimited ? " Rate limit reached." : "";
-      errors.append(node("li", "", `${error.repository} (${error.stage}): ${error.message}${suffix}`));
+      const issue = error.issue ? `#${error.issue} ` : "";
+      errors.append(
+        node(
+          "li",
+          "",
+          `${error.repository} ${issue}(${error.stage}): ${error.message}${suffix}`
+        )
+      );
     }
     elements.status.append(errors);
   }
@@ -85,36 +101,56 @@ function formatDate(value, prefix = "") {
 function renderMetrics(dashboard) {
   const cards = [
     [dashboard.metrics.issueCount, "open issues"],
+    [dashboard.metrics.linkedPullRequests ?? 0, "linked pull requests"],
     [dashboard.metrics.repositoryCount, "repositories"],
     [dashboard.metrics.failedRepositories, "sources needing attention"]
   ];
   elements.metrics.replaceChildren(
     ...cards.map(([value, label]) => {
       const card = node("div", "metric-card");
-      card.append(node("span", "metric-value", text(value)), node("span", "metric-label", label));
+      card.append(
+        node("span", "metric-value", text(value)),
+        node("span", "metric-label", label)
+      );
       return card;
     })
   );
 }
 
 function renderRepositorySummary(dashboard) {
-  const counts = dashboard.repositories.map((repository) => repository.openIssueCount ?? 0);
+  const counts = dashboard.repositories.map(
+    (repository) => repository.openIssueCount ?? 0
+  );
   const max = Math.max(...counts, 1);
   elements.repositorySummary.replaceChildren(
     ...dashboard.repositories.map((repository) => {
       const product = productForRepository(repository.fullName);
-      const row = node("div", `repo-row${repository.fetchStatus === "ok" ? "" : " failed"}`);
+      const row = node(
+        "div",
+        `repo-row${repository.fetchStatus === "ok" ? "" : " failed"}`
+      );
       const identity = node("div", "repo-identity");
       if (product) identity.append(productLink(product, "repo-product"));
-      identity.append(link(repository.url, repository.fullName, "repo-github"));
+      identity.append(
+        link(repository.url, repository.fullName, "repo-github")
+      );
       const bar = node("div", "repo-bar");
       const fill = node("div", "repo-bar-fill");
-      fill.style.width = `${Math.max(((repository.openIssueCount ?? 0) / max) * 100, repository.fetchStatus === "ok" ? 0 : 2)}%`;
+      fill.style.width = `${Math.max(
+        ((repository.openIssueCount ?? 0) / max) * 100,
+        repository.fetchStatus === "ok" ? 0 : 2
+      )}%`;
       bar.append(fill);
       row.append(
         identity,
         bar,
-        node("div", "repo-count", repository.fetchStatus === "ok" ? `${repository.openIssueCount} open` : "Data unavailable")
+        node(
+          "div",
+          "repo-count",
+          repository.fetchStatus === "ok"
+            ? `${repository.openIssueCount} open`
+            : "Data unavailable"
+        )
       );
       return row;
     })
@@ -126,7 +162,13 @@ function renderRepositoryFilter(dashboard) {
   all.value = "";
   const options = dashboard.repositories.map((repository) => {
     const product = productForRepository(repository.fullName);
-    const option = node("option", "", product ? `${product.name} · ${repository.fullName}` : repository.fullName);
+    const option = node(
+      "option",
+      "",
+      product
+        ? `${product.name} · ${repository.fullName}`
+        : repository.fullName
+    );
     option.value = repository.fullName;
     return option;
   });
@@ -134,8 +176,14 @@ function renderRepositoryFilter(dashboard) {
   elements.repositoryFilter.value = state.repository;
 }
 
+function pullRequestsForIssue(issue) {
+  return issue.relationships?.pullRequests?.items ?? [];
+}
+
 function issueMatches(issue) {
-  if (state.repository && issue.repository.fullName !== state.repository) return false;
+  if (state.repository && issue.repository.fullName !== state.repository) {
+    return false;
+  }
   const query = state.search.trim().toLowerCase();
   if (!query) return true;
   const product = productForRepository(issue.repository.fullName);
@@ -147,12 +195,58 @@ function issueMatches(issue) {
     issue.type,
     issue.milestone?.title,
     issue.assignee?.login,
-    ...issue.labels.map((label) => label.name)
+    ...issue.labels.map((label) => label.name),
+    ...pullRequestsForIssue(issue).flatMap((pullRequest) => [
+      pullRequest.title,
+      pullRequest.repository.fullName,
+      `PR ${pullRequest.number}`,
+      pullRequest.state
+    ])
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase()
     .includes(query);
+}
+
+function renderPullRequests(issue) {
+  const container = node("div", "issue-prs");
+  const linkage = issue.relationships?.pullRequests;
+  if (!linkage || linkage.status !== "complete") {
+    container.append(
+      node("span", "pr-linkage unknown", "PR linkage unavailable")
+    );
+    return container;
+  }
+  if (linkage.items.length === 0) {
+    container.append(
+      node("span", "pr-linkage unlinked", "No authoritative linked PR")
+    );
+    return container;
+  }
+
+  for (const pullRequest of linkage.items) {
+    const item = node("div", `issue-pr ${pullRequest.state}`);
+    const title = link(
+      pullRequest.url,
+      `PR #${pullRequest.number} ${pullRequest.title}`,
+      "pr-title"
+    );
+    const repository =
+      pullRequest.repository.fullName === issue.repository.fullName
+        ? "same repository"
+        : pullRequest.repository.fullName;
+    const status =
+      pullRequest.state === "closed"
+        ? "closed without merge"
+        : pullRequest.state;
+    item.append(
+      title,
+      node("span", "pr-meta", `${repository} · ${status}`)
+    );
+    container.append(item);
+  }
+  return container;
 }
 
 function renderIssue(issue) {
@@ -161,19 +255,38 @@ function renderIssue(issue) {
   const repositoryCell = node("td");
   const identity = node("div", "issue-repository");
   if (product) identity.append(productLink(product, "issue-product"));
-  identity.append(link(issue.repository.url, issue.repository.fullName, "issue-repo"));
+  identity.append(
+    link(issue.repository.url, issue.repository.fullName, "issue-repo")
+  );
   repositoryCell.append(identity);
 
   const issueCell = node("td");
-  issueCell.append(link(issue.url, `#${issue.number} ${issue.title}`, "issue-link"));
+  issueCell.append(
+    link(issue.url, `#${issue.number} ${issue.title}`, "issue-link"),
+    renderPullRequests(issue)
+  );
 
   const metadataCell = node("td");
   const metadata = node("div", "issue-meta");
-  metadata.append(node("span", "pill state", `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`));
+  metadata.append(
+    node(
+      "span",
+      "pill state",
+      `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`
+    )
+  );
   if (issue.type) metadata.append(node("span", "pill", issue.type));
-  for (const label of issue.labels) metadata.append(node("span", "pill", label.name));
-  if (issue.milestone) metadata.append(node("span", "pill", `Milestone: ${issue.milestone.title}`));
-  if (issue.assignee) metadata.append(node("span", "pill", `@${issue.assignee.login}`));
+  for (const label of issue.labels) {
+    metadata.append(node("span", "pill", label.name));
+  }
+  if (issue.milestone) {
+    metadata.append(
+      node("span", "pill", `Milestone: ${issue.milestone.title}`)
+    );
+  }
+  if (issue.assignee) {
+    metadata.append(node("span", "pill", `@${issue.assignee.login}`));
+  }
   metadataCell.append(metadata);
 
   const updatedCell = node("td");
@@ -189,7 +302,11 @@ function renderIssues() {
   elements.issueCount.textContent = `${issues.length} of ${state.dashboard.issues.length} issues`;
   if (issues.length === 0) {
     const row = node("tr");
-    const empty = node("td", "empty-state", "No issues match current filters.");
+    const empty = node(
+      "td",
+      "empty-state",
+      "No issues match current filters."
+    );
     empty.colSpan = 4;
     row.append(empty);
     elements.issueList.replaceChildren(row);
@@ -199,8 +316,15 @@ function renderIssues() {
 }
 
 function syncUrl() {
-  const query = buildWorkQuery({ repository: state.repository, search: state.search });
-  history.replaceState(null, "", `${location.pathname}${query}${location.hash}`);
+  const query = buildWorkQuery({
+    repository: state.repository,
+    search: state.search
+  });
+  history.replaceState(
+    null,
+    "",
+    `${location.pathname}${query}${location.hash}`
+  );
 }
 
 function showLoadError(error) {
@@ -209,7 +333,11 @@ function showLoadError(error) {
   elements.status.className = "status-banner load-error";
   elements.status.replaceChildren(
     node("p", "status-title", "Portal work data failed to load"),
-    node("p", "status-detail", `${error.message}. No issue data is being presented.`)
+    node(
+      "p",
+      "status-detail",
+      `${error.message}. No issue data is being presented.`
+    )
   );
 }
 
@@ -230,10 +358,16 @@ async function loadDashboard() {
     ]);
     state.dashboard = dashboard;
     state.productByRepository = buildProductRepositoryIndex(productCatalog);
-    state.repository = resolveRepositoryFilter(location.search, dashboard.repositories);
+    state.repository = resolveRepositoryFilter(
+      location.search,
+      dashboard.repositories
+    );
     state.search = resolveSearchFilter(location.search);
     elements.issueSearch.value = state.search;
-    elements.generatedAt.textContent = formatDate(dashboard.generatedAt, "Generated ");
+    elements.generatedAt.textContent = formatDate(
+      dashboard.generatedAt,
+      "Generated "
+    );
     showStatus(dashboard);
     renderMetrics(dashboard);
     renderRepositorySummary(dashboard);
