@@ -18,6 +18,7 @@
           <a href="../#products">Products</a>
           <a href="../#system">System</a>
           <a aria-current="page" href="./">Work</a>
+          <a href="./graph/">Dependency graph</a>
           <a href="https://github.com/yohn-jp" rel="noreferrer">GitHub ↗</a>
         </div>
       </nav>
@@ -39,7 +40,7 @@
         <section aria-labelledby="summary-heading">
           <div class="work-section-head">
             <div><p class="eyebrow">At a glance</p><h2 id="summary-heading">Open-work distribution</h2></div>
-            <p>Repository counts stay tied to generated GitHub evidence. Cataloged repositories link back to their product boundary.</p>
+            <p>Repository counts stay tied to generated GitHub evidence. Cataloged repositories link back to their product boundary. <a href="./graph/">View native dependency graph →</a></p>
           </div>
           <div id="metrics" class="metrics" aria-live="polite"></div>
           <div id="repository-summary" class="repository-summary"></div>
@@ -51,14 +52,8 @@
             <p id="issue-count" class="result-count"></p>
           </div>
           <div class="filters" aria-label="Issue filters">
-            <label>
-              <span>Repository</span>
-              <select id="repository-filter"><option value="">All repositories</option></select>
-            </label>
-            <label class="search-label">
-              <span>Search</span>
-              <input id="issue-search" type="search" placeholder="Title, product, label, assignee…" autocomplete="off" />
-            </label>
+            <label><span>Repository</span><select id="repository-filter"><option value="">All repositories</option></select></label>
+            <label class="search-label"><span>Search</span><input id="issue-search" type="search" placeholder="Title, product, label, assignee…" autocomplete="off" /></label>
           </div>
           <div class="table-frame">
             <table>
@@ -70,9 +65,6 @@
       </div>
     </main>
 
-    <footer class="shell footer">
-      <span>GitHub remains source of truth.</span>
-      <div><a href="../">Portal home</a><a href="https://github.com/yohn-jp/.github/issues" rel="noreferrer">Portal issues ↗</a></div>
-    </footer>
+    <footer class="shell footer"><span>GitHub remains source of truth.</span><div><a href="./graph/">Dependency graph</a><a href="../">Portal home</a><a href="https://github.com/yohn-jp/.github/issues" rel="noreferrer">Portal issues ↗</a></div></footer>
   </body>
 </html>
