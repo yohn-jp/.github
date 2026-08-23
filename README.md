@@ -87,9 +87,14 @@ Repository Pages settings and DNS remain external configuration.
 
 [`dashboard-pages.yml`](.github/workflows/dashboard-pages.yml) builds and
 deploys the portal on relevant changes, on a schedule, or by manual dispatch.
-The build uses the Actions token only while collecting public GitHub data;
-browser assets receive no GitHub credential. Partial and failed source requests
-remain visible in the work dashboard rather than being presented as complete.
+Organization-wide authenticated collection uses an optional short-lived GitHub
+App installation token exposed only as `PORTAL_GITHUB_TOKEN` during the build;
+the repository-scoped workflow `GITHUB_TOKEN` is not treated as cross-repository
+authority. Without App credentials, public REST collection remains available
+without authentication while GraphQL PR linkage is explicitly unavailable.
+Browser assets receive no GitHub credential. See
+[`docs/portal-auth.md`](docs/portal-auth.md) and
+[`docs/portal-work-links.md`](docs/portal-work-links.md).
 
 Configure GitHub Pages with **GitHub Actions** as the source and set the
 repository custom domain to `dev.yohn.jp`. DNS should point that subdomain at

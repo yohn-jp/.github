@@ -25,4 +25,8 @@ Linked PR identity always preserves repository, PR number, canonical URL, title,
 
 ## Authentication boundary
 
-The Pages build uses the GitHub Actions token server-side while generating the static JSON snapshot. Browser assets receive only generated projection data and never receive the token or call the GitHub GraphQL API directly.
+The workflow's built-in `GITHUB_TOKEN` belongs to the `.github` repository and is not treated as organization-wide read authority. The preferred complete path is a short-lived installation token from a dedicated read-only GitHub App installed on the repositories listed in `dashboard/repositories.json`. The workflow exposes that token only to the build process as `PORTAL_GITHUB_TOKEN`.
+
+If the App is not configured, REST requests for public repository/Issue/dependency data run unauthenticated. GitHub GraphQL requires authentication, so Issue→PR linkage is then reported as unavailable and the snapshot remains explicitly incomplete rather than inferring links.
+
+Browser assets receive only generated projection data and never receive the App private key, installation token, repository `GITHUB_TOKEN`, or a direct GitHub GraphQL credential path. See [portal authentication](portal-auth.md) for setup and permission scope.
