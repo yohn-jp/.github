@@ -119,6 +119,29 @@
         }
       ],
       "maturity": "Wabachi is early-stage architecture and provider-evidence work. Its public README is still placeholder-level; current authoritative intent is primarily captured in architecture/tracking Issues such as #5 and #24. The portal therefore describes the programme and boundary, not a finished CLI or stable semantic schema."
+    },
+    {
+      "id": "majiwari",
+      "why": "A coding agent hosted outside the local machine (ChatGPT) still needs to call deterministic, narrowly-scoped tools -- not a general shell. Majiwari keeps that exposure explicit: adapters know what a wrapped tool means, the gateway knows only MCP transport, and remote reachability is a separate, Access-protected concern layered on top of both.",
+      "core": [
+        {
+          "title": "Deterministic adapters, not reimplementation",
+          "body": "Each adapter wraps one fixed CLI -- Alibaba OpenCodeReview or Inari (gh-inari) -- as stdio MCP tools with fixed executables, `shell: false`, and argument arrays. Adapters translate MCP calls; they do not reimplement review reasoning or template governance."
+        },
+        {
+          "title": "Generic transport gateway",
+          "body": "`gateway/` converts any stdio MCP server to Streamable HTTP with no adapter-specific logic, binds to `127.0.0.1` only, and never inspects the tools it proxies -- the same gateway fronts OCR, Inari, or any other stdio MCP server given to it."
+        },
+        {
+          "title": "Access-protected remote exposure",
+          "body": "A Cloudflare Named Tunnel (outbound-only), a Worker behind Access Managed OAuth on `/mcp`, and a Workers VPC Service binding let ChatGPT reach the gateway without a public hostname or open inbound port."
+        },
+        {
+          "title": "Resident local runtime",
+          "body": "The resident runtime composes multiple trusted adapters on one loopback ingress and shared HTTP listener, owning config, adapter lifecycle, and signals, while `gateway/` only attaches MCP bridges. It never accepts arbitrary commands, modules, URLs, or environment maps."
+        }
+      ],
+      "maturity": "Majiwari is pre-1.0 and in active dogfood. OCR delegation is its first adapter, not its purpose; Inari is the second. It preserves upstream attribution for both wrapped tools and is intended to converge upstream rather than fork their behavior."
     }
   ]
 }

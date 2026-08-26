@@ -106,6 +106,11 @@
           "product": "nawabari",
           "type": "separates-from",
           "label": "Keeps provider governance separate from physical Git authority"
+        },
+        {
+          "product": "majiwari",
+          "type": "serves",
+          "label": "Is wrapped as a governed MCP adapter for remote exposure"
         }
       ]
     },
@@ -171,6 +176,34 @@
           "product": "mottainai",
           "type": "adjacent-to",
           "label": "Keeps semantic authority separate from execution orchestration"
+        }
+      ]
+    },
+    {
+      "id": "majiwari",
+      "order": 60,
+      "name": "Majiwari",
+      "role": "Deterministic MCP adapter gateway for remote agent exposure",
+      "repository": "https://github.com/yohn-jp/majiwari",
+      "documentation": "https://github.com/yohn-jp/majiwari#readme",
+      "summary": "Wraps deterministic CLI/API tools such as Alibaba OpenCodeReview and Inari as stdio MCP adapters, and exposes any of them remotely to a host LLM (ChatGPT) through a generic transport gateway and a Cloudflare Access-protected Worker.",
+      "status": "Active dogfood · pre-1.0",
+      "owns": [
+        "Deterministic stdio MCP adapters wrapping fixed CLI executables",
+        "Generic stdio MCP -> Streamable HTTP transport gateway with no adapter-specific logic",
+        "Cloudflare Tunnel/Worker/Access Managed OAuth exposure of the gateway to ChatGPT",
+        "Resident local runtime composing multiple trusted adapters on one loopback ingress"
+      ],
+      "doesNotOwn": [
+        "Code review reasoning, Issue/PR template governance rules, or any other wrapped tool's domain logic",
+        "Physical Git/worktree/session authority or GitHub mutation semantics beyond translating adapter calls",
+        "Coding-agent orchestration or workflow state"
+      ],
+      "relationships": [
+        {
+          "product": "inari",
+          "type": "delegates-to",
+          "label": "Wraps gh-inari as a governed MCP adapter, translating calls without reimplementing governance"
         }
       ]
     }

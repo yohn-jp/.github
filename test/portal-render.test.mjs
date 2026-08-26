@@ -54,7 +54,8 @@ test("each product page carries product-specific grounded core concepts", async 
     nawabari: /Session and resource ownership/,
     inari: /Validate, render, then mutate/,
     suzukuri: /Provenance and loss semantics/,
-    wabachi: /Immutable provider evidence/
+    wabachi: /Immutable provider evidence/,
+    majiwari: /Deterministic adapters, not reimplementation/
   };
   for (const product of catalog.products) {
     const detail = details.products.find((entry) => entry.id === product.id);
@@ -83,7 +84,7 @@ test("build publishes root and stable product routes", async () => {
     await buildDashboard({ outputDirectory, configPath, fetchImpl });
     const root = await readFile(join(outputDirectory, "index.html"), "utf8");
     assert.match(root, /Small tools\./);
-    for (const id of ["mottainai", "nawabari", "inari", "suzukuri", "wabachi"]) {
+    for (const id of ["mottainai", "nawabari", "inari", "suzukuri", "wabachi", "majiwari"]) {
       const product = await readFile(join(outputDirectory, "products", id, "index.html"), "utf8");
       assert.match(product, new RegExp(`https://dev\\.yohn\\.jp/products/${id}/`));
       assert.match(product, /Why it exists/);
