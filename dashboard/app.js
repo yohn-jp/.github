@@ -2,14 +2,18 @@ import {
   buildProductRepositoryIndex,
   buildWorkQuery,
   classifyIssue,
+  governanceStatus,
+  issueMatchesGovernance,
   issueMatchesView,
   resolveRepositoryFilter,
   resolveSearchFilter,
+  resolveGovernanceFilter,
   resolveSort,
   resolveView,
   sortIssues,
   supportsCreatedAt,
   WORK_SORTS,
+  WORK_GOVERNANCE_FILTERS,
   WORK_VIEWS
 } from "./work-model.js";
 import {
@@ -30,6 +34,7 @@ const state = {
   dashboard: null,
   productByRepository: new Map(),
   view: "recent",
+  governance: "all",
   repository: "",
   search: "",
   sort: "updated",
@@ -48,6 +53,7 @@ const elements = {
   metrics: document.querySelector("#metrics"),
   repositorySummary: document.querySelector("#repository-summary"),
   viewFilter: document.querySelector("#view-filter"),
+  governanceFilter: document.querySelector("#governance-filter"),
   repositoryFilter: document.querySelector("#repository-filter"),
   sortFilter: document.querySelector("#sort-filter"),
   issueSearch: document.querySelector("#issue-search"),
@@ -190,7 +196,13 @@ function renderMetrics(dashboard) {
       "work.metrics.linkedPullRequests"
     ],
     [dashboard.metrics.repositoryCount, "work.metrics.repositories"],
-    [dashboard.metrics.failedRepositories, "work.metrics.sourcesAttention"]
+    [dashboard.metrics.failedRepositories, "work.metrics.sourcesAttention"],
+    [dashboard.metrics.governanceValid ?? 0, "work.metrics.governanceValid"],
+    [
+      dashboard.metrics.governanceInvalid ?? 0,
+      "work.metrics.governanceInvalid"
+    ],
+    [dashboard.metrics.governanceUnknown ?? 0, "work.metrics.governanceUnknown"]
   ];
   elements.metrics.replaceChildren(
     ...cards.map(([value, label]) => {
@@ -273,6 +285,18 @@ function renderViewFilter() {
   elements.viewFilter.value = state.view;
 }
 
+function renderGovernanceFilter() {
+  if (!elements.governanceFilter) return;
+  elements.governanceFilter.replaceChildren(
+    ...WORK_GOVERNANCE_FILTERS.map(({ id, messageKey }) => {
+      const option = node("option", "", t(messageKey));
+      option.value = id;
+      return option;
+    })
+  );
+  elements.governanceFilter.value = state.governance;
+}
+
 function renderSortFilter(issues) {
   if (!elements.sortFilter) return;
   const createdSupported = supportsCreatedAt(issues);
@@ -296,6 +320,7 @@ function pullRequestsForIssue(issue) {
 }
 
 function issueMatches(issue) {
+  if (!issueMatchesGovernance(issue, state.governance)) return false;
   if (state.repository && issue.repository.fullName !== state.repository) {
     return false;
   }
@@ -322,6 +347,51 @@ function issueMatches(issue) {
     .join(" ")
     .toLowerCase()
     .includes(query);
+}
+
+function governanceViolationText(violation) {
+  if (!violation || typeof violation !== "object") return text(violation);
+  const prefix = [violation.code, violation.path].filter(Boolean).join(" ");
+  return (
+    [prefix, violation.message].filter(Boolean).join(": ") ||
+    t("work.governance.violations.unspecified")
+  );
+}
+
+function renderGovernance(issue) {
+  const status = governanceStatus(issue);
+  const container = node("div", "governance-status");
+  const badge = node(
+    "span",
+    `governance-badge ${status}`,
+    t(`work.governance.status.${status}`)
+  );
+  if (issue.governance?.reason) badge.title = issue.governance.reason;
+  container.append(badge);
+
+  if (status !== "invalid") return container;
+  const violations = Array.isArray(issue.governance?.violations)
+    ? issue.governance.violations
+    : [];
+  const details = document.createElement("details");
+  details.className = "governance-violations";
+  const summary = document.createElement("summary");
+  summary.textContent = t(
+    `work.governance.violations.${violations.length === 1 ? "one" : "other"}`,
+    { count: violations.length }
+  );
+  details.append(summary);
+  if (violations.length > 0) {
+    const list = node("ul", "governance-violation-list");
+    for (const violation of violations) {
+      list.append(node("li", "", governanceViolationText(violation)));
+    }
+    details.append(list);
+  } else {
+    details.append(node("p", "", t("work.governance.violations.noDetail")));
+  }
+  container.append(details);
+  return container;
 }
 
 function renderPullRequests(issue) {
@@ -445,20 +515,22 @@ function renderIssue(issue) {
   issueHeader.append(identity, age);
   const issueSide = node("aside", "issue-side");
   issueSide.setAttribute("aria-label", t("work.issue.aria"));
-  issueSide.append(stateGroup, metadata);
+  issueSide.append(stateGroup, renderGovernance(issue), metadata);
   row.append(issueMain, issueHeader, issueSide);
   return row;
 }
 
 function renderIssues() {
-  const viewIssues = state.dashboard.issues.filter((issue) =>
-    issueMatchesView(issue, state.view)
+  const scopedIssues = state.dashboard.issues.filter(
+    (issue) =>
+      issueMatchesView(issue, state.view) &&
+      issueMatchesGovernance(issue, state.governance)
   );
-  const issues = sortIssues(viewIssues.filter(issueMatches), state.sort);
+  const issues = sortIssues(scopedIssues.filter(issueMatches), state.sort);
   const view = WORK_VIEWS.find(({ id }) => id === state.view);
   elements.issueCount.textContent = t("work.issue.count", {
     shown: issues.length,
-    total: viewIssues.length,
+    total: scopedIssues.length,
     view: view ? t(view.messageKey) : t("work.view.all")
   });
   if (issues.length === 0) {
@@ -473,6 +545,7 @@ function renderIssues() {
 function syncUrl() {
   const query = buildWorkQuery({
     view: state.view,
+    governance: state.governance,
     repository: state.repository,
     search: state.search,
     sort: state.sort
@@ -532,6 +605,7 @@ function applyDashboard(dashboard, productCatalog) {
   if (productIndex) state.productByRepository = productIndex;
   if (!state.initialized) {
     state.view = resolveView(location.search);
+    state.governance = resolveGovernanceFilter(location.search);
     state.repository = resolveRepositoryFilter(
       location.search,
       dashboard.repositories
@@ -548,6 +622,7 @@ function applyDashboard(dashboard, productCatalog) {
   renderMetrics(dashboard);
   renderRepositorySummary(dashboard);
   renderViewFilter();
+  renderGovernanceFilter();
   renderRepositoryFilter(dashboard);
   renderSortFilter(dashboard.issues);
   renderIssues();
@@ -624,6 +699,12 @@ function startPolling() {
 
 elements.repositoryFilter.addEventListener("change", (event) => {
   state.repository = event.target.value;
+  syncUrl();
+  renderIssues();
+});
+
+elements.governanceFilter?.addEventListener("change", (event) => {
+  state.governance = event.target.value;
   syncUrl();
   renderIssues();
 });

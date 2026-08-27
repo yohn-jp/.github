@@ -151,10 +151,72 @@ test("projects Inari governance as valid, invalid, or unavailable per open Issue
   assert.equal(data.schemaVersion, 4);
   assert.equal(data.status, "complete");
   assert.equal(data.metrics.governanceDataUnavailable, 1);
-  assert.deepEqual(data.issues.map(({ governance }) => governance.status).sort(), ["invalid", "unavailable", "valid"]);
-  assert.equal(data.issues.find((issue) => issue.number === 1).governance.revision, "sha256:tree-1");
-  assert.equal(data.issues.find((issue) => issue.number === 2).governance.valid, false);
-  assert.equal(data.issues.find((issue) => issue.number === 3).governance.valid, null);
+  assert.equal(data.metrics.governanceValid, 1);
+  assert.equal(data.metrics.governanceInvalid, 1);
+  assert.equal(data.metrics.governanceUnknown, 1);
+  assert.deepEqual(data.metrics.governanceCompliance, {
+    valid: 1,
+    invalid: 1,
+    unknown: 1
+  });
+  assert.deepEqual(
+    data.issues.map(({ governance }) => governance.status).sort(),
+    ["invalid", "unavailable", "valid"]
+  );
+  assert.equal(
+    data.issues.find((issue) => issue.number === 1).governance.revision,
+    "sha256:tree-1"
+  );
+  assert.equal(
+    data.issues.find((issue) => issue.number === 2).governance.valid,
+    false
+  );
+  assert.equal(
+    data.issues.find((issue) => issue.number === 3).governance.valid,
+    null
+  );
+});
+
+test("fails closed when governance projection is unavailable", async () => {
+  const config = { organization: "yohn-jp", repositories: ["example"] };
+  const repository = {
+    id: 1,
+    name: "example",
+    full_name: "yohn-jp/example",
+    html_url: "https://github.com/yohn-jp/example",
+    visibility: "public"
+  };
+  const rawIssue = {
+    id: 1,
+    number: 1,
+    title: "Issue",
+    html_url: "https://github.com/yohn-jp/example/issues/1",
+    state: "open",
+    labels: [],
+    assignees: [],
+    updated_at: "2026-08-23T00:00:00Z"
+  };
+  const fetchImpl = async (url) => {
+    if (url.endsWith("/repos/yohn-jp/example")) return response(repository);
+    if (url.includes("/repos/yohn-jp/example/issues"))
+      return response([rawIssue]);
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  const data = await collectDashboardData({
+    config,
+    fetchImpl,
+    token: "portal-token",
+    governanceImpl: async () => {
+      throw new Error("governance source unavailable");
+    }
+  });
+
+  assert.equal(data.issues[0].governance.status, "unavailable");
+  assert.equal(data.issues[0].governance.valid, null);
+  assert.equal(data.metrics.governanceUnknown, 1);
+  assert.equal(data.metrics.governanceValid, 0);
+  assert.equal(data.status, "partial");
 });
 
 test("marks rate-limited repositories partial and excludes pull requests", async () => {
@@ -233,7 +295,11 @@ test("marks rate-limited repositories partial and excludes pull requests", async
 });
 
 test("browser assets contain no GitHub API credential path", async () => {
-  for (const path of ["portal/index.html", "portal/styles.css", "dashboard/app.js"]) {
+  for (const path of [
+    "portal/index.html",
+    "portal/styles.css",
+    "dashboard/app.js"
+  ]) {
     const asset = await readFile(path, "utf8");
     assert.doesNotMatch(
       asset,
@@ -248,10 +314,7 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
   const registryPath = join(temporaryDirectory, "registry.json");
   const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
   registry.collectionRepositories = ["example"];
-  await writeFile(
-    registryPath,
-    JSON.stringify(registry)
-  );
+  await writeFile(registryPath, JSON.stringify(registry));
 
   const fetchImpl = async (url, options) => {
     assert.equal(options.headers.Authorization, "Bearer build-token");
@@ -304,7 +367,10 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
       now: () => new Date("2026-08-23T03:00:00Z")
     });
 
-    const rootIndex = await readFile(join(outputDirectory, "index.html"), "utf8");
+    const rootIndex = await readFile(
+      join(outputDirectory, "index.html"),
+      "utf8"
+    );
     const cname = await readFile(join(outputDirectory, "CNAME"), "utf8");
     const workIndex = await readFile(
       join(outputDirectory, "work", "index.html"),
