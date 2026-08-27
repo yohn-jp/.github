@@ -356,9 +356,13 @@ const JAPANESE_MESSAGES = Object.freeze({
   "work.metrics.linkedPullRequests": "リンク済みPull Request",
   "work.metrics.repositories": "リポジトリ",
   "work.metrics.sourcesAttention": "要対応のソース",
+  "work.metrics.governanceValid": "ガバナンス有効",
+  "work.metrics.governanceInvalid": "ガバナンス無効",
+  "work.metrics.governanceUnknown": "ガバナンス不明",
   "work.issues.title": "公開Issue",
   "work.issues.filters.aria": "Issueフィルター",
   "work.filters.view": "ビュー",
+  "work.filters.governance": "ガバナンス",
   "work.filters.repository": "リポジトリ",
   "work.filters.sort": "並び順",
   "work.filters.search": "検索",
@@ -415,6 +419,18 @@ const JAPANESE_MESSAGES = Object.freeze({
   "work.issue.aria": "Issueの状態とメタデータ",
   "work.issue.count": "{view}：{total}件中{shown}件",
   "work.issue.noMatches": "現在のフィルターに一致するIssueはありません。",
+  "work.governance.filter.all": "すべて",
+  "work.governance.filter.valid": "有効",
+  "work.governance.filter.invalid": "無効",
+  "work.governance.filter.unknown": "不明",
+  "work.governance.status.valid": "ガバナンス有効",
+  "work.governance.status.invalid": "ガバナンス無効",
+  "work.governance.status.unknown": "ガバナンス不明",
+  "work.governance.violations.one": "違反{count}件",
+  "work.governance.violations.other": "違反{count}件",
+  "work.governance.violations.unspecified": "特定できない違反",
+  "work.governance.violations.noDetail":
+    "構造化された違反の詳細はありません。",
   "work.load.snapshotUnavailable": "スナップショット利用不可",
   "work.load.failedTitle": "Workデータの読み込みに失敗しました",
   "work.load.noSnapshot":
@@ -760,7 +776,7 @@ export function resolveHtmlMessages(html, locale) {
     }
   );
   output = output.replace(
-    /(<([A-Za-z][A-Za-z0-9:-]*)\b[^>]*\sdata-message="([^"]+)"[^>]*>)[\s\S]*?(<\/\2>)/g,
+    /(<([A-Za-z][A-Za-z0-9:-]*)\b[^>]*\sdata-message="([^"]+)"[^>]*>)[\s\S]*?(<\/\2\s*>)/g,
     (_, opening, tag, key, closing) =>
       `${opening}${escapeHtml(resolveMessage(key, {}, { locale: resolvedLocale }))}${closing}`
   );

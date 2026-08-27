@@ -83,6 +83,33 @@ test("English and Japanese catalogs expose the same complete UI contract", () =>
   );
 });
 
+test("Japanese catalog translates every governance Work message", () => {
+  const governanceKeys = [
+    "work.metrics.governanceValid",
+    "work.metrics.governanceInvalid",
+    "work.metrics.governanceUnknown",
+    "work.filters.governance",
+    "work.governance.filter.all",
+    "work.governance.filter.valid",
+    "work.governance.filter.invalid",
+    "work.governance.filter.unknown",
+    "work.governance.status.valid",
+    "work.governance.status.invalid",
+    "work.governance.status.unknown",
+    "work.governance.violations.one",
+    "work.governance.violations.other",
+    "work.governance.violations.unspecified",
+    "work.governance.violations.noDetail"
+  ];
+  for (const key of governanceKeys) {
+    assert.notEqual(
+      MESSAGE_CATALOG.ja[key],
+      MESSAGE_CATALOG.en[key],
+      `${key} must not fall back to English`
+    );
+  }
+});
+
 test("locale links preserve Work query and hash when switching", () => {
   const links = [
     {
@@ -101,13 +128,19 @@ test("locale links preserve Work query and hash when switching", () => {
   preserveLocaleQuery(
     { querySelectorAll: () => links },
     {
-      href: "https://dev.yohn.jp/en/work/?view=invalid&q=contract#issues",
-      search: "?view=invalid&q=contract",
+      href: "https://dev.yohn.jp/en/work/?view=invalid&q=contract&governance=invalid#issues",
+      search: "?view=invalid&q=contract&governance=invalid",
       hash: "#issues"
     }
   );
-  assert.equal(links[0].href, "/ja/work/?view=invalid&q=contract#issues");
-  assert.equal(links[1].href, "/en/work/?view=invalid&q=contract#issues");
+  assert.equal(
+    links[0].href,
+    "/ja/work/?view=invalid&q=contract&governance=invalid#issues"
+  );
+  assert.equal(
+    links[1].href,
+    "/en/work/?view=invalid&q=contract&governance=invalid#issues"
+  );
 });
 
 test("message interpolation is explicit and missing keys fail", () => {
@@ -152,6 +185,17 @@ test("HTML message directives resolve content and attributes without fallback", 
   assert.throws(
     () => resolveHtmlMessages('<p data-message="missing.key"></p>'),
     /Missing message key: missing\.key/
+  );
+});
+
+test("HTML message directives support formatted closing tags", () => {
+  const html = resolveHtmlMessages(
+    '<label><span data-message="work.filters.governance"></span\n></label>',
+    "ja"
+  );
+  assert.match(
+    html,
+    /data-message="work\.filters\.governance">ガバナンス<\/span\s*>/
   );
 });
 

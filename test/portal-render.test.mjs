@@ -192,6 +192,14 @@ test("build publishes root and stable product routes", async () => {
         new RegExp(`https://dev\\.yohn\\.jp/${locale}/work/graph/`)
       );
       assert.match(work, /data-locale-switch="ja"/);
+      assert.match(
+        work,
+        new RegExp(
+          `data-message="work\\.filters\\.governance">${
+            locale === "ja" ? "ガバナンス" : "Governance"
+          }<\\/span\\s*>`
+        )
+      );
       assert.match(workApp, /preserveLocaleQuery/);
       assert.match(graph, /data-locale-switch="en"/);
       assert.ok(
