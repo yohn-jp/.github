@@ -11,6 +11,9 @@ const ENGLISH_MESSAGES = Object.freeze({
   "portal.nav.system": "System",
   "portal.nav.work": "Work",
   "portal.nav.github": "GitHub ↗",
+  "portal.locale.selector": "Language",
+  "portal.locale.english": "English",
+  "portal.locale.japanese": "日本語",
   "portal.hero.eyebrow": "Tools for governed agentic development",
   "portal.hero.titleLead": "Small tools.",
   "portal.hero.titleEmphasis": "Clear authority.",
@@ -246,11 +249,253 @@ const ENGLISH_MESSAGES = Object.freeze({
   "graph.load.failedTitle": "Dependency graph failed to load"
 });
 
+const JAPANESE_MESSAGES = Object.freeze({
+  ...ENGLISH_MESSAGES,
+  "common.empty": "—",
+  "common.separator": " · ",
+
+  "portal.title": "yohn-jp · 開発者ポータル",
+  "portal.meta.description":
+    "yohn-jp開発者ポータル：統制されたエージェント開発のための専門ツール",
+  "portal.nav.primary": "主要ナビゲーション",
+  "portal.nav.home": "yohn-jp開発者ポータルのホーム",
+  "portal.nav.products": "プロダクト",
+  "portal.nav.system": "システム",
+  "portal.nav.work": "Work",
+  "portal.nav.github": "GitHub ↗",
+  "portal.locale.selector": "言語",
+  "portal.locale.english": "English",
+  "portal.locale.japanese": "日本語",
+  "portal.hero.eyebrow": "統制されたエージェント開発のためのツール",
+  "portal.hero.titleLead": "小さなツール。",
+  "portal.hero.titleEmphasis": "明確な権限。",
+  "portal.hero.lede":
+    "オーケストレーション、Gitの所有権、GitHubガバナンス、意味投影、リポジトリの意味論を、明示的かつ組み合わせ可能に保つプロダクト群。",
+  "portal.hero.browseProducts": "プロダクトを見る",
+  "portal.hero.seeWork": "公開中のWorkを見る",
+  "portal.hero.designPrinciple": "設計原則",
+  "portal.hero.note":
+    "すべての境界には1つの所有者があります。権限がない場合は、暗黙に代替せずfail closedします。",
+  "portal.hero.sourceOfTruth": "GitHubが唯一の正しい情報源です。",
+  "portal.principles.title": "ポータルの原則",
+  "portal.principles.explicitAuthority.title": "明示的な権限",
+  "portal.principles.explicitAuthority.body":
+    "Git、GitHub、オーケストレーション、ビュー、意味論を別々の契約として扱います。",
+  "portal.principles.machineReadable.title": "機械可読を優先",
+  "portal.principles.machineReadable.body":
+    "装飾的な表示より先に、安定した識別子と構造化された証拠を扱います。",
+  "portal.principles.failClosed.title": "Fail closed",
+  "portal.principles.failClosed.body":
+    "利用できない証拠は、推測してよい理由ではなくブロッカーです。",
+  "portal.products.eyebrow": "プロダクト群",
+  "portal.products.title": "6つの専門レイヤー。",
+  "portal.products.body":
+    "各プロダクトは狭い責務を担います。機能一覧の前に境界を確認してください。",
+  "portal.product.explore": "{name}を詳しく見る",
+  "portal.product.github": "GitHub",
+  "portal.system.eyebrow": "システムマップ",
+  "portal.system.title": "権限を曖昧にしない組み合わせ。",
+  "portal.system.body":
+    "プロダクトは明示的な接続面で協調します。ノードから責務の境界をたどれます。",
+  "portal.system.nodes": "プロダクトノード",
+  "portal.system.relationships": "宣言された関係",
+  "portal.work.eyebrow": "公開中のWork",
+  "portal.work.title": "計画は証拠とつながっているときに役立ちます。",
+  "portal.work.body":
+    "yohn-jpの公開Issueを確認できます。次の層は依存関係と実装のグラフです。",
+  "portal.work.openDashboard": "Workダッシュボードを開く",
+  "portal.footer.identity": "dev.yohn.jp · yohn-jp開発者ポータル",
+  "portal.footer.domain": "dev.yohn.jp",
+  "portal.footer.source": "ソース ↗",
+  "portal.footer.portalHome": "ポータルホーム",
+  "portal.product.backToProducts": "← すべてのプロダクト",
+  "portal.product.title": "{name} · yohn-jp",
+  "portal.product.repository": "リポジトリ ↗",
+  "portal.product.documentation": "ドキュメント ↗",
+  "portal.product.why": "存在する理由",
+  "portal.product.owns": "所有するもの",
+  "portal.product.authority": "権限",
+  "portal.product.doesNotOwn": "所有しないもの",
+  "portal.product.boundary": "境界",
+  "portal.product.boundaryLabel": "プロダクトの責務境界",
+  "portal.product.coreModel": "コアモデル",
+  "portal.product.howItWorks": "{name}の仕組み",
+  "portal.product.operationalDetail":
+    "運用の詳細はリポジトリのドキュメントで管理します。ここではプロダクトの境界を定義する概念を示します。",
+  "portal.product.currentMaturity": "現在の成熟度",
+  "portal.product.relationships": "関係",
+  "portal.product.fitsSystem": "大きなシステムへの位置づけ",
+  "portal.product.publicWork": "公開中のWork",
+  "portal.product.followImplementation": "{name}の実装を追う",
+  "portal.product.prefilteredWork":
+    "公開中のWorkはこのプロダクトのリポジトリに絞り込まれます。GitHubが唯一の正しい情報源です。",
+  "portal.product.openWork": "{name}のWorkを開く",
+
+  "work.title": "公開中のWork · yohn-jp",
+  "work.meta.description": "yohn-jp公開リポジトリのWork",
+  "work.nav.primary": "主要ナビゲーション",
+  "work.nav.home": "yohn-jp開発者ポータルのホーム",
+  "work.nav.products": "プロダクト",
+  "work.nav.system": "システム",
+  "work.nav.work": "Work",
+  "work.nav.graph": "依存関係グラフ",
+  "work.nav.issueIndex": "Issue一覧",
+  "work.nav.github": "GitHub ↗",
+  "work.header.eyebrow": "公開中のWork · GitHub投影",
+  "work.header.title": "公開中のWork",
+  "work.header.lede":
+    "読み取り専用の日次ビュー。GitHubが唯一の正しい情報源です。",
+  "work.snapshot.aria": "スナップショットの鮮度",
+  "work.snapshot.loading": "スナップショットを読み込み中…",
+  "work.snapshot.checking": "最新スナップショットを確認中…",
+  "work.snapshot.refresh": "今すぐ更新",
+  "work.snapshot.refreshing": "更新中…",
+  "work.snapshot.generated": "生成日時：{date}",
+  "work.metrics.aria": "Workの主要メトリクス",
+  "work.metrics.openIssues": "公開Issue",
+  "work.metrics.linkedPullRequests": "リンク済みPull Request",
+  "work.metrics.repositories": "リポジトリ",
+  "work.metrics.sourcesAttention": "要対応のソース",
+  "work.issues.title": "公開Issue",
+  "work.issues.filters.aria": "Issueフィルター",
+  "work.filters.view": "ビュー",
+  "work.filters.repository": "リポジトリ",
+  "work.filters.sort": "並び順",
+  "work.filters.search": "検索",
+  "work.filters.searchPlaceholder": "タイトル、プロダクト、ラベル、担当者…",
+  "work.repositories.all": "すべてのリポジトリ",
+  "work.issues.loading": "Issueを読み込み中…",
+  "work.distribution.eyebrow": "補助ビュー",
+  "work.distribution.title": "リポジトリのWork量",
+  "work.distribution.body":
+    "リポジトリ件数は生成されたGitHubの証拠に結びついています。カタログ済みリポジトリからプロダクト境界へ移動できます。",
+  "work.distribution.graphLink": "ネイティブ依存関係グラフを見る →",
+  "work.footer.sourceOfTruth": "GitHubが唯一の正しい情報源です。",
+  "work.footer.graph": "依存関係グラフ",
+  "work.footer.portalHome": "ポータルホーム",
+  "work.footer.issues": "ポータルのIssue ↗",
+  "work.status.snapshotComplete":
+    "スナップショット完了 · {count}リポジトリを読み込み済み",
+  "work.status.snapshot": "スナップショット：{status}",
+  "work.status.snapshotDetail":
+    "{count}リポジトリ中{successful}件を読み込み済み；{unavailable}件のIssueでPRリンクが利用できないか不完全です。このビューは不完全なものとして扱ってください。",
+  "work.status.rateLimit": " レート制限に達しました。",
+  "work.status.issuePrefix": "#{issue} ",
+  "work.status.error": "{repository} {issue}（{stage}）：{error}{rateLimit}",
+  "work.freshness.noValid": "最終確認：{date} · 有効なスナップショットなし。",
+  "work.freshness.checking": "最新スナップショットを確認中…",
+  "work.freshness.notChecked": "未確認",
+  "work.freshness.snapshotAge": "スナップショットの経過：{age}。",
+  "work.freshness.refreshFailed":
+    "{checked} · {freshness} 更新に失敗しました。最後に有効だったデータを表示しています。",
+  "work.freshness.checked": "最終確認：{date}",
+  "work.age.unknown": "経過時間不明",
+  "work.age.lessThanMinute": "1分未満",
+  "work.age.minute.one": "{count}分前",
+  "work.age.minute.other": "{count}分前",
+  "work.age.hour.one": "{count}時間前",
+  "work.age.hour.other": "{count}時間前",
+  "work.updated.unknown": "更新時期不明",
+  "work.updated.future": "未来に更新",
+  "work.updated.justNow": "たった今更新",
+  "work.updated.relative": "更新：{relativeTime}",
+  "work.updated.lastUpdated": "最終更新：{date}",
+  "work.repository.open": "{count}件公開中",
+  "work.repository.unavailable": "データ利用不可",
+  "work.pr.linkageUnavailable": "PRリンク利用不可",
+  "work.pr.noAuthoritative": "権威あるリンク済みPRなし",
+  "work.pr.title": "PR #{number} {title}",
+  "work.pr.sameRepository": "同一リポジトリ",
+  "work.pr.closedWithoutMerge": "マージなしでクローズ",
+  "work.state.inProgress": "進行中",
+  "work.state.ready": "準備済み / 未着手",
+  "work.state.needsAttention": "要対応",
+  "work.metadata.labels": "ラベル{count}件を追加",
+  "work.metadata.milestone": "マイルストーン：{title}",
+  "work.issue.aria": "Issueの状態とメタデータ",
+  "work.issue.count": "{view}：{total}件中{shown}件",
+  "work.issue.noMatches": "現在のフィルターに一致するIssueはありません。",
+  "work.load.snapshotUnavailable": "スナップショット利用不可",
+  "work.load.failedTitle": "Workデータの読み込みに失敗しました",
+  "work.load.noSnapshot":
+    "{error}。有効なIssueスナップショットはまだありません。",
+  "work.refresh.failedTitle": "スナップショットの更新に失敗しました",
+  "work.refresh.lastValid":
+    "{error}。最後に有効だったスナップショットを表示しています。",
+  "work.view.recent": "最近",
+  "work.view.attention": "要対応",
+  "work.view.inProgress": "進行中",
+  "work.view.ready": "準備済み / 未着手",
+  "work.view.all": "すべて",
+  "work.sort.updated": "更新が新しい順",
+  "work.sort.created": "作成が新しい順",
+  "work.sort.oldest": "活動が古い順",
+  "work.sort.repository": "リポジトリ順",
+  "work.sort.unavailable": "（利用不可）",
+
+  "graph.title": "依存関係グラフ · yohn-jp",
+  "graph.meta.description": "yohn-jp公開Issueの依存関係グラフ",
+  "graph.nav.primary": "主要ナビゲーション",
+  "graph.nav.home": "yohn-jp開発者ポータルのホーム",
+  "graph.nav.products": "プロダクト",
+  "graph.nav.issueIndex": "Issue一覧",
+  "graph.nav.graph": "依存関係グラフ",
+  "graph.hero.eyebrow": "GitHubネイティブな関係",
+  "graph.hero.title": "依存関係グラフ。",
+  "graph.hero.body":
+    "有向辺はブロッカーからブロックされたWorkへ向きます。関係データはGitHub Issueの依存関係から取得し、文章から辺を推測しません。",
+  "graph.filters.aria": "グラフフィルター",
+  "graph.filters.repository": "リポジトリ",
+  "graph.filters.disconnected": "切断されたIssueを表示",
+  "graph.blockers.eyebrow": "ボトルネック",
+  "graph.blockers.title": "主要ブロッカー",
+  "graph.layout.aria": "Issue依存関係グラフ",
+  "graph.empty": "現在のフィルターに一致する依存関係辺はありません。",
+  "graph.svg.title": "Issue依存関係グラフ",
+  "graph.svg.description":
+    "有向辺はブロック元からブロック先のIssueを指します。",
+  "graph.detail.eyebrow": "Issue詳細",
+  "graph.detail.select":
+    "ノードを選択して依存関係のコンテキストを確認してください。",
+  "graph.footer.sourceOfTruth": "GitHubが唯一の正しい情報源です。",
+  "graph.footer.issueIndex": "Issue一覧",
+  "graph.footer.portalHome": "ポータルホーム",
+  "graph.status.complete": "依存関係スナップショット完了",
+  "graph.status.incomplete": "依存関係スナップショット不完全",
+  "graph.status.completeDetail":
+    "ネイティブ依存関係辺{count}件を読み込み済み。",
+  "graph.status.incompleteDetail":
+    "既知の辺{count}件を読み込み済み；{unavailable}件のIssueで依存関係データが利用できないか不完全で、依存関係ソースエラーが{errors}件記録されています。",
+  "graph.blockers.none": "現在のビューにブロッキング辺はありません。",
+  "graph.blockers.count.one": "{count}件をブロック",
+  "graph.blockers.count.other": "{count}件をブロック",
+  "graph.pr.implementation": "実装",
+  "graph.pr.outsideSnapshot":
+    "現在の公開Issueスナップショット外の依存ノードのため、PRリンクは利用できません。",
+  "graph.pr.unavailable": "PRリンクは利用できないか不完全です。",
+  "graph.pr.noAuthoritative": "権威あるリンク済みPRなし",
+  "graph.detail.relations.blocker.one": "ブロッカー{count}件",
+  "graph.detail.relations.blocker.other": "ブロッカー{count}件",
+  "graph.detail.relations.blocked.one": "ブロックされたIssue {count}件",
+  "graph.detail.relations.blocked.other": "ブロックされたIssue {count}件",
+  "graph.detail.cycle": "サイクル参加ノード",
+  "graph.detail.openGithub": "GitHubで開く ↗",
+  "graph.node.aria": "{repository} Issue {number}：{title}",
+  "graph.node.outsideOpenSet": "公開集合外",
+  "graph.node.cycle": "サイクル",
+  "graph.node.pr.one": "PR {count}件",
+  "graph.node.pr.other": "PR {count}件",
+  "graph.count": "ノード{nodes}件 · 辺{edges}件",
+  "graph.load.failedTitle": "依存関係グラフの読み込みに失敗しました"
+});
+
 export const MESSAGE_CATALOG = Object.freeze({
-  en: ENGLISH_MESSAGES
+  en: ENGLISH_MESSAGES,
+  ja: JAPANESE_MESSAGES
 });
 
 export const MESSAGES = ENGLISH_MESSAGES;
+export const SUPPORTED_LOCALES = Object.freeze(["en", "ja"]);
 
 const DEFAULT_LOCALE = "en";
 
@@ -272,6 +517,24 @@ export function resolveRuntimeLocale(root = globalThis.document) {
       ? documentElement.lang
       : documentElement?.getAttribute?.("lang");
   return normalizeLocale(lang);
+}
+
+export function preserveLocaleQuery(
+  root = globalThis.document,
+  currentLocation = globalThis.location
+) {
+  if (!root?.querySelectorAll || !currentLocation?.href) return;
+  for (const anchor of root.querySelectorAll("[data-locale-switch]")) {
+    const href = anchor.getAttribute("href");
+    if (!href) continue;
+    const target = new URL(href, currentLocation.href);
+    target.search = currentLocation.search;
+    target.hash = currentLocation.hash;
+    anchor.setAttribute(
+      "href",
+      `${target.pathname}${target.search}${target.hash}`
+    );
+  }
 }
 
 function defaultLocale(root = globalThis.document) {
@@ -466,10 +729,35 @@ export function resolveHtmlMessages(html, locale) {
     /(<html\b[^>]*\blang\s*=\s*["'])[^"']*(["'])/i,
     `$1${escapeHtml(resolvedLocale)}$2`
   );
-  output = output.replaceAll(
-    /data-message-(aria-label|content|placeholder)="([^"]+)"/g,
-    (match, attribute, key) =>
-      `${attribute}="${escapeHtml(resolveMessage(key, {}, { locale: resolvedLocale }))}" ${match}`
+  output = output.replace(
+    /<([A-Za-z][A-Za-z0-9:-]*)(\s[^>]*?)?>/g,
+    (tag, name, attributes = "") => {
+      let outputAttributes = attributes;
+      for (const match of outputAttributes.matchAll(
+        /data-message-(aria-label|content|placeholder)="([^"]+)"/g
+      )) {
+        const [directive, attribute, key] = match;
+        const value = escapeHtml(
+          resolveMessage(key, {}, { locale: resolvedLocale })
+        );
+        const attributePattern = new RegExp(
+          `(\\s${attribute}\\s*=\\s*["'])[^"']*(["'])`,
+          "i"
+        );
+        if (attributePattern.test(outputAttributes)) {
+          outputAttributes = outputAttributes.replace(
+            attributePattern,
+            `$1${value}$2`
+          );
+        } else {
+          outputAttributes = outputAttributes.replace(
+            directive,
+            `${attribute}="${value}" ${directive}`
+          );
+        }
+      }
+      return `<${name}${outputAttributes}>`;
+    }
   );
   output = output.replace(
     /(<([A-Za-z][A-Za-z0-9:-]*)\b[^>]*\sdata-message="([^"]+)"[^>]*>)[\s\S]*?(<\/\2>)/g,

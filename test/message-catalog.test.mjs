@@ -7,6 +7,7 @@ import {
   formatSnapshotAge,
   localeDate,
   normalizeLocale,
+  preserveLocaleQuery,
   resolveHtmlLocale,
   resolveHtmlMessages,
   resolveMessage,
@@ -67,6 +68,48 @@ test("locale resolution prefers exact catalog matches before base fallback", () 
   );
 });
 
+test("English and Japanese catalogs expose the same complete UI contract", () => {
+  assert.deepEqual(
+    Object.keys(MESSAGE_CATALOG.en).sort(),
+    Object.keys(MESSAGE_CATALOG.ja).sort()
+  );
+  assert.equal(
+    resolveMessage("portal.nav.products", {}, { locale: "ja" }),
+    "プロダクト"
+  );
+  assert.notEqual(
+    resolveMessage("work.filters.searchPlaceholder", {}, { locale: "ja" }),
+    resolveMessage("work.filters.searchPlaceholder", {}, { locale: "en" })
+  );
+});
+
+test("locale links preserve Work query and hash when switching", () => {
+  const links = [
+    {
+      getAttribute: () => "/ja/work/",
+      setAttribute(name, value) {
+        this[name] = value;
+      }
+    },
+    {
+      getAttribute: () => "/en/work/",
+      setAttribute(name, value) {
+        this[name] = value;
+      }
+    }
+  ];
+  preserveLocaleQuery(
+    { querySelectorAll: () => links },
+    {
+      href: "https://dev.yohn.jp/en/work/?view=invalid&q=contract#issues",
+      search: "?view=invalid&q=contract",
+      hash: "#issues"
+    }
+  );
+  assert.equal(links[0].href, "/ja/work/?view=invalid&q=contract#issues");
+  assert.equal(links[1].href, "/en/work/?view=invalid&q=contract#issues");
+});
+
 test("message interpolation is explicit and missing keys fail", () => {
   assert.equal(
     resolveMessage(
@@ -125,6 +168,11 @@ test("date and relative-time helpers use Intl formatting", () => {
       formatSnapshotAge("2026-08-27T10:00:00Z", "en-US"),
       "2 hours old"
     );
+    assert.match(
+      formatRelativeTime("2026-08-27T11:55:00Z", "ja"),
+      /更新.*分前/
+    );
+    assert.match(localeDate("2026-08-27T11:00:00Z", "ja"), /2026/);
   } finally {
     Date.now = originalNow;
   }

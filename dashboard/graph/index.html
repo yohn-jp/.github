@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Canonical site origin: https://dev.yohn.jp/ -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -8,7 +9,8 @@
       content=""
       data-message-content="graph.meta.description"
     />
-    <link rel="canonical" href="https://dev.yohn.jp/work/graph/" />
+    <link rel="canonical" href="{{CANONICAL_URL}}" />
+    {{HREFLANG_LINKS}}
     <title data-message="graph.title"></title>
     <link rel="stylesheet" href="../../styles.css" />
     <link rel="stylesheet" href="../work.css" />
@@ -34,6 +36,7 @@
           <a href="../" data-message="graph.nav.issueIndex"></a>
           <a aria-current="page" href="./" data-message="graph.nav.graph"></a>
         </div>
+        {{LANGUAGE_SELECTOR}}
       </nav>
     </header>
 

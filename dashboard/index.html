@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Canonical site origin: https://dev.yohn.jp/ -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -8,7 +9,8 @@
       content=""
       data-message-content="work.meta.description"
     />
-    <link rel="canonical" href="https://dev.yohn.jp/work/" />
+    <link rel="canonical" href="{{CANONICAL_URL}}" />
+    {{HREFLANG_LINKS}}
     <title data-message="work.title"></title>
     <link rel="stylesheet" href="../styles.css" />
     <link rel="stylesheet" href="./work.css" />
@@ -39,6 +41,7 @@
             data-message="work.nav.github"
           ></a>
         </div>
+        {{LANGUAGE_SELECTOR}}
       </nav>
     </header>
 
