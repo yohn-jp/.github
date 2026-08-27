@@ -3,20 +3,38 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="yohn-jp developer portal: focused tools for governed agentic software development" />
+    <meta
+      name="description"
+      content=""
+      data-message-content="portal.meta.description"
+    />
     <link rel="canonical" href="https://dev.yohn.jp/" />
-    <title>yohn-jp · Developer portal</title>
+    <title data-message="portal.title"></title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="site-nav-wrap">
-      <nav class="shell site-nav" aria-label="Primary navigation">
-        <a class="brand" href="./" aria-label="yohn-jp developer portal home"><span class="brand-slash">/</span><span>yohn-jp</span></a>
+      <nav
+        class="shell site-nav"
+        aria-label=""
+        data-message-aria-label="portal.nav.primary"
+      >
+        <a
+          class="brand"
+          href="./"
+          aria-label=""
+          data-message-aria-label="portal.nav.home"
+          ><span class="brand-slash">/</span><span>yohn-jp</span></a
+        >
         <div class="nav-links">
-          <a href="#products">Products</a>
-          <a href="#system">System</a>
-          <a href="./work/">Work</a>
-          <a href="https://github.com/yohn-jp" rel="noreferrer">GitHub ↗</a>
+          <a href="#products" data-message="portal.nav.products"></a>
+          <a href="#system" data-message="portal.nav.system"></a>
+          <a href="./work/" data-message="portal.nav.work"></a>
+          <a
+            href="https://github.com/yohn-jp"
+            rel="noreferrer"
+            data-message="portal.nav.github"
+          ></a>
         </div>
       </nav>
     </header>
@@ -24,62 +42,141 @@
     <main>
       <section class="shell hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Tools for governed agentic development</p>
-          <h1 id="hero-title">Small tools.<br /><span>Clear authority.</span></h1>
-          <p class="lede">A product family for coding agents where orchestration, Git ownership, GitHub governance, semantic projection, and repository semantics stay explicit and composable.</p>
+          <p class="eyebrow" data-message="portal.hero.eyebrow"></p>
+          <h1 id="hero-title">
+            <span data-message="portal.hero.titleLead"></span><br /><span
+              data-message="portal.hero.titleEmphasis"
+            ></span>
+          </h1>
+          <p class="lede" data-message="portal.hero.lede"></p>
           <div class="hero-actions">
-            <a class="button dark" href="#products">Browse products</a>
-            <a class="button light" href="./work/">See open work</a>
+            <a
+              class="button dark"
+              href="#products"
+              data-message="portal.hero.browseProducts"
+            ></a>
+            <a
+              class="button light"
+              href="./work/"
+              data-message="portal.hero.seeWork"
+            ></a>
           </div>
         </div>
-        <aside class="hero-note" aria-label="Design principle">
+        <aside
+          class="hero-note"
+          aria-label=""
+          data-message-aria-label="portal.hero.designPrinciple"
+        >
           <span class="hero-note-index">01</span>
-          <p>Every boundary has one owner. Missing authority fails closed instead of silently falling back.</p>
-          <span class="hero-note-caption">GitHub remains source of truth.</span>
+          <p data-message="portal.hero.note"></p>
+          <span
+            class="hero-note-caption"
+            data-message="portal.hero.sourceOfTruth"
+          ></span>
         </aside>
       </section>
 
-      <section class="principles" aria-label="Portal principles">
+      <section
+        class="principles"
+        aria-label=""
+        data-message-aria-label="portal.principles.title"
+      >
         <div class="shell principle-grid">
-          <div><span>01</span><strong>Explicit authority</strong><p>Git, GitHub, orchestration, views, and semantics are separate contracts.</p></div>
-          <div><span>02</span><strong>Machine-readable first</strong><p>Stable identities and structured evidence before decorative presentation.</p></div>
-          <div><span>03</span><strong>Fail closed</strong><p>Unavailable proof is a blocker, not permission to guess.</p></div>
+          <div>
+            <span>01</span
+            ><strong
+              data-message="portal.principles.explicitAuthority.title"
+            ></strong>
+            <p data-message="portal.principles.explicitAuthority.body"></p>
+          </div>
+          <div>
+            <span>02</span
+            ><strong
+              data-message="portal.principles.machineReadable.title"
+            ></strong>
+            <p data-message="portal.principles.machineReadable.body"></p>
+          </div>
+          <div>
+            <span>03</span
+            ><strong data-message="portal.principles.failClosed.title"></strong>
+            <p data-message="portal.principles.failClosed.body"></p>
+          </div>
         </div>
       </section>
 
-      <section id="products" class="shell section" aria-labelledby="products-heading">
+      <section
+        id="products"
+        class="shell section"
+        aria-labelledby="products-heading"
+      >
         <div class="section-head">
-          <div><p class="eyebrow">Product family</p><h2 id="products-heading">Six focused layers.</h2></div>
-          <p>Each product owns a narrow responsibility. Explore the boundary before the feature list.</p>
+          <div>
+            <p class="eyebrow" data-message="portal.products.eyebrow"></p>
+            <h2 id="products-heading" data-message="portal.products.title"></h2>
+          </div>
+          <p data-message="portal.products.body"></p>
         </div>
         <div class="product-grid">{{PRODUCT_CARDS}}</div>
       </section>
 
-      <section id="system" class="system-section" aria-labelledby="system-heading">
+      <section
+        id="system"
+        class="system-section"
+        aria-labelledby="system-heading"
+      >
         <div class="shell">
           <div class="section-head inverse">
-            <div><p class="eyebrow">System map</p><h2 id="system-heading">Composition without authority blur.</h2></div>
-            <p>Products cooperate through explicit seams. Follow any node to its responsibility boundary.</p>
+            <div>
+              <p class="eyebrow" data-message="portal.system.eyebrow"></p>
+              <h2 id="system-heading" data-message="portal.system.title"></h2>
+            </div>
+            <p data-message="portal.system.body"></p>
           </div>
           <div class="system-layout">
-            <div class="system-nodes" aria-label="Product nodes">{{SYSTEM_NODES}}</div>
+            <div
+              class="system-nodes"
+              aria-label=""
+              data-message-aria-label="portal.system.nodes"
+            >
+              {{SYSTEM_NODES}}
+            </div>
             <div class="relationship-panel">
-              <p class="relationship-title">Declared relationships</p>
-              <ul class="relationship-list">{{RELATIONSHIPS}}</ul>
+              <p
+                class="relationship-title"
+                data-message="portal.system.relationships"
+              ></p>
+              <ul class="relationship-list">
+                {{RELATIONSHIPS}}
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
       <section class="shell work-strip" aria-labelledby="work-heading">
-        <div><p class="eyebrow">Live public work</p><h2 id="work-heading">Plans are useful when they stay connected to evidence.</h2><p>Browse open Issues across yohn-jp. Dependency and implementation graphs are the next layer.</p></div>
-        <a class="button accent" href="./work/">Open work dashboard</a>
+        <div>
+          <p class="eyebrow" data-message="portal.work.eyebrow"></p>
+          <h2 id="work-heading" data-message="portal.work.title"></h2>
+          <p data-message="portal.work.body"></p>
+        </div>
+        <a
+          class="button accent"
+          href="./work/"
+          data-message="portal.work.openDashboard"
+        ></a>
       </section>
     </main>
 
     <footer class="shell footer">
-      <span>dev.yohn.jp · yohn-jp developer portal</span>
-      <div><a href="https://github.com/yohn-jp/.github" rel="noreferrer">Source ↗</a><a href="./work/">Work</a></div>
+      <span data-message="portal.footer.identity"></span>
+      <div>
+        <a
+          href="https://github.com/yohn-jp/.github"
+          rel="noreferrer"
+          data-message="portal.footer.source"
+        ></a
+        ><a href="./work/" data-message="portal.nav.work"></a>
+      </div>
     </footer>
   </body>
 </html>

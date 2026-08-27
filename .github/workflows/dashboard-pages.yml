@@ -6,6 +6,7 @@ on:
     paths:
       - "portal/**"
       - "dashboard/**"
+      - "messages.js"
       - "scripts/build-dashboard.mjs"
       - "scripts/dashboard-data.mjs"
       - "scripts/portal-registry.mjs"

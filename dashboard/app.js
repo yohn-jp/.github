@@ -12,6 +12,17 @@ import {
   WORK_SORTS,
   WORK_VIEWS
 } from "./work-model.js";
+import {
+  formatRelativeTime as formatLocaleRelativeTime,
+  formatSnapshotAge as formatLocaleSnapshotAge,
+  hydrateMessages,
+  localeDate,
+  message
+} from "../messages.js";
+
+hydrateMessages(document);
+
+const t = (key, values = {}) => message(key, values);
 
 const SNAPSHOT_REFRESH_INTERVAL_MS = 60_000;
 
@@ -46,7 +57,7 @@ const elements = {
 
 function text(value) {
   return value === null || value === undefined || value === ""
-    ? "—"
+    ? t("common.empty")
     : String(value);
 }
 
@@ -87,28 +98,42 @@ function showStatus(dashboard) {
       node(
         "p",
         "status-detail",
-        `Snapshot complete · ${dashboard.metrics.repositoryCount} repositories loaded`
+        t("work.status.snapshotComplete", {
+          count: dashboard.metrics.repositoryCount
+        })
       )
     );
     return;
   }
 
   elements.status.className = `status-banner ${status}`;
-  const detail = `${dashboard.metrics.successfulRepositories} of ${dashboard.metrics.repositoryCount} repositories loaded; ${unavailableLinks} issues have unavailable or partial PR linkage. Treat this view as incomplete.`;
+  const detail = t("work.status.snapshotDetail", {
+    successful: dashboard.metrics.successfulRepositories,
+    count: dashboard.metrics.repositoryCount,
+    unavailable: unavailableLinks
+  });
   elements.status.replaceChildren(
-    node("p", "status-title", `Snapshot ${status}`),
+    node("p", "status-title", t("work.status.snapshot", { status })),
     node("p", "status-detail", detail)
   );
   if (errors.length > 0) {
     const errorList = node("ul", "status-errors");
     for (const error of errors) {
-      const suffix = error.rateLimited ? " Rate limit reached." : "";
-      const issue = error.issue ? `#${error.issue} ` : "";
+      const rateLimit = error.rateLimited ? t("work.status.rateLimit") : "";
+      const issue = error.issue
+        ? t("work.status.issuePrefix", { issue: error.issue })
+        : "";
       errorList.append(
         node(
           "li",
           "",
-          `${error.repository} ${issue}(${error.stage}): ${error.message}${suffix}`
+          t("work.status.error", {
+            repository: error.repository,
+            issue,
+            stage: error.stage,
+            error: error.message,
+            rateLimit
+          })
         )
       );
     }
@@ -117,84 +142,62 @@ function showStatus(dashboard) {
 }
 
 function formatDate(value, prefix = "") {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return `${prefix}${text(value)}`;
-  return `${prefix}${new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(date)}`;
+  const formatted = localeDate(value);
+  return `${prefix}${formatted ?? text(value)}`;
 }
 
 function formatSnapshotAge(value) {
-  const timestamp = new Date(value).valueOf();
-  if (Number.isNaN(timestamp)) return "unknown age";
-  const ageSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (ageSeconds < 60) return "less than a minute old";
-  const ageMinutes = Math.floor(ageSeconds / 60);
-  if (ageMinutes < 60)
-    return `${ageMinutes} minute${ageMinutes === 1 ? "" : "s"} old`;
-  const ageHours = Math.floor(ageMinutes / 60);
-  return `${ageHours} hour${ageHours === 1 ? "" : "s"} old`;
+  return formatLocaleSnapshotAge(value);
 }
 
 function formatRelativeAge(value) {
-  const timestamp = new Date(value).valueOf();
-  if (Number.isNaN(timestamp)) return "Update age unknown";
-  const difference = Date.now() - timestamp;
-  if (difference < 0) return "Updated in the future";
-  const seconds = Math.floor(difference / 1000);
-  if (seconds < 60) return "Updated just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `Updated ${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `Updated ${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `Updated ${days}d ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `Updated ${weeks}w ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `Updated ${months}mo ago`;
-  const years = Math.floor(days / 365);
-  return `Updated ${years}y ago`;
+  return formatLocaleRelativeTime(value);
 }
 
 function renderFreshness() {
   if (!elements.freshness) return;
   if (!state.dashboard) {
     elements.freshness.textContent = state.lastCheckedAt
-      ? `Last checked ${formatDate(state.lastCheckedAt)} · No valid snapshot loaded.`
-      : "Checking for the latest snapshot…";
+      ? t("work.freshness.noValid", { date: formatDate(state.lastCheckedAt) })
+      : t("work.freshness.checking");
     return;
   }
   const checked = state.lastCheckedAt
-    ? `Last checked ${formatDate(state.lastCheckedAt)}`
-    : "Not checked yet";
-  const freshness = `Snapshot is ${formatSnapshotAge(state.dashboard.generatedAt)}.`;
+    ? t("work.freshness.checked", { date: formatDate(state.lastCheckedAt) })
+    : t("work.freshness.notChecked");
+  const freshness = t("work.freshness.snapshotAge", {
+    age: formatSnapshotAge(state.dashboard.generatedAt)
+  });
   elements.freshness.textContent = state.refreshError
-    ? `${checked} · ${freshness} Refresh failed; showing the last valid data.`
-    : `${checked} · ${freshness}`;
+    ? t("work.freshness.refreshFailed", { checked, freshness })
+    : `${checked}${t("common.separator")}${freshness}`;
 }
 
 function updateRefreshControl() {
   if (!elements.refreshButton) return;
   const active = Boolean(state.refreshInFlight);
   elements.refreshButton.disabled = active;
-  elements.refreshButton.textContent = active ? "Refreshing…" : "Refresh now";
+  elements.refreshButton.textContent = active
+    ? t("work.snapshot.refreshing")
+    : t("work.snapshot.refresh");
 }
 
 function renderMetrics(dashboard) {
   const cards = [
-    [dashboard.metrics.issueCount, "open issues"],
-    [dashboard.metrics.linkedPullRequests ?? 0, "linked pull requests"],
-    [dashboard.metrics.repositoryCount, "repositories"],
-    [dashboard.metrics.failedRepositories, "sources needing attention"]
+    [dashboard.metrics.issueCount, "work.metrics.openIssues"],
+    [
+      dashboard.metrics.linkedPullRequests ?? 0,
+      "work.metrics.linkedPullRequests"
+    ],
+    [dashboard.metrics.repositoryCount, "work.metrics.repositories"],
+    [dashboard.metrics.failedRepositories, "work.metrics.sourcesAttention"]
   ];
   elements.metrics.replaceChildren(
     ...cards.map(([value, label]) => {
       const card = node("div", "metric-card");
       card.append(
         node("span", "metric-value", text(value)),
-        node("span", "metric-label", label)
+        node("span", "metric-label", t(label))
       );
       return card;
     })
@@ -230,8 +233,8 @@ function renderRepositorySummary(dashboard) {
           "div",
           "repo-count",
           repository.fetchStatus === "ok"
-            ? `${repository.openIssueCount} open`
-            : "Data unavailable"
+            ? t("work.repository.open", { count: repository.openIssueCount })
+            : t("work.repository.unavailable")
         )
       );
       return row;
@@ -240,14 +243,16 @@ function renderRepositorySummary(dashboard) {
 }
 
 function renderRepositoryFilter(dashboard) {
-  const all = node("option", "", "All repositories");
+  const all = node("option", "", t("work.repositories.all"));
   all.value = "";
   const options = dashboard.repositories.map((repository) => {
     const product = productForRepository(repository.fullName);
     const option = node(
       "option",
       "",
-      product ? `${product.name} · ${repository.fullName}` : repository.fullName
+      product
+        ? `${product.name}${t("common.separator")}${repository.fullName}`
+        : repository.fullName
     );
     option.value = repository.fullName;
     return option;
@@ -259,8 +264,8 @@ function renderRepositoryFilter(dashboard) {
 function renderViewFilter() {
   if (!elements.viewFilter) return;
   elements.viewFilter.replaceChildren(
-    ...WORK_VIEWS.map(({ id, label }) => {
-      const option = node("option", "", label);
+    ...WORK_VIEWS.map(({ id, messageKey }) => {
+      const option = node("option", "", t(messageKey));
       option.value = id;
       return option;
     })
@@ -272,12 +277,12 @@ function renderSortFilter(issues) {
   if (!elements.sortFilter) return;
   const createdSupported = supportsCreatedAt(issues);
   elements.sortFilter.replaceChildren(
-    ...WORK_SORTS.map(({ id, label }) => {
-      const option = node("option", "", label);
+    ...WORK_SORTS.map(({ id, messageKey }) => {
+      const option = node("option", "", t(messageKey));
       option.value = id;
       if (id === "created" && !createdSupported) {
         option.disabled = true;
-        option.textContent = `${label} (unavailable)`;
+        option.textContent += t("work.sort.unavailable");
       }
       return option;
     })
@@ -324,13 +329,13 @@ function renderPullRequests(issue) {
   const linkage = issue.relationships?.pullRequests;
   if (!linkage || linkage.status !== "complete") {
     container.append(
-      node("span", "pr-linkage unknown", "PR linkage unavailable")
+      node("span", "pr-linkage unknown", t("work.pr.linkageUnavailable"))
     );
     return container;
   }
   if (linkage.items.length === 0) {
     container.append(
-      node("span", "pr-linkage unlinked", "No authoritative linked PR")
+      node("span", "pr-linkage unlinked", t("work.pr.noAuthoritative"))
     );
     return container;
   }
@@ -339,18 +344,24 @@ function renderPullRequests(issue) {
     const item = node("div", `issue-pr ${pullRequest.state}`);
     const title = link(
       pullRequest.url,
-      `PR #${pullRequest.number} ${pullRequest.title}`,
+      t("work.pr.title", {
+        number: pullRequest.number,
+        title: pullRequest.title
+      }),
       "pr-title"
     );
     const repository =
       pullRequest.repository.fullName === issue.repository.fullName
-        ? "same repository"
+        ? t("work.pr.sameRepository")
         : pullRequest.repository.fullName;
     const status =
       pullRequest.state === "closed"
-        ? "closed without merge"
+        ? t("work.pr.closedWithoutMerge")
         : pullRequest.state;
-    item.append(title, node("span", "pr-meta", `${repository} · ${status}`));
+    item.append(
+      title,
+      node("span", "pr-meta", `${repository}${t("common.separator")}${status}`)
+    );
     container.append(item);
   }
   return container;
@@ -374,12 +385,12 @@ function renderIssue(issue) {
 
   const classification = classifyIssue(issue);
   const primaryState = classification.inProgress
-    ? { className: "progress", label: "In progress" }
+    ? { className: "progress", label: t("work.state.inProgress") }
     : classification.ready
-      ? { className: "ready", label: "Ready / unstarted" }
+      ? { className: "ready", label: t("work.state.ready") }
       : {
           className: "state",
-          label: `${text(issue.state)}${issue.stateReason ? ` · ${issue.stateReason}` : ""}`
+          label: `${text(issue.state)}${issue.stateReason ? `${t("common.separator")}${issue.stateReason}` : ""}`
         };
   const state = node(
     "span",
@@ -389,7 +400,9 @@ function renderIssue(issue) {
   const stateGroup = node("div", "work-state-group");
   stateGroup.append(state);
   if (classification.needsAttention) {
-    stateGroup.append(node("span", "attention-signal", "Needs attention"));
+    stateGroup.append(
+      node("span", "attention-signal", t("work.state.needsAttention"))
+    );
   }
 
   const metadata = node("div", "issue-meta");
@@ -399,12 +412,20 @@ function renderIssue(issue) {
   }
   if (issue.labels.length > 3) {
     metadata.append(
-      node("span", "metadata-item", `+${issue.labels.length - 3} labels`)
+      node(
+        "span",
+        "metadata-item",
+        t("work.metadata.labels", { count: issue.labels.length - 3 })
+      )
     );
   }
   if (issue.milestone) {
     metadata.append(
-      node("span", "metadata-item", `Milestone: ${issue.milestone.title}`)
+      node(
+        "span",
+        "metadata-item",
+        t("work.metadata.milestone", { title: issue.milestone.title })
+      )
     );
   }
   if (issue.assignee) {
@@ -415,7 +436,7 @@ function renderIssue(issue) {
   updated.title = formatDate(issue.updatedAt);
   updated.setAttribute(
     "aria-label",
-    `Last updated ${formatDate(issue.updatedAt)}`
+    t("work.updated.lastUpdated", { date: formatDate(issue.updatedAt) })
   );
 
   const issueHeader = node("header", "issue-row-header");
@@ -423,7 +444,7 @@ function renderIssue(issue) {
   age.append(updated);
   issueHeader.append(identity, age);
   const issueSide = node("aside", "issue-side");
-  issueSide.setAttribute("aria-label", "Issue status and metadata");
+  issueSide.setAttribute("aria-label", t("work.issue.aria"));
   issueSide.append(stateGroup, metadata);
   row.append(issueMain, issueHeader, issueSide);
   return row;
@@ -434,12 +455,15 @@ function renderIssues() {
     issueMatchesView(issue, state.view)
   );
   const issues = sortIssues(viewIssues.filter(issueMatches), state.sort);
-  elements.issueCount.textContent = `${issues.length} of ${viewIssues.length} issues in ${
-    WORK_VIEWS.find(({ id }) => id === state.view)?.label ?? "All"
-  }`;
+  const view = WORK_VIEWS.find(({ id }) => id === state.view);
+  elements.issueCount.textContent = t("work.issue.count", {
+    shown: issues.length,
+    total: viewIssues.length,
+    view: view ? t(view.messageKey) : t("work.view.all")
+  });
   if (issues.length === 0) {
     elements.issueList.replaceChildren(
-      node("p", "empty-state", "No issues match current filters.")
+      node("p", "empty-state", t("work.issue.noMatches"))
     );
     return;
   }
@@ -462,15 +486,15 @@ function syncUrl() {
 
 function showLoadError(error) {
   state.refreshError = error;
-  elements.generatedAt.textContent = "Snapshot unavailable";
+  elements.generatedAt.textContent = t("work.load.snapshotUnavailable");
   elements.status.hidden = false;
   elements.status.className = "status-banner load-error";
   elements.status.replaceChildren(
-    node("p", "status-title", "Portal work data failed to load"),
+    node("p", "status-title", t("work.load.failedTitle")),
     node(
       "p",
       "status-detail",
-      `${error.message}. No valid issue snapshot is available yet.`
+      t("work.load.noSnapshot", { error: error.message })
     )
   );
   renderFreshness();
@@ -485,11 +509,11 @@ function showRefreshError(error) {
   elements.status.hidden = false;
   elements.status.className = "status-banner stale";
   elements.status.replaceChildren(
-    node("p", "status-title", "Snapshot refresh failed"),
+    node("p", "status-title", t("work.refresh.failedTitle")),
     node(
       "p",
       "status-detail",
-      `${error.message}. The last valid snapshot remains visible.`
+      t("work.refresh.lastValid", { error: error.message })
     )
   );
   renderFreshness();
@@ -517,10 +541,9 @@ function applyDashboard(dashboard, productCatalog) {
     state.initialized = true;
   }
   elements.issueSearch.value = state.search;
-  elements.generatedAt.textContent = formatDate(
-    dashboard.generatedAt,
-    "Generated "
-  );
+  elements.generatedAt.textContent = t("work.snapshot.generated", {
+    date: formatDate(dashboard.generatedAt)
+  });
   showStatus(dashboard);
   renderMetrics(dashboard);
   renderRepositorySummary(dashboard);

@@ -24,7 +24,7 @@ test("work and graph UI distinguish linked PR states without GitHub credentials"
   ]);
 
   for (const source of [work, graph]) {
-    assert.match(source, /closed without merge/);
+    assert.match(source, /work\.pr\.closedWithoutMerge/);
     assert.match(source, /pullRequests/);
     assert.doesNotMatch(
       source,

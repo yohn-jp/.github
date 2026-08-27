@@ -38,6 +38,7 @@ test("Pages push paths cover every transitive portal build script", async () => 
   assert.equal(workflow?.on?.schedule?.[0]?.cron, "*/10 * * * *");
   assert.ok(paths.includes("portal/**"));
   assert.ok(paths.includes("dashboard/**"));
+  assert.ok(paths.includes("messages.js"));
   assert.ok(paths.includes(".github/workflows/dashboard-pages.yml"));
   assert.ok(!paths.includes("scripts/**"), "trigger must remain bounded, not all scripts");
 

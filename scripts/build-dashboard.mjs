@@ -11,7 +11,11 @@ import {
   loadPortalRegistry,
   productCatalogFromRegistry
 } from "./portal-registry.mjs";
-import { renderPortalHome, renderProductOverviewPage } from "./render-portal.mjs";
+import {
+  renderPortalHome,
+  renderProductOverviewPage
+} from "./render-portal.mjs";
+import { resolveHtmlLocale, resolveHtmlMessages } from "../messages.js";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
@@ -20,6 +24,7 @@ const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 const GRAPH_DIRECTORY = join(DASHBOARD_DIRECTORY, "graph");
 
 const PORTAL_COPY_FILES = ["styles.css", "product.css", "CNAME"];
+const ROOT_COPY_FILES = ["messages.js"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];
 
@@ -30,8 +35,10 @@ export function resolvePortalCollectionToken(environment = process.env) {
 }
 
 export async function buildDashboard({
-  outputDirectory = process.env.DASHBOARD_OUTPUT ?? join(REPOSITORY_ROOT, "site"),
+  outputDirectory = process.env.DASHBOARD_OUTPUT ??
+    join(REPOSITORY_ROOT, "site"),
   registryPath = join(PORTAL_DIRECTORY, "registry.json"),
+  locale,
   detailsPath = join(PORTAL_DIRECTORY, "product-details.json"),
   portalTemplatePath = join(PORTAL_DIRECTORY, "index.html"),
   fetchImpl = globalThis.fetch,
@@ -43,6 +50,7 @@ export async function buildDashboard({
     loadPortalRegistry(registryPath),
     readFile(portalTemplatePath, "utf8")
   ]);
+  const portalLocale = resolveHtmlLocale(portalTemplate, locale);
   const config = dashboardConfigFromRegistry(registry);
   const productCatalog = productCatalogFromRegistry(registry);
   const [rawDashboard, productDetails] = await Promise.all([
@@ -72,9 +80,12 @@ export async function buildDashboard({
   for (const file of PORTAL_COPY_FILES) {
     await copyFile(join(PORTAL_DIRECTORY, file), join(outputDirectory, file));
   }
+  for (const file of ROOT_COPY_FILES) {
+    await copyFile(join(REPOSITORY_ROOT, file), join(outputDirectory, file));
+  }
   await writeFile(
     join(outputDirectory, "index.html"),
-    renderPortalHome(portalTemplate, productCatalog)
+    renderPortalHome(portalTemplate, productCatalog, portalLocale)
   );
 
   for (const product of productCatalog.products) {
@@ -85,16 +96,35 @@ export async function buildDashboard({
       renderProductOverviewPage(
         product,
         productCatalog,
-        detailsById.get(product.id)
+        detailsById.get(product.id),
+        portalLocale
       )
     );
   }
 
   for (const file of DASHBOARD_FILES) {
-    await copyFile(join(DASHBOARD_DIRECTORY, file), join(workDirectory, file));
+    const source = join(DASHBOARD_DIRECTORY, file);
+    const target = join(workDirectory, file);
+    if (file.endsWith(".html")) {
+      await writeFile(
+        target,
+        resolveHtmlMessages(await readFile(source, "utf8"), locale)
+      );
+    } else {
+      await copyFile(source, target);
+    }
   }
   for (const file of GRAPH_FILES) {
-    await copyFile(join(GRAPH_DIRECTORY, file), join(graphOutputDirectory, file));
+    const source = join(GRAPH_DIRECTORY, file);
+    const target = join(graphOutputDirectory, file);
+    if (file.endsWith(".html")) {
+      await writeFile(
+        target,
+        resolveHtmlMessages(await readFile(source, "utf8"), locale)
+      );
+    } else {
+      await copyFile(source, target);
+    }
   }
 
   await Promise.all([

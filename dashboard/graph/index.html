@@ -3,9 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Dependency graph for public yohn-jp Issues" />
+    <meta
+      name="description"
+      content=""
+      data-message-content="graph.meta.description"
+    />
     <link rel="canonical" href="https://dev.yohn.jp/work/graph/" />
-    <title>Dependency graph · yohn-jp</title>
+    <title data-message="graph.title"></title>
     <link rel="stylesheet" href="../../styles.css" />
     <link rel="stylesheet" href="../work.css" />
     <link rel="stylesheet" href="./graph.css" />
@@ -13,44 +17,109 @@
   </head>
   <body class="work-page graph-page">
     <header class="site-nav-wrap">
-      <nav class="shell site-nav" aria-label="Primary navigation">
-        <a class="brand" href="../../" aria-label="yohn-jp developer portal home"><span class="brand-slash">/</span><span>yohn-jp</span></a>
+      <nav
+        class="shell site-nav"
+        aria-label=""
+        data-message-aria-label="graph.nav.primary"
+      >
+        <a
+          class="brand"
+          href="../../"
+          aria-label=""
+          data-message-aria-label="graph.nav.home"
+          ><span class="brand-slash">/</span><span>yohn-jp</span></a
+        >
         <div class="nav-links">
-          <a href="../../#products">Products</a>
-          <a href="../">Issue index</a>
-          <a aria-current="page" href="./">Dependency graph</a>
+          <a href="../../#products" data-message="graph.nav.products"></a>
+          <a href="../" data-message="graph.nav.issueIndex"></a>
+          <a aria-current="page" href="./" data-message="graph.nav.graph"></a>
         </div>
       </nav>
     </header>
 
     <main>
       <section class="shell graph-hero">
-        <p class="eyebrow">GitHub-native relationships</p>
-        <h1>Dependency graph.</h1>
-        <p>Directed edges run from blocker to blocked work. Relationship data comes from GitHub Issue dependencies; no edge is inferred from prose.</p>
+        <p class="eyebrow" data-message="graph.hero.eyebrow"></p>
+        <h1 data-message="graph.hero.title"></h1>
+        <p data-message="graph.hero.body"></p>
       </section>
 
       <div class="shell graph-content">
-        <section id="graph-status" class="status-banner" role="status" aria-live="polite" hidden></section>
-        <div class="graph-toolbar" aria-label="Graph filters">
-          <label><span>Repository</span><select id="graph-repository"><option value="">All repositories</option></select></label>
-          <label class="checkbox-control"><input id="show-disconnected" type="checkbox" /><span>Show disconnected issues</span></label>
+        <section
+          id="graph-status"
+          class="status-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></section>
+        <div
+          class="graph-toolbar"
+          aria-label=""
+          data-message-aria-label="graph.filters.aria"
+        >
+          <label
+            ><span data-message="graph.filters.repository"></span
+            ><select id="graph-repository">
+              <option
+                value=""
+                data-message="work.repositories.all"
+              ></option></select
+          ></label>
+          <label class="checkbox-control"
+            ><input id="show-disconnected" type="checkbox" /><span
+              data-message="graph.filters.disconnected"
+            ></span
+          ></label>
           <span id="graph-count" class="graph-count"></span>
         </div>
 
         <section class="graph-summary" aria-labelledby="blockers-heading">
-          <div><p class="eyebrow">Bottlenecks</p><h2 id="blockers-heading">Major blockers</h2></div>
+          <div>
+            <p class="eyebrow" data-message="graph.blockers.eyebrow"></p>
+            <h2 id="blockers-heading" data-message="graph.blockers.title"></h2>
+          </div>
           <ol id="major-blockers" class="blocker-list"></ol>
         </section>
 
-        <section class="graph-layout" aria-label="Issue dependency graph">
-          <div id="graph-empty" class="graph-empty" hidden>No dependency edges match current filters.</div>
-          <div class="graph-canvas-frame"><svg id="dependency-graph" class="dependency-graph" role="img" aria-labelledby="graph-title graph-description"><title id="graph-title">Issue dependency graph</title><desc id="graph-description">Directed edges point from blocking issues to issues they block.</desc></svg></div>
-          <aside id="node-detail" class="node-detail" aria-live="polite"><p class="eyebrow">Issue detail</p><p>Select a node to inspect its dependency context.</p></aside>
+        <section
+          class="graph-layout"
+          aria-label=""
+          data-message-aria-label="graph.layout.aria"
+        >
+          <div
+            id="graph-empty"
+            class="graph-empty"
+            hidden
+            data-message="graph.empty"
+          ></div>
+          <div class="graph-canvas-frame">
+            <svg
+              id="dependency-graph"
+              class="dependency-graph"
+              role="img"
+              aria-labelledby="graph-title graph-description"
+            >
+              <title id="graph-title" data-message="graph.svg.title"></title>
+              <desc
+                id="graph-description"
+                data-message="graph.svg.description"
+              ></desc>
+            </svg>
+          </div>
+          <aside id="node-detail" class="node-detail" aria-live="polite">
+            <p class="eyebrow" data-message="graph.detail.eyebrow"></p>
+            <p data-message="graph.detail.select"></p>
+          </aside>
         </section>
       </div>
     </main>
 
-    <footer class="shell footer"><span>GitHub remains source of truth.</span><div><a href="../">Issue index</a><a href="../../">Portal home</a></div></footer>
+    <footer class="shell footer">
+      <span data-message="graph.footer.sourceOfTruth"></span>
+      <div>
+        <a href="../" data-message="graph.footer.issueIndex"></a
+        ><a href="../../" data-message="graph.footer.portalHome"></a>
+      </div>
+    </footer>
   </body>
 </html>

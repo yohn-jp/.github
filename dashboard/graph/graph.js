@@ -4,6 +4,11 @@ import {
   layoutDependencyGraph
 } from "./graph-model.js";
 import { buildProductRepositoryIndex } from "../work-model.js";
+import { hydrateMessages, message } from "../../messages.js";
+
+hydrateMessages(document);
+
+const t = (key, values = {}) => message(key, values);
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const state = {
@@ -69,20 +74,24 @@ function showStatus() {
     htmlNode(
       "p",
       "status-title",
-      complete ? "Dependency snapshot complete" : "Dependency snapshot incomplete"
+      complete ? t("graph.status.complete") : t("graph.status.incomplete")
     ),
     htmlNode(
       "p",
       "status-detail",
       complete
-        ? `${state.graph.edges.length} native dependency edges loaded.`
-        : `${state.graph.edges.length} known edges loaded; ${unavailable} issues have unavailable or partial dependency data and ${dependencyErrors} dependency-source errors were recorded.`
+        ? t("graph.status.completeDetail", { count: state.graph.edges.length })
+        : t("graph.status.incompleteDetail", {
+            count: state.graph.edges.length,
+            unavailable,
+            errors: dependencyErrors
+          })
     )
   );
 }
 
 function renderRepositoryFilter() {
-  const all = htmlNode("option", "", "All repositories");
+  const all = htmlNode("option", "", t("work.repositories.all"));
   all.value = "";
   const options = state.dashboard.repositories.map((repository) => {
     const product = productFor(repository.fullName);
@@ -90,7 +99,7 @@ function renderRepositoryFilter() {
       "option",
       "",
       product
-        ? `${product.name} · ${repository.fullName}`
+        ? `${product.name}${t("common.separator")}${repository.fullName}`
         : repository.fullName
     );
     option.value = repository.fullName;
@@ -106,7 +115,7 @@ function renderBlockers(graph) {
     .slice(0, 6);
   if (blockers.length === 0) {
     elements.blockers.replaceChildren(
-      htmlNode("li", "", "No blocking edges in current view.")
+      htmlNode("li", "", t("graph.blockers.none"))
     );
     return;
   }
@@ -119,11 +128,18 @@ function renderBlockers(graph) {
           htmlNode(
             "a",
             "blocker-link",
-            `${displayRepository(blocker.repository)} #${blocker.number} · ${blocker.title}`
+            `${displayRepository(blocker.repository)}${t("common.separator")}#${blocker.number} ${blocker.title}`
           ),
           { href: blocker.url }
         ),
-        htmlNode("span", "blocker-count", `${blocker.outgoing} blocked`)
+        htmlNode(
+          "span",
+          "blocker-count",
+          t(
+            `graph.blockers.count.${blocker.outgoing === 1 ? "one" : "other"}`,
+            { count: blocker.outgoing }
+          )
+        )
       );
       return item;
     })
@@ -148,35 +164,29 @@ function graphContext(node) {
 
 function pullRequestStatus(pullRequest) {
   return pullRequest.state === "closed"
-    ? "closed without merge"
+    ? t("work.pr.closedWithoutMerge")
     : pullRequest.state;
 }
 
 function renderPullRequests(node) {
   const section = htmlNode("div", "node-prs");
-  section.append(htmlNode("p", "node-prs-label", "Implementation"));
+  section.append(htmlNode("p", "node-prs-label", t("graph.pr.implementation")));
 
   if (!node.openDataset) {
     section.append(
-      htmlNode(
-        "p",
-        "node-prs-empty",
-        "PR linkage unavailable for dependency node outside current open-issue snapshot."
-      )
+      htmlNode("p", "node-prs-empty", t("graph.pr.outsideSnapshot"))
     );
     return section;
   }
 
   const linkage = node.pullRequests;
   if (!linkage || linkage.status !== "complete") {
-    section.append(
-      htmlNode("p", "node-prs-empty", "PR linkage unavailable or partial.")
-    );
+    section.append(htmlNode("p", "node-prs-empty", t("graph.pr.unavailable")));
     return section;
   }
   if (linkage.items.length === 0) {
     section.append(
-      htmlNode("p", "node-prs-empty", "No authoritative linked PR.")
+      htmlNode("p", "node-prs-empty", t("graph.pr.noAuthoritative"))
     );
     return section;
   }
@@ -186,7 +196,10 @@ function renderPullRequests(node) {
     const anchor = htmlNode(
       "a",
       "node-pr-title",
-      `PR #${pullRequest.number} ${pullRequest.title}`
+      t("work.pr.title", {
+        number: pullRequest.number,
+        title: pullRequest.title
+      })
     );
     anchor.href = pullRequest.url;
     anchor.rel = "noreferrer";
@@ -195,7 +208,7 @@ function renderPullRequests(node) {
       htmlNode(
         "span",
         "node-pr-meta",
-        `${pullRequest.repository.fullName} · ${pullRequestStatus(pullRequest)}`
+        `${pullRequest.repository.fullName}${t("common.separator")}${pullRequestStatus(pullRequest)}`
       )
     );
     section.append(item);
@@ -209,18 +222,24 @@ function renderDetail(node) {
   const repository = htmlNode(
     "p",
     "node-detail-meta",
-    `${displayRepository(node.repository)} · ${node.repository} · ${node.state}`
+    `${displayRepository(node.repository)}${t("common.separator")}${node.repository}${t("common.separator")}${node.state}`
   );
-  const relation = htmlNode(
-    "p",
-    "",
-    `${incoming.length} blocker${incoming.length === 1 ? "" : "s"} · ${outgoing.length} blocked issue${outgoing.length === 1 ? "" : "s"}${node.cycle ? " · cycle participant" : ""}`
+  const blockerCount = t(
+    `graph.detail.relations.blocker.${incoming.length === 1 ? "one" : "other"}`,
+    { count: incoming.length }
   );
-  const open = htmlNode("a", "", "Open on GitHub ↗");
+  const blockedCount = t(
+    `graph.detail.relations.blocked.${outgoing.length === 1 ? "one" : "other"}`,
+    { count: outgoing.length }
+  );
+  const relationParts = [blockerCount, blockedCount];
+  if (node.cycle) relationParts.push(t("graph.detail.cycle"));
+  const relation = htmlNode("p", "", relationParts.join(t("common.separator")));
+  const open = htmlNode("a", "", t("graph.detail.openGithub"));
   open.href = node.url;
   open.rel = "noreferrer";
   elements.detail.replaceChildren(
-    htmlNode("p", "eyebrow", "Issue detail"),
+    htmlNode("p", "eyebrow", t("graph.detail.eyebrow")),
     title,
     repository,
     relation,
@@ -276,7 +295,11 @@ function renderSvg(layout) {
       transform: `translate(${node.x} ${node.y})`,
       tabindex: 0,
       role: "button",
-      "aria-label": `${node.repository} issue ${node.number}: ${node.title}`
+      "aria-label": t("graph.node.aria", {
+        repository: node.repository,
+        number: node.number,
+        title: node.title
+      })
     });
     group.append(
       svgNode("rect", { width: node.width, height: node.height, rx: 11 })
@@ -286,7 +309,7 @@ function renderSvg(layout) {
       y: 19,
       class: "graph-node-repo"
     });
-    repo.textContent = `${displayRepository(node.repository)} · #${node.number}`;
+    repo.textContent = `${displayRepository(node.repository)}${t("common.separator")}#${node.number}`;
     const title = svgNode("text", {
       x: 14,
       y: 41,
@@ -303,7 +326,17 @@ function renderSvg(layout) {
       node.pullRequests?.status === "complete"
         ? node.pullRequests.items.length
         : null;
-    status.textContent = `${node.state}${node.openDataset ? "" : " · outside open set"}${node.cycle ? " · cycle" : ""}${pullRequestCount ? ` · ${pullRequestCount} PR${pullRequestCount === 1 ? "" : "s"}` : ""}`;
+    const statusParts = [node.state];
+    if (!node.openDataset) statusParts.push(t("graph.node.outsideOpenSet"));
+    if (node.cycle) statusParts.push(t("graph.node.cycle"));
+    if (pullRequestCount) {
+      statusParts.push(
+        t(`graph.node.pr.${pullRequestCount === 1 ? "one" : "other"}`, {
+          count: pullRequestCount
+        })
+      );
+    }
+    status.textContent = statusParts.join(t("common.separator"));
     group.append(repo, title, status);
     group.addEventListener("click", () => renderDetail(node));
     group.addEventListener("keydown", (event) => {
@@ -323,7 +356,10 @@ function renderGraph() {
     state.includeDisconnected
   );
   const layout = layoutDependencyGraph(filtered);
-  elements.count.textContent = `${filtered.nodes.length} nodes · ${filtered.edges.length} edges`;
+  elements.count.textContent = t("graph.count", {
+    nodes: filtered.nodes.length,
+    edges: filtered.edges.length
+  });
   elements.empty.hidden = filtered.nodes.length > 0;
   elements.svg.hidden = filtered.nodes.length === 0;
   renderBlockers(filtered);
@@ -352,7 +388,7 @@ async function load() {
     elements.status.hidden = false;
     elements.status.className = "status-banner load-error";
     elements.status.replaceChildren(
-      htmlNode("p", "status-title", "Dependency graph failed to load"),
+      htmlNode("p", "status-title", t("graph.load.failedTitle")),
       htmlNode("p", "status-detail", error.message)
     );
   }

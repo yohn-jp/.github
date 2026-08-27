@@ -15,8 +15,14 @@ test("product catalog maps canonical repositories to product routes", async () =
   const index = buildProductRepositoryIndex(catalog);
   assert.equal(index.get("yohn-jp/mottainai").id, "mottainai");
   assert.equal(index.get("yohn-jp/nawabari").name, "Nawabari");
-  assert.equal(repositoryFullNameFromUrl("https://github.com/yohn-jp/gh-inari"), "yohn-jp/gh-inari");
-  assert.equal(repositoryFullNameFromUrl("https://example.com/yohn-jp/gh-inari"), null);
+  assert.equal(
+    repositoryFullNameFromUrl("https://github.com/yohn-jp/gh-inari"),
+    "yohn-jp/gh-inari"
+  );
+  assert.equal(
+    repositoryFullNameFromUrl("https://example.com/yohn-jp/gh-inari"),
+    null
+  );
 });
 
 test("repository query prefilter accepts only configured exact repositories", () => {
@@ -63,11 +69,17 @@ test("work UI shares portal visual system and loads product projection without c
   assert.match(app, /SNAPSHOT_REFRESH_INTERVAL_MS = 60_000/);
   assert.match(app, /document\.visibilityState/);
   assert.match(app, /dashboard\.generatedAt !== state\.dashboard\.generatedAt/);
-  assert.match(app, /last valid snapshot remains visible/);
-  assert.match(app, /\.\.\/products\/\$\{encodeURIComponent\(product\.id\)\}\//);
+  assert.match(app, /work\.refresh\.lastValid/);
+  assert.match(
+    app,
+    /\.\.\/products\/\$\{encodeURIComponent\(product\.id\)\}\//
+  );
   assert.match(app, /issueMatchesView/);
   assert.match(app, /sortIssues/);
   assert.match(model, /URLSearchParams/);
   assert.match(css, /\.work-header/);
-  assert.doesNotMatch(`${app}\n${model}`, /api\.github\.com|Authorization|GITHUB_TOKEN|GH_TOKEN/);
+  assert.doesNotMatch(
+    `${app}\n${model}`,
+    /api\.github\.com|Authorization|GITHUB_TOKEN|GH_TOKEN/
+  );
 });

@@ -25,11 +25,8 @@ test("work surface keeps daily issue browsing primary and repository distributio
   assert.match(app, /node\("article", "issue-row"\)/);
   assert.match(app, /formatRelativeAge\(issue\.updatedAt\)/);
   assert.match(app, /classifyIssue\(issue\)/);
-  assert.match(app, /className: "progress", label: "In progress"/);
-  assert.match(
-    app,
-    /stateGroup\.append\(node\("span", "attention-signal", "Needs attention"\)\)/
-  );
+  assert.match(app, /label: t\("work\.state\.inProgress"\)/);
+  assert.match(app, /work\.state\.needsAttention/);
   assert.match(app, /elements\.status\.className = "status-inline complete"/);
   assert.match(styles, /\.issue-row\s*\{/);
   assert.match(styles, /\.work-header\s*\{/);
