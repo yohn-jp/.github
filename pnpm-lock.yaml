@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      gh-inari:
+        specifier: 0.8.0
+        version: 0.8.0
       js-yaml:
         specifier: ^4.1.0
         version: 4.3.1
@@ -21,6 +24,11 @@ packages:
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
+  gh-inari@0.8.0:
+    resolution: {integrity: sha512-QCBFiByGb6r3TcNKh4CZpcStvnywf3Qh3QIPDIDJJ7dGEPPwEtMed/d0XeFhXm0a/SVgqOp0N1AOTG3G3oYKGA==}
+    engines: {node: '>=22.13'}
+    hasBin: true
+
   js-yaml@4.3.1:
     resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
@@ -30,12 +38,23 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
 snapshots:
 
   argparse@2.0.1: {}
+
+  gh-inari@0.8.0:
+    dependencies:
+      yaml: 2.9.0
 
   js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
   prettier@3.9.6: {}
+
+  yaml@2.9.0: {}

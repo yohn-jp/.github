@@ -69,6 +69,94 @@ test("parses pagination links", () => {
   );
 });
 
+test("projects Inari governance as valid, invalid, or unavailable per open Issue", async () => {
+  const config = { organization: "yohn-jp", repositories: ["example"] };
+  const repository = {
+    id: 1,
+    name: "example",
+    full_name: "yohn-jp/example",
+    html_url: "https://github.com/yohn-jp/example",
+    visibility: "public"
+  };
+  const issues = [1, 2, 3].map((number) => ({
+    id: number,
+    number,
+    title: `Issue ${number}`,
+    html_url: `https://github.com/yohn-jp/example/issues/${number}`,
+    state: "open",
+    labels: [],
+    assignees: [],
+    updated_at: "2026-08-23T00:00:00Z"
+  }));
+  const fetchImpl = async (url) => {
+    if (url.endsWith("/repos/yohn-jp/example")) return response(repository);
+    if (url.includes("/repos/yohn-jp/example/issues")) return response(issues);
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+  const governanceImpl = async ({ issue }) => {
+    if (issue.number === 1) {
+      return {
+        authority: "Inari",
+        status: "valid",
+        valid: true,
+        classification: "valid",
+        template: {
+          id: "feature",
+          name: "Feature",
+          path: ".github/ISSUE_TEMPLATE/feature.yml",
+          source: "issue_form"
+        },
+        violations: [],
+        revision: "sha256:tree-1",
+        reason: null
+      };
+    }
+    if (issue.number === 2) {
+      return {
+        authority: "Inari",
+        status: "invalid",
+        valid: false,
+        classification: "semantic",
+        template: {
+          id: "feature",
+          name: "Feature",
+          path: ".github/ISSUE_TEMPLATE/feature.yml",
+          source: "issue_form"
+        },
+        violations: [{ code: "FIELD_MISSING", path: "$.problem" }],
+        revision: "sha256:tree-1",
+        reason: null
+      };
+    }
+    return {
+      authority: "Inari",
+      status: "unavailable",
+      valid: null,
+      classification: "unknown",
+      template: null,
+      violations: [],
+      revision: null,
+      reason: "authentication-unavailable"
+    };
+  };
+
+  const data = await collectDashboardData({
+    config,
+    fetchImpl,
+    token: "portal-token",
+    governanceImpl,
+    now: () => new Date("2026-08-23T02:00:00Z")
+  });
+
+  assert.equal(data.schemaVersion, 4);
+  assert.equal(data.status, "complete");
+  assert.equal(data.metrics.governanceDataUnavailable, 1);
+  assert.deepEqual(data.issues.map(({ governance }) => governance.status).sort(), ["invalid", "unavailable", "valid"]);
+  assert.equal(data.issues.find((issue) => issue.number === 1).governance.revision, "sha256:tree-1");
+  assert.equal(data.issues.find((issue) => issue.number === 2).governance.valid, false);
+  assert.equal(data.issues.find((issue) => issue.number === 3).governance.valid, null);
+});
+
 test("marks rate-limited repositories partial and excludes pull requests", async () => {
   const config = {
     organization: "yohn-jp",
@@ -203,6 +291,16 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
       registryPath,
       fetchImpl,
       token: "build-token",
+      governanceImpl: async () => ({
+        authority: "Inari",
+        status: "unavailable",
+        valid: null,
+        classification: "unknown",
+        template: null,
+        violations: [],
+        revision: null,
+        reason: "test-fixture"
+      }),
       now: () => new Date("2026-08-23T03:00:00Z")
     });
 
@@ -238,6 +336,7 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
     assert.match(workIndex, /href="\.\.\/"/);
     assert.match(workApp, /fetch\("\.\/data\/dashboard\.json"/);
     assert.equal(data.metrics.issueCount, 1);
+    assert.equal(data.schemaVersion, 4);
     assert.equal(data.issues[0].title, "Portal issue");
     assert.deepEqual(
       data.source.repositories,

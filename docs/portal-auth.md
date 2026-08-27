@@ -12,11 +12,14 @@ Use a dedicated GitHub App so the portal receives a short-lived installation tok
 
 Create a GitHub App owned by `yohn-jp` with no webhook requirement and these repository permissions:
 
+- **Contents: Read-only**
 - **Metadata: Read-only**
 - **Issues: Read-only**
 - **Pull requests: Read-only**
 
 Do not grant write permissions or unrelated organization permissions.
+
+Any existing GitHub App installation used by the portal must also include **Contents: Read-only** in its repository permissions; update the App configuration and installation before using the workflow.
 
 Install the App only on repositories listed or product-mapped in [`portal/registry.json`](../portal/registry.json). When the registry changes, update the App installation repository selection to match it. The workflow derives its requested token repository list from the validated registry, so it does not maintain another repository allowlist.
 
@@ -34,7 +37,7 @@ Store the complete App private key as an Actions secret available to `.github`:
 PORTAL_APP_PRIVATE_KEY
 ```
 
-The Pages workflow uses the GitHub-owned `actions/create-github-app-token` action pinned to an immutable commit. It requests only `issues: read`, `pull_requests: read`, and `metadata: read` and scopes the token to the configured portal repositories.
+The Pages workflow uses the GitHub-owned `actions/create-github-app-token` action pinned to an immutable commit. It requests only the four required read permissions: `contents: read`, `metadata: read`, `issues: read`, and `pull_requests: read`; it scopes the token to the configured portal repositories.
 
 If `PORTAL_APP_CLIENT_ID` is unset, token creation is skipped. If the client ID is configured but the private key or App installation is invalid, the workflow fails rather than silently substituting another credential.
 

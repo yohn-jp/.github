@@ -1,7 +1,9 @@
+import { collectIssueGovernance, createIssueGovernanceReader } from "./inari-governance.mjs";
+
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 
-export const DASHBOARD_SCHEMA_VERSION = 3;
+export const DASHBOARD_SCHEMA_VERSION = 4;
 
 function getHeader(headers, name) {
   if (!headers) return null;
@@ -263,7 +265,8 @@ export async function collectDashboardData({
   config,
   fetchImpl = globalThis.fetch,
   token = "",
-  now = () => new Date()
+  now = () => new Date(),
+  governanceImpl = collectIssueGovernance
 }) {
   if (typeof fetchImpl !== "function") throw new Error("A fetch implementation is required");
   const configuredRepositories = validateConfig(config);
@@ -292,6 +295,14 @@ export async function collectDashboardData({
       const rawIssues = (await fetchAll(endpointFor(configured, "/issues?state=open&per_page=100"), { fetchImpl, token }))
         .filter((issue) => !issue.pull_request);
       const normalizedIssues = rawIssues.map((rawIssue) => normalizeIssue(rawIssue, repository));
+      const governanceReader = token
+        ? createIssueGovernanceReader({
+            repository,
+            fetchImpl,
+            token,
+            rawIssues
+          })
+        : undefined;
       for (let index = 0; index < rawIssues.length; index += 1) {
         await hydrateDependencies({
           rawIssue: rawIssues[index],
@@ -301,6 +312,20 @@ export async function collectDashboardData({
           token,
           errors
         });
+        normalizedIssues[index].governance = await governanceImpl({
+          issue: normalizedIssues[index],
+          repository,
+          rawIssues,
+          fetchImpl,
+          token,
+          reader: governanceReader
+        });
+        if (
+          normalizedIssues[index].governance.status === "unavailable" &&
+          normalizedIssues[index].governance.reason !== "authentication-unavailable"
+        ) {
+          errors.push(errorRecord(configured, "governance", new Error(normalizedIssues[index].governance.reason)));
+        }
       }
       repository.openIssueCount = normalizedIssues.length;
       repository.fetchStatus = "ok";
@@ -324,9 +349,11 @@ export async function collectDashboardData({
   const failedRepositories = repositories.length - successfulRepositories;
   const dependencyEdges = new Set();
   let dependencyDataUnavailable = 0;
+  let governanceDataUnavailable = 0;
   for (const issue of issues) {
     const dependencies = issue.relationships.dependencies;
     if (dependencies?.status === "unavailable" || dependencies?.status === "partial") dependencyDataUnavailable += 1;
+    if (issue.governance?.status === "unavailable") governanceDataUnavailable += 1;
     for (const blocker of dependencies?.blockedBy ?? []) {
       dependencyEdges.add(`${blocker.repository.fullName}#${blocker.number}->${issue.repository.fullName}#${issue.number}`);
     }
@@ -351,7 +378,8 @@ export async function collectDashboardData({
       successfulRepositories,
       failedRepositories,
       dependencyEdges: dependencyEdges.size,
-      dependencyDataUnavailable
+      dependencyDataUnavailable,
+      governanceDataUnavailable
     },
     repositories,
     issues,
