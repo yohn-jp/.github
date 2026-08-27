@@ -25,8 +25,18 @@ export const WORK_SORTS = Object.freeze([
   { id: "repository", messageKey: "work.sort.repository" }
 ]);
 
+export const WORK_GOVERNANCE_FILTERS = Object.freeze([
+  { id: "all", messageKey: "work.governance.filter.all" },
+  { id: "valid", messageKey: "work.governance.filter.valid" },
+  { id: "invalid", messageKey: "work.governance.filter.invalid" },
+  { id: "unknown", messageKey: "work.governance.filter.unknown" }
+]);
+
 const WORK_VIEW_IDS = new Set(WORK_VIEWS.map(({ id }) => id));
 const WORK_SORT_IDS = new Set(WORK_SORTS.map(({ id }) => id));
+const WORK_GOVERNANCE_FILTER_IDS = new Set(
+  WORK_GOVERNANCE_FILTERS.map(({ id }) => id)
+);
 
 function timestamp(value) {
   if (!value) return null;
@@ -45,6 +55,25 @@ function pullRequestLinkage(issue) {
 }
 
 /**
+ * Maps projected governance data to the public three-state UI contract.
+ * Only an explicit valid projection is compliant; missing or unavailable
+ * evidence is deliberately treated as unknown.
+ */
+export function governanceStatus(issue) {
+  const governance = issue?.governance;
+  if (governance?.status === "valid" && governance.valid === true) {
+    return "valid";
+  }
+  if (
+    governance?.status === "invalid" ||
+    (!governance?.status && governance?.valid === false)
+  ) {
+    return "invalid";
+  }
+  return "unknown";
+}
+
+/**
  * Classifies an issue using only fields projected from GitHub.
  * `inProgress` and `ready` deliberately require complete PR linkage; an
  * unavailable relationship cannot be treated as evidence that no PR exists.
@@ -56,6 +85,12 @@ export function classifyIssue(issue) {
     (pullRequest) => String(pullRequest?.state ?? "").toLowerCase() === "open"
   );
   const reasons = [];
+
+  if (governanceStatus(issue) === "invalid") {
+    reasons.push("governance-invalid");
+  } else if (governanceStatus(issue) === "unknown") {
+    reasons.push("governance-unavailable");
+  }
 
   if (!complete) reasons.push("pull-request-linkage-unavailable");
   for (const pullRequest of linkage.items) {
@@ -93,6 +128,11 @@ export function issueMatchesView(issue, view = "recent") {
   if (view === "in-progress") return classification.inProgress;
   if (view === "ready") return classification.ready;
   return true;
+}
+
+export function issueMatchesGovernance(issue, filter = "all") {
+  if (filter === "all") return true;
+  return governanceStatus(issue) === filter;
 }
 
 export function supportsCreatedAt(issues = []) {
@@ -184,6 +224,11 @@ export function resolveView(search) {
   return WORK_VIEW_IDS.has(requested) ? requested : "recent";
 }
 
+export function resolveGovernanceFilter(search) {
+  const requested = new URLSearchParams(search).get("governance") ?? "";
+  return WORK_GOVERNANCE_FILTER_IDS.has(requested) ? requested : "all";
+}
+
 export function resolveSort(search, issues = []) {
   const requested = new URLSearchParams(search).get("sort") ?? "";
   if (!WORK_SORT_IDS.has(requested)) return "updated";
@@ -195,13 +240,17 @@ export function buildWorkQuery({
   view = "recent",
   repository = "",
   search = "",
-  sort = "updated"
+  sort = "updated",
+  governance = "all"
 } = {}) {
   const params = new URLSearchParams();
   if (WORK_VIEW_IDS.has(view) && view !== "recent") params.set("view", view);
   if (repository) params.set("repository", repository);
   if (search.trim()) params.set("q", search.trim());
   if (WORK_SORT_IDS.has(sort) && sort !== "updated") params.set("sort", sort);
+  if (WORK_GOVERNANCE_FILTER_IDS.has(governance) && governance !== "all") {
+    params.set("governance", governance);
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 }

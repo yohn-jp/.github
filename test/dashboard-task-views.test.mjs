@@ -3,20 +3,26 @@ import assert from "node:assert/strict";
 import {
   buildWorkQuery,
   classifyIssue,
+  governanceStatus,
+  issueMatchesGovernance,
   issueMatchesView,
+  resolveGovernanceFilter,
   resolveSort,
   resolveView,
   sortIssues
 } from "../dashboard/work-model.js";
 
-function issue(number, {
-  updatedAt = `2026-08-${String(number).padStart(2, "0")}T00:00:00Z`,
-  createdAt = updatedAt,
-  repository = "yohn-jp/example",
-  linkage = { status: "complete", items: [] },
-  dependencies = { status: "complete", blockedBy: [], blocking: [] },
-  stateReason = null
-} = {}) {
+function issue(
+  number,
+  {
+    updatedAt = `2026-08-${String(number).padStart(2, "0")}T00:00:00Z`,
+    createdAt = updatedAt,
+    repository = "yohn-jp/example",
+    linkage = { status: "complete", items: [] },
+    dependencies = { status: "complete", blockedBy: [], blocking: [] },
+    stateReason = null
+  } = {}
+) {
   return {
     id: `${repository}#${number}`,
     number,
@@ -87,20 +93,43 @@ test("marks clearly evidenced attention states without priority scoring", () => 
 
 test("sorts every supported order deterministically regardless of source order", () => {
   const issues = [
-    issue(2, { updatedAt: "2026-08-02T00:00:00Z", createdAt: "2026-08-01T00:00:00Z", repository: "yohn-jp/z" }),
-    issue(1, { updatedAt: "2026-08-03T00:00:00Z", createdAt: "2026-08-02T00:00:00Z", repository: "yohn-jp/a" }),
-    issue(3, { updatedAt: "2026-08-01T00:00:00Z", createdAt: "2026-08-03T00:00:00Z", repository: "yohn-jp/a" })
+    issue(2, {
+      updatedAt: "2026-08-02T00:00:00Z",
+      createdAt: "2026-08-01T00:00:00Z",
+      repository: "yohn-jp/z"
+    }),
+    issue(1, {
+      updatedAt: "2026-08-03T00:00:00Z",
+      createdAt: "2026-08-02T00:00:00Z",
+      repository: "yohn-jp/a"
+    }),
+    issue(3, {
+      updatedAt: "2026-08-01T00:00:00Z",
+      createdAt: "2026-08-03T00:00:00Z",
+      repository: "yohn-jp/a"
+    })
   ];
 
-  assert.deepEqual(sortIssues(issues, "updated").map((item) => item.number), [1, 2, 3]);
-  assert.deepEqual(sortIssues(issues, "created").map((item) => item.number), [3, 1, 2]);
-  assert.deepEqual(sortIssues(issues, "oldest").map((item) => item.number), [3, 2, 1]);
-  assert.deepEqual(sortIssues(issues, "repository").map((item) => item.id), [
-    "yohn-jp/a#1",
-    "yohn-jp/a#3",
-    "yohn-jp/z#2"
-  ]);
-  assert.deepEqual(issues.map((item) => item.number), [2, 1, 3]);
+  assert.deepEqual(
+    sortIssues(issues, "updated").map((item) => item.number),
+    [1, 2, 3]
+  );
+  assert.deepEqual(
+    sortIssues(issues, "created").map((item) => item.number),
+    [3, 1, 2]
+  );
+  assert.deepEqual(
+    sortIssues(issues, "oldest").map((item) => item.number),
+    [3, 2, 1]
+  );
+  assert.deepEqual(
+    sortIssues(issues, "repository").map((item) => item.id),
+    ["yohn-jp/a#1", "yohn-jp/a#3", "yohn-jp/z#2"]
+  );
+  assert.deepEqual(
+    issues.map((item) => item.number),
+    [2, 1, 3]
+  );
 });
 
 test("keeps view, repository, search, and sort in a shareable URL", () => {
@@ -119,4 +148,55 @@ test("keeps view, repository, search, and sort in a shareable URL", () => {
   assert.equal(resolveView("?view=unknown"), "recent");
   assert.equal(resolveSort("?sort=unknown", [issue(1)]), "updated");
   assert.equal(resolveSort("?sort=created", []), "updated");
+});
+
+test("keeps governance as an explicit fail-closed three-state filter", () => {
+  const valid = issue(1, { linkage: { status: "complete", items: [] } });
+  valid.governance = { status: "valid", valid: true, violations: [] };
+  const invalid = issue(2);
+  invalid.governance = {
+    status: "invalid",
+    valid: false,
+    violations: [{ code: "FIELD_MISSING", path: "$.problem" }]
+  };
+  const unavailable = issue(3);
+  unavailable.governance = {
+    status: "unavailable",
+    valid: null,
+    reason: "authentication-unavailable"
+  };
+
+  assert.equal(governanceStatus(valid), "valid");
+  assert.equal(governanceStatus(invalid), "invalid");
+  assert.equal(governanceStatus(unavailable), "unknown");
+  assert.equal(governanceStatus(issue(4)), "unknown");
+  assert.equal(
+    governanceStatus({ governance: { status: "unavailable", valid: false } }),
+    "unknown"
+  );
+  assert.equal(
+    classifyIssue(invalid).reasons.includes("governance-invalid"),
+    true
+  );
+  assert.equal(
+    classifyIssue(unavailable).reasons.includes("governance-unavailable"),
+    true
+  );
+  assert.equal(issueMatchesGovernance(valid, "valid"), true);
+  assert.equal(issueMatchesGovernance(invalid, "valid"), false);
+  assert.equal(issueMatchesGovernance(unavailable, "unknown"), true);
+
+  const query = buildWorkQuery({
+    view: "attention",
+    governance: "invalid",
+    repository: "yohn-jp/example",
+    search: "contract",
+    sort: "oldest"
+  });
+  assert.equal(
+    query,
+    "?view=attention&repository=yohn-jp%2Fexample&q=contract&sort=oldest&governance=invalid"
+  );
+  assert.equal(resolveGovernanceFilter(query), "invalid");
+  assert.equal(resolveGovernanceFilter("?governance=bad"), "all");
 });

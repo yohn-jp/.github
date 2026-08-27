@@ -158,7 +158,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
   border-block: 1px solid var(--line-strong);
 }
 
@@ -213,7 +213,8 @@
 .filters {
   display: grid;
   grid-template-columns:
-    minmax(140px, 0.65fr) minmax(190px, 0.95fr) minmax(140px, 0.65fr)
+    minmax(120px, 0.55fr) minmax(140px, 0.65fr) minmax(190px, 0.95fr)
+    minmax(140px, 0.65fr)
     minmax(230px, 1.35fr);
   gap: 10px;
   margin-bottom: 10px;
@@ -433,6 +434,61 @@
   content: "";
 }
 
+.governance-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.68rem;
+}
+
+.governance-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.governance-badge.valid {
+  border-color: #b9d7a8;
+  background: #edf7e8;
+  color: #3d6b2e;
+}
+
+.governance-badge.invalid {
+  border-color: #e3b5ae;
+  background: #fff0ed;
+  color: #9b3f35;
+}
+
+.governance-badge.unknown {
+  border-color: #e2c98d;
+  background: #fff8e7;
+  color: #805e16;
+}
+
+.governance-violations summary {
+  cursor: pointer;
+  color: #9b3f35;
+  font-weight: 750;
+}
+
+.governance-violation-list {
+  max-width: 320px;
+  margin: 7px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.governance-violations p {
+  margin: 7px 0 0;
+  color: var(--muted);
+}
+
 .issue-meta {
   display: flex;
   flex-wrap: wrap;
@@ -517,14 +573,13 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .metric-card:nth-child(3) {
-    border-left: 0;
+  .metric-card:nth-child(n + 3) {
     border-top: 1px solid var(--line);
-    padding-left: 0;
   }
 
-  .metric-card:nth-child(4) {
-    border-top: 1px solid var(--line);
+  .metric-card:nth-child(odd) {
+    border-left: 0;
+    padding-left: 0;
   }
 
   .filters {
@@ -589,10 +644,16 @@
 
   .metric-card,
   .metric-card + .metric-card,
-  .metric-card:nth-child(3),
-  .metric-card:nth-child(4) {
+  .metric-card:nth-child(n) {
     min-height: 58px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-left: 0;
     padding-block: 8px;
+  }
+
+  .metric-card:first-child {
+    border-top: 0;
   }
 
   .snapshot-controls {
