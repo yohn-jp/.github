@@ -56,13 +56,14 @@ publishing via npm Trusted Publishing (OIDC) — no long-lived npm token.
 `portal/` defines the static landing page for `https://dev.yohn.jp/`, including
 the product responsibility map and concise product boundaries. The read-only
 cross-repository dashboard remains defined in `dashboard/`, with source
-repositories configured in
-[`dashboard/repositories.json`](dashboard/repositories.json).
+repository collection derived from the portal registry.
 
-[`portal/products.json`](portal/products.json) is the versioned source for
-product metadata repeated across the portal: stable product identity, role,
-repository, concise summary/status, responsibility boundaries, and typed
-cross-product relationships. `scripts/product-catalog.mjs` validates this file
+[`portal/registry.json`](portal/registry.json) is the versioned canonical source
+for product identity, repository mappings, collection scope, role, concise
+summary/status, responsibility boundaries, and typed cross-product
+relationships. `scripts/portal-registry.mjs` validates it and derives both the
+product catalog and dashboard repository configuration. `scripts/product-catalog.mjs`
+validates the catalog projection
 and the Pages build fails on malformed, duplicate, self-referential, or unknown
 relationship data. Repository READMEs and docs remain authoritative for actual
 CLI/API/release behavior; the portal catalog is a curated navigation and

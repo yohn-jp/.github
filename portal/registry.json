@@ -1,5 +1,7 @@
 {
   "schemaVersion": 1,
+  "organization": "yohn-jp",
+  "collectionRepositories": ["gh-makami", ".github"],
   "products": [
     {
       "id": "mottainai",

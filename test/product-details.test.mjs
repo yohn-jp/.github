@@ -11,7 +11,7 @@ function clone(value) {
 }
 
 test("details cover every catalog product in catalog order", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const details = await loadProductDetails("portal/product-details.json", catalog);
   assert.deepEqual(
     details.products.map((detail) => detail.id),
@@ -25,7 +25,7 @@ test("details cover every catalog product in catalog order", async () => {
 });
 
 test("details reject missing, duplicate, and unknown product entries", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const details = await loadProductDetails("portal/product-details.json", catalog);
 
   const missing = clone(details);
@@ -51,7 +51,7 @@ test("details reject missing, duplicate, and unknown product entries", async () 
 });
 
 test("Wabachi detail remains explicit about early authority-programme status", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const details = await loadProductDetails("portal/product-details.json", catalog);
   const wabachi = details.products.find((detail) => detail.id === "wabachi");
   assert.match(wabachi.maturity, /early-stage/i);

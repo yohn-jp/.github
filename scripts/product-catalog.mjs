@@ -129,5 +129,9 @@ export function validateProductCatalog(catalog) {
 
 export async function loadProductCatalog(path) {
   const source = JSON.parse(await readFile(path, "utf8"));
-  return validateProductCatalog(source);
+  if (!Object.hasOwn(source, "organization") || !Object.hasOwn(source, "collectionRepositories")) {
+    throw new Error("Product catalog source must be a portal registry");
+  }
+  const { productCatalogFromRegistry } = await import("./portal-registry.mjs");
+  return productCatalogFromRegistry(source);
 }

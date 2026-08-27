@@ -18,7 +18,7 @@ function response(body, status = 200, headers = {}) {
 }
 
 test("loads the versioned six-product portal catalog deterministically", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   assert.equal(catalog.schemaVersion, 1);
   assert.deepEqual(
     catalog.products.map((product) => product.id),
@@ -32,7 +32,7 @@ test("loads the versioned six-product portal catalog deterministically", async (
 });
 
 test("rejects duplicate product ids", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const invalid = clone(catalog);
   invalid.products[1].id = invalid.products[0].id;
   invalid.products[1].relationships = [];
@@ -40,7 +40,7 @@ test("rejects duplicate product ids", async () => {
 });
 
 test("rejects self and unknown product relationships", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
 
   const self = clone(catalog);
   self.products[0].relationships[0].product = self.products[0].id;
@@ -55,7 +55,7 @@ test("rejects self and unknown product relationships", async () => {
 });
 
 test("rejects non-canonical repository URLs", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const invalid = clone(catalog);
   invalid.products[0].repository = "https://example.com/yohn-jp/mottainai";
   assert.throws(
@@ -67,28 +67,32 @@ test("rejects non-canonical repository URLs", async () => {
 test("portal build publishes only the validated catalog projection", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "product-catalog-"));
   const outputDirectory = join(temporaryDirectory, "site");
-  const configPath = join(temporaryDirectory, "repositories.json");
+  const registryPath = join(temporaryDirectory, "registry.json");
+  const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
+  registry.collectionRepositories = ["example"];
   await writeFile(
-    configPath,
-    JSON.stringify({ organization: "yohn-jp", repositories: ["example"] })
+    registryPath,
+    JSON.stringify(registry)
   );
 
   const fetchImpl = async (url) => {
-    if (url.endsWith("/repos/yohn-jp/example")) {
+    const repositoryMatch = url.match(/\/repos\/yohn-jp\/([^/]+)$/);
+    if (repositoryMatch) {
+      const name = repositoryMatch[1];
       return response({
-        id: 1,
-        name: "example",
-        full_name: "yohn-jp/example",
-        html_url: "https://github.com/yohn-jp/example",
+        id: name,
+        name,
+        full_name: `yohn-jp/${name}`,
+        html_url: `https://github.com/yohn-jp/${name}`,
         visibility: "public"
       });
     }
-    if (url.includes("/repos/yohn-jp/example/issues")) return response([]);
+    if (url.includes("/issues")) return response([]);
     throw new Error(`Unexpected URL: ${url}`);
   };
 
   try {
-    await buildDashboard({ outputDirectory, configPath, fetchImpl });
+    await buildDashboard({ outputDirectory, registryPath, fetchImpl });
     const published = JSON.parse(
       await readFile(join(outputDirectory, "data", "products.json"), "utf8")
     );

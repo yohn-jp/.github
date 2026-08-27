@@ -8,6 +8,7 @@ on:
       - "dashboard/**"
       - "scripts/build-dashboard.mjs"
       - "scripts/dashboard-data.mjs"
+      - "scripts/portal-registry.mjs"
       - "scripts/product-catalog.mjs"
       - "scripts/product-details.mjs"
       - "scripts/render-portal.mjs"
@@ -46,29 +47,16 @@ jobs:
         id: portal-scope
         shell: bash
         run: |
-          node <<'NODE'
-          const fs = require("node:fs");
-          const config = JSON.parse(fs.readFileSync("dashboard/repositories.json", "utf8"));
-          const ownerPattern = /^[A-Za-z0-9-]+$/;
-          const repositoryPattern = /^[A-Za-z0-9._-]+$/;
-          if (
-            typeof config.organization !== "string" ||
-            !ownerPattern.test(config.organization) ||
-            !Array.isArray(config.repositories) ||
-            config.repositories.length === 0
-          ) {
-            throw new Error("dashboard/repositories.json lacks valid portal collection scope");
-          }
-          if (
-            config.repositories.some(
-              (repository) =>
-                typeof repository !== "string" ||
-                !repositoryPattern.test(repository)
-            )
-          ) {
-            throw new Error("dashboard/repositories.json contains invalid repository name");
-          }
-          fs.appendFileSync(
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+          import {
+            dashboardConfigFromRegistry,
+            loadPortalRegistry
+          } from "./scripts/portal-registry.mjs";
+
+          const registry = await loadPortalRegistry("portal/registry.json");
+          const config = dashboardConfigFromRegistry(registry);
+          appendFileSync(
             process.env.GITHUB_OUTPUT,
             `owner=${config.organization}\nrepositories=${config.repositories.join(",")}\n`
           );

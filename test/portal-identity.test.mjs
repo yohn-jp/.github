@@ -21,7 +21,7 @@ test("static portal surfaces use yohn-jp and dev.yohn.jp identity", async () => 
 });
 
 test("generated product pages use canonical organization and domain identity", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const details = await loadProductDetails("portal/product-details.json", catalog);
   const detailsById = new Map(details.products.map((detail) => [detail.id, detail]));
 

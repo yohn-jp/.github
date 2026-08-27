@@ -11,7 +11,7 @@ import {
 } from "../dashboard/work-model.js";
 
 test("product catalog maps canonical repositories to product routes", async () => {
-  const catalog = await loadProductCatalog("portal/products.json");
+  const catalog = await loadProductCatalog("portal/registry.json");
   const index = buildProductRepositoryIndex(catalog);
   assert.equal(index.get("yohn-jp/mottainai").id, "mottainai");
   assert.equal(index.get("yohn-jp/nawabari").name, "Nawabari");

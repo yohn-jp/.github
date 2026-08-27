@@ -15,7 +15,7 @@ function response(body, status = 200, headers = {}) {
 async function portalInputs() {
   const [template, catalog] = await Promise.all([
     readFile("portal/index.html", "utf8"),
-    loadProductCatalog("portal/products.json")
+    loadProductCatalog("portal/registry.json")
   ]);
   const details = await loadProductDetails("portal/product-details.json", catalog);
   return { template, catalog, details };
@@ -71,17 +71,21 @@ test("renderer rejects malformed templates", async () => {
 test("build publishes root and stable product routes", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "portal-render-"));
   const outputDirectory = join(temporaryDirectory, "site");
-  const configPath = join(temporaryDirectory, "repositories.json");
-  await writeFile(configPath, JSON.stringify({ organization: "yohn-jp", repositories: ["example"] }));
+  const registryPath = join(temporaryDirectory, "registry.json");
+  const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
+  registry.collectionRepositories = ["example"];
+  await writeFile(registryPath, JSON.stringify(registry));
   const fetchImpl = async (url) => {
-    if (url.endsWith("/repos/yohn-jp/example")) {
-      return response({ id: 1, name: "example", full_name: "yohn-jp/example", html_url: "https://github.com/yohn-jp/example", visibility: "public" });
+    const repositoryMatch = url.match(/\/repos\/yohn-jp\/([^/]+)$/);
+    if (repositoryMatch) {
+      const name = repositoryMatch[1];
+      return response({ id: name, name, full_name: `yohn-jp/${name}`, html_url: `https://github.com/yohn-jp/${name}`, visibility: "public" });
     }
-    if (url.includes("/repos/yohn-jp/example/issues")) return response([]);
+    if (url.includes("/issues")) return response([]);
     throw new Error(`Unexpected URL: ${url}`);
   };
   try {
-    await buildDashboard({ outputDirectory, configPath, fetchImpl });
+    await buildDashboard({ outputDirectory, registryPath, fetchImpl });
     const root = await readFile(join(outputDirectory, "index.html"), "utf8");
     assert.match(root, /Small tools\./);
     for (const id of ["mottainai", "nawabari", "inari", "suzukuri", "wabachi", "majiwari"]) {
