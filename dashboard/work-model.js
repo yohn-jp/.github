@@ -11,18 +11,18 @@ export function repositoryFullNameFromUrl(value) {
 }
 
 export const WORK_VIEWS = Object.freeze([
-  { id: "recent", label: "Recent" },
-  { id: "attention", label: "Needs attention" },
-  { id: "in-progress", label: "In progress" },
-  { id: "ready", label: "Ready / unstarted" },
-  { id: "all", label: "All" }
+  { id: "recent", messageKey: "work.view.recent" },
+  { id: "attention", messageKey: "work.view.attention" },
+  { id: "in-progress", messageKey: "work.view.inProgress" },
+  { id: "ready", messageKey: "work.view.ready" },
+  { id: "all", messageKey: "work.view.all" }
 ]);
 
 export const WORK_SORTS = Object.freeze([
-  { id: "updated", label: "Recently updated" },
-  { id: "created", label: "Newly created" },
-  { id: "oldest", label: "Oldest activity" },
-  { id: "repository", label: "Repository" }
+  { id: "updated", messageKey: "work.sort.updated" },
+  { id: "created", messageKey: "work.sort.created" },
+  { id: "oldest", messageKey: "work.sort.oldest" },
+  { id: "repository", messageKey: "work.sort.repository" }
 ]);
 
 const WORK_VIEW_IDS = new Set(WORK_VIEWS.map(({ id }) => id));
@@ -39,7 +39,7 @@ function pullRequestLinkage(issue) {
   const hasItems = Array.isArray(linkage?.items);
   const items = hasItems ? linkage.items : [];
   return {
-    status: hasItems ? linkage?.status ?? "unavailable" : "unavailable",
+    status: hasItems ? (linkage?.status ?? "unavailable") : "unavailable",
     items
   };
 }
@@ -127,9 +127,11 @@ export function sortIssues(issues = [], sort = "updated") {
   const selected = WORK_SORT_IDS.has(sort) ? sort : "updated";
   return [...issues].sort((left, right) => {
     if (selected === "repository") {
-      return compareIssueIdentity(left, right) ||
+      return (
+        compareIssueIdentity(left, right) ||
         compareNullableDate(right?.updatedAt, left?.updatedAt, 1) ||
-        Number(right?.number ?? 0) - Number(left?.number ?? 0);
+        Number(right?.number ?? 0) - Number(left?.number ?? 0)
+      );
     }
     if (selected === "created") {
       return (

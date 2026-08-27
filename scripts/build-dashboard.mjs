@@ -12,6 +12,7 @@ import {
   productCatalogFromRegistry
 } from "./portal-registry.mjs";
 import { renderPortalHome, renderProductOverviewPage } from "./render-portal.mjs";
+import { resolveHtmlMessages } from "../messages.js";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
@@ -20,6 +21,7 @@ const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 const GRAPH_DIRECTORY = join(DASHBOARD_DIRECTORY, "graph");
 
 const PORTAL_COPY_FILES = ["styles.css", "product.css", "CNAME"];
+const ROOT_COPY_FILES = ["messages.js"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];
 
@@ -71,6 +73,9 @@ export async function buildDashboard({
   for (const file of PORTAL_COPY_FILES) {
     await copyFile(join(PORTAL_DIRECTORY, file), join(outputDirectory, file));
   }
+  for (const file of ROOT_COPY_FILES) {
+    await copyFile(join(REPOSITORY_ROOT, file), join(outputDirectory, file));
+  }
   await writeFile(
     join(outputDirectory, "index.html"),
     renderPortalHome(portalTemplate, productCatalog)
@@ -90,10 +95,28 @@ export async function buildDashboard({
   }
 
   for (const file of DASHBOARD_FILES) {
-    await copyFile(join(DASHBOARD_DIRECTORY, file), join(workDirectory, file));
+    const source = join(DASHBOARD_DIRECTORY, file);
+    const target = join(workDirectory, file);
+    if (file.endsWith(".html")) {
+      await writeFile(
+        target,
+        resolveHtmlMessages(await readFile(source, "utf8"))
+      );
+    } else {
+      await copyFile(source, target);
+    }
   }
   for (const file of GRAPH_FILES) {
-    await copyFile(join(GRAPH_DIRECTORY, file), join(graphOutputDirectory, file));
+    const source = join(GRAPH_DIRECTORY, file);
+    const target = join(graphOutputDirectory, file);
+    if (file.endsWith(".html")) {
+      await writeFile(
+        target,
+        resolveHtmlMessages(await readFile(source, "utf8"))
+      );
+    } else {
+      await copyFile(source, target);
+    }
   }
 
   await Promise.all([
