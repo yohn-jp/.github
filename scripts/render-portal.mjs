@@ -1,6 +1,9 @@
-import { message, resolveHtmlMessages } from "../messages.js";
-
-const t = (key, values = {}) => message(key, values, "en");
+import {
+  message,
+  normalizeLocale,
+  resolveHtmlLocale,
+  resolveHtmlMessages
+} from "../messages.js";
 
 function escapeHtml(value) {
   return String(value)
@@ -24,7 +27,7 @@ function list(items, className = "boundary-list") {
   return `<ul class="${className}">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
-function renderProductCard(product) {
+function renderProductCard(product, t) {
   return `
 <article class="product-card" data-product="${escapeHtml(product.id)}">
   <div class="product-card-topline">
@@ -80,12 +83,14 @@ function replaceOnce(template, token, value) {
   return template.replace(token, value);
 }
 
-export function renderPortalHome(template, catalog) {
+export function renderPortalHome(template, catalog, locale) {
+  const resolvedLocale = resolveHtmlLocale(template, locale);
+  const t = (key, values = {}) => message(key, values, resolvedLocale);
   let output = template;
   output = replaceOnce(
     output,
     "{{PRODUCT_CARDS}}",
-    catalog.products.map(renderProductCard).join("\n")
+    catalog.products.map((product) => renderProductCard(product, t)).join("\n")
   );
   output = replaceOnce(
     output,
@@ -97,7 +102,7 @@ export function renderPortalHome(template, catalog) {
     "{{RELATIONSHIPS}}",
     renderRelationships(catalog)
   );
-  return resolveHtmlMessages(output, "en");
+  return resolveHtmlMessages(output, resolvedLocale);
 }
 
 function renderCoreSections(detail) {
@@ -112,9 +117,16 @@ function renderCoreSections(detail) {
     .join("\n");
 }
 
-export function renderProductOverviewPage(product, catalog, detail) {
+export function renderProductOverviewPage(
+  product,
+  catalog,
+  detail,
+  locale = "en"
+) {
   if (!detail || detail.id !== product.id)
     throw new Error(`Product detail mismatch for ${product.id}`);
+  const resolvedLocale = normalizeLocale(locale);
+  const t = (key, values = {}) => message(key, values, resolvedLocale);
   const byId = new Map(catalog.products.map((entry) => [entry.id, entry]));
   const relationships = product.relationships
     .map((relation) => {
@@ -125,7 +137,7 @@ export function renderProductOverviewPage(product, catalog, detail) {
   const workHref = `../../work/?repository=${encodeURIComponent(repositoryFullName(product))}`;
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(resolvedLocale)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

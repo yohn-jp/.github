@@ -6,8 +6,11 @@ import {
   formatRelativeTime,
   formatSnapshotAge,
   localeDate,
+  normalizeLocale,
+  resolveHtmlLocale,
   resolveHtmlMessages,
-  resolveMessage
+  resolveMessage,
+  resolveRuntimeLocale
 } from "../messages.js";
 
 const sourceFiles = [
@@ -28,6 +31,40 @@ test("all static UI message keys resolve from the English catalog", async () => 
   );
   assert.ok(keys.size > 0);
   for (const key of keys) assert.doesNotThrow(() => resolveMessage(key));
+});
+
+test("runtime locale follows explicit page language and defaults to English", () => {
+  assert.equal(
+    resolveRuntimeLocale({ documentElement: { lang: "ja-JP" } }),
+    "ja-JP"
+  );
+  assert.equal(resolveRuntimeLocale({ documentElement: { lang: "" } }), "en");
+  assert.equal(resolveRuntimeLocale({}), "en");
+  assert.equal(normalizeLocale("EN-us"), "en-US");
+});
+
+test("locale resolution prefers exact catalog matches before base fallback", () => {
+  const catalog = {
+    en: { greeting: "English" },
+    "en-GB": { greeting: "British English" },
+    ja: { greeting: "Japanese" }
+  };
+  assert.equal(
+    resolveMessage("greeting", {}, { catalog, locale: "en-GB" }),
+    "British English"
+  );
+  assert.equal(
+    resolveMessage("greeting", {}, { catalog, locale: "en-US" }),
+    "English"
+  );
+  assert.equal(
+    resolveMessage("greeting", {}, { catalog, locale: "ja-JP" }),
+    "Japanese"
+  );
+  assert.equal(
+    resolveHtmlLocale('<html lang="ja-JP"><body></body></html>'),
+    "ja-JP"
+  );
 });
 
 test("message interpolation is explicit and missing keys fail", () => {

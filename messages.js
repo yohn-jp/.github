@@ -236,13 +236,45 @@ export const MESSAGE_CATALOG = Object.freeze({
 
 export const MESSAGES = ENGLISH_MESSAGES;
 
-function defaultLocale() {
-  return globalThis.navigator?.language || "en";
+const DEFAULT_LOCALE = "en";
+
+export function normalizeLocale(locale) {
+  if (typeof locale !== "string" || locale.trim() === "") {
+    return DEFAULT_LOCALE;
+  }
+  try {
+    return Intl.getCanonicalLocales(locale.trim())[0] ?? DEFAULT_LOCALE;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
+}
+
+export function resolveRuntimeLocale(root = globalThis.document) {
+  const documentElement = root?.documentElement;
+  const lang =
+    typeof documentElement?.lang === "string" && documentElement.lang.trim()
+      ? documentElement.lang
+      : documentElement?.getAttribute?.("lang");
+  return normalizeLocale(lang);
+}
+
+function defaultLocale(root = globalThis.document) {
+  return resolveRuntimeLocale(root);
+}
+
+function localeCandidates(locale) {
+  const normalized = normalizeLocale(locale);
+  const baseLanguage = normalized.split("-")[0];
+  return baseLanguage === normalized
+    ? [normalized]
+    : [normalized, baseLanguage];
 }
 
 function messagesFor(catalog, locale) {
-  if (catalog?.[locale] && typeof catalog[locale] === "object") {
-    return catalog[locale];
+  for (const candidate of localeCandidates(locale)) {
+    if (catalog?.[candidate] && typeof catalog[candidate] === "object") {
+      return catalog[candidate];
+    }
   }
   if (catalog?.en && typeof catalog.en === "object") return catalog.en;
   return catalog;
@@ -279,7 +311,7 @@ export function message(key, values = {}, locale = defaultLocale()) {
 export function localeDate(value, locale = defaultLocale()) {
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(normalizeLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(date);
@@ -301,45 +333,51 @@ function relativeUnit(seconds) {
 }
 
 export function formatRelativeTime(value, locale = defaultLocale()) {
+  const resolvedLocale = normalizeLocale(locale);
   const timestamp = new Date(value).valueOf();
   if (Number.isNaN(timestamp))
-    return message("work.updated.unknown", {}, locale);
+    return message("work.updated.unknown", {}, resolvedLocale);
   const difference = Date.now() - timestamp;
-  if (difference < 0) return message("work.updated.future", {}, locale);
+  if (difference < 0) return message("work.updated.future", {}, resolvedLocale);
   const seconds = Math.floor(difference / 1000);
-  if (seconds < 60) return message("work.updated.justNow", {}, locale);
+  if (seconds < 60) return message("work.updated.justNow", {}, resolvedLocale);
   const relative = relativeUnit(seconds);
-  const relativeTime = new Intl.RelativeTimeFormat(locale, {
+  const relativeTime = new Intl.RelativeTimeFormat(resolvedLocale, {
     numeric: "always",
     style: "narrow"
   }).format(-relative.amount, relative.unit);
-  return message("work.updated.relative", { relativeTime }, locale);
+  return message("work.updated.relative", { relativeTime }, resolvedLocale);
 }
 
 export function formatSnapshotAge(value, locale = defaultLocale()) {
+  const resolvedLocale = normalizeLocale(locale);
   const timestamp = new Date(value).valueOf();
-  if (Number.isNaN(timestamp)) return message("work.age.unknown", {}, locale);
+  if (Number.isNaN(timestamp)) {
+    return message("work.age.unknown", {}, resolvedLocale);
+  }
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  if (seconds < 60) return message("work.age.lessThanMinute", {}, locale);
+  if (seconds < 60) {
+    return message("work.age.lessThanMinute", {}, resolvedLocale);
+  }
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
-    const plural = new Intl.PluralRules(locale).select(minutes);
+    const plural = new Intl.PluralRules(resolvedLocale).select(minutes);
     return message(
       `work.age.minute.${plural}`,
       {
-        count: new Intl.NumberFormat(locale).format(minutes)
+        count: new Intl.NumberFormat(resolvedLocale).format(minutes)
       },
-      locale
+      resolvedLocale
     );
   }
   const hours = Math.floor(minutes / 60);
-  const plural = new Intl.PluralRules(locale).select(hours);
+  const plural = new Intl.PluralRules(resolvedLocale).select(hours);
   return message(
     `work.age.hour.${plural}`,
     {
-      count: new Intl.NumberFormat(locale).format(hours)
+      count: new Intl.NumberFormat(resolvedLocale).format(hours)
     },
-    locale
+    resolvedLocale
   );
 }
 
@@ -396,17 +434,31 @@ export function hydrateMessages(root, locale = defaultLocale()) {
   }
 }
 
-export function resolveHtmlMessages(html, locale = "en") {
-  let output = String(html);
+export function resolveHtmlLocale(html, locale) {
+  if (locale !== undefined && locale !== null) return normalizeLocale(locale);
+  const match = String(html).match(
+    /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i
+  );
+  return normalizeLocale(match?.[1]);
+}
+
+export function resolveHtmlMessages(html, locale) {
+  const source = String(html);
+  const resolvedLocale = resolveHtmlLocale(source, locale);
+  let output = source;
+  output = output.replace(
+    /(<html\b[^>]*\blang\s*=\s*["'])[^"']*(["'])/i,
+    `$1${escapeHtml(resolvedLocale)}$2`
+  );
   output = output.replaceAll(
     /data-message-(aria-label|content|placeholder)="([^"]+)"/g,
     (match, attribute, key) =>
-      `${attribute}="${escapeHtml(resolveMessage(key, {}, { locale }))}" ${match}`
+      `${attribute}="${escapeHtml(resolveMessage(key, {}, { locale: resolvedLocale }))}" ${match}`
   );
   output = output.replace(
     /(<([A-Za-z][A-Za-z0-9:-]*)\b[^>]*\sdata-message="([^"]+)"[^>]*>)[\s\S]*?(<\/\2>)/g,
     (_, opening, tag, key, closing) =>
-      `${opening}${escapeHtml(resolveMessage(key, {}, { locale }))}${closing}`
+      `${opening}${escapeHtml(resolveMessage(key, {}, { locale: resolvedLocale }))}${closing}`
   );
   return output;
 }

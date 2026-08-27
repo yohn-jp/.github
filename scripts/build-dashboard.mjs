@@ -11,8 +11,11 @@ import {
   loadPortalRegistry,
   productCatalogFromRegistry
 } from "./portal-registry.mjs";
-import { renderPortalHome, renderProductOverviewPage } from "./render-portal.mjs";
-import { resolveHtmlMessages } from "../messages.js";
+import {
+  renderPortalHome,
+  renderProductOverviewPage
+} from "./render-portal.mjs";
+import { resolveHtmlLocale, resolveHtmlMessages } from "../messages.js";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
@@ -32,8 +35,10 @@ export function resolvePortalCollectionToken(environment = process.env) {
 }
 
 export async function buildDashboard({
-  outputDirectory = process.env.DASHBOARD_OUTPUT ?? join(REPOSITORY_ROOT, "site"),
+  outputDirectory = process.env.DASHBOARD_OUTPUT ??
+    join(REPOSITORY_ROOT, "site"),
   registryPath = join(PORTAL_DIRECTORY, "registry.json"),
+  locale,
   detailsPath = join(PORTAL_DIRECTORY, "product-details.json"),
   portalTemplatePath = join(PORTAL_DIRECTORY, "index.html"),
   fetchImpl = globalThis.fetch,
@@ -44,6 +49,7 @@ export async function buildDashboard({
     loadPortalRegistry(registryPath),
     readFile(portalTemplatePath, "utf8")
   ]);
+  const portalLocale = resolveHtmlLocale(portalTemplate, locale);
   const config = dashboardConfigFromRegistry(registry);
   const productCatalog = productCatalogFromRegistry(registry);
   const [rawDashboard, productDetails] = await Promise.all([
@@ -78,7 +84,7 @@ export async function buildDashboard({
   }
   await writeFile(
     join(outputDirectory, "index.html"),
-    renderPortalHome(portalTemplate, productCatalog)
+    renderPortalHome(portalTemplate, productCatalog, portalLocale)
   );
 
   for (const product of productCatalog.products) {
@@ -89,7 +95,8 @@ export async function buildDashboard({
       renderProductOverviewPage(
         product,
         productCatalog,
-        detailsById.get(product.id)
+        detailsById.get(product.id),
+        portalLocale
       )
     );
   }
@@ -100,7 +107,7 @@ export async function buildDashboard({
     if (file.endsWith(".html")) {
       await writeFile(
         target,
-        resolveHtmlMessages(await readFile(source, "utf8"))
+        resolveHtmlMessages(await readFile(source, "utf8"), locale)
       );
     } else {
       await copyFile(source, target);
@@ -112,7 +119,7 @@ export async function buildDashboard({
     if (file.endsWith(".html")) {
       await writeFile(
         target,
-        resolveHtmlMessages(await readFile(source, "utf8"))
+        resolveHtmlMessages(await readFile(source, "utf8"), locale)
       );
     } else {
       await copyFile(source, target);
