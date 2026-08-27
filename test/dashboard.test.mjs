@@ -10,6 +10,7 @@ import {
   normalizeRepository,
   parseLinkHeader
 } from "../scripts/dashboard-data.mjs";
+import { dashboardConfigFromRegistry } from "../scripts/portal-registry.mjs";
 
 function response(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), { status, headers });
@@ -156,24 +157,30 @@ test("browser assets contain no GitHub API credential path", async () => {
 test("build publishes portal root, CNAME, and dashboard under work", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "yohn-jp-portal-"));
   const outputDirectory = join(temporaryDirectory, "site");
-  const configPath = join(temporaryDirectory, "repositories.json");
+  const registryPath = join(temporaryDirectory, "registry.json");
+  const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
+  registry.collectionRepositories = ["example"];
   await writeFile(
-    configPath,
-    JSON.stringify({ organization: "yohn-jp", repositories: ["example"] })
+    registryPath,
+    JSON.stringify(registry)
   );
 
   const fetchImpl = async (url, options) => {
     assert.equal(options.headers.Authorization, "Bearer build-token");
-    if (url.endsWith("/repos/yohn-jp/example")) {
+    const repositoryMatch = url.match(/\/repos\/yohn-jp\/([^/]+)$/);
+    if (repositoryMatch) {
+      const name = repositoryMatch[1];
       return response({
-        id: 1,
-        name: "example",
-        full_name: "yohn-jp/example",
-        html_url: "https://github.com/yohn-jp/example",
+        id: name,
+        name,
+        full_name: `yohn-jp/${name}`,
+        html_url: `https://github.com/yohn-jp/${name}`,
         visibility: "public"
       });
     }
-    if (url.includes("/repos/yohn-jp/example/issues")) {
+    if (url.includes("/issues")) {
+      const repository = url.match(/\/repos\/yohn-jp\/([^/]+)\/issues/)?.[1];
+      if (repository !== "example") return response([]);
       return response([
         {
           id: 11,
@@ -193,7 +200,7 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
   try {
     await buildDashboard({
       outputDirectory,
-      configPath,
+      registryPath,
       fetchImpl,
       token: "build-token",
       now: () => new Date("2026-08-23T03:00:00Z")
@@ -232,6 +239,12 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
     assert.match(workApp, /fetch\("\.\/data\/dashboard\.json"/);
     assert.equal(data.metrics.issueCount, 1);
     assert.equal(data.issues[0].title, "Portal issue");
+    assert.deepEqual(
+      data.source.repositories,
+      dashboardConfigFromRegistry(registry).repositories.map(
+        (repository) => `${registry.organization}/${repository}`
+      )
+    );
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

@@ -5,8 +5,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDashboardData } from "./dashboard-data.mjs";
 import { hydrateDashboardPullRequests } from "./pull-request-links.mjs";
-import { loadProductCatalog } from "./product-catalog.mjs";
 import { loadProductDetails } from "./product-details.mjs";
+import {
+  dashboardConfigFromRegistry,
+  loadPortalRegistry,
+  productCatalogFromRegistry
+} from "./portal-registry.mjs";
 import { renderPortalHome, renderProductOverviewPage } from "./render-portal.mjs";
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
@@ -27,19 +31,19 @@ export function resolvePortalCollectionToken(environment = process.env) {
 
 export async function buildDashboard({
   outputDirectory = process.env.DASHBOARD_OUTPUT ?? join(REPOSITORY_ROOT, "site"),
-  configPath = join(DASHBOARD_DIRECTORY, "repositories.json"),
-  catalogPath = join(PORTAL_DIRECTORY, "products.json"),
+  registryPath = join(PORTAL_DIRECTORY, "registry.json"),
   detailsPath = join(PORTAL_DIRECTORY, "product-details.json"),
   portalTemplatePath = join(PORTAL_DIRECTORY, "index.html"),
   fetchImpl = globalThis.fetch,
   token = resolvePortalCollectionToken(),
   now
 } = {}) {
-  const [config, productCatalog, portalTemplate] = await Promise.all([
-    readFile(configPath, "utf8").then(JSON.parse),
-    loadProductCatalog(catalogPath),
+  const [registry, portalTemplate] = await Promise.all([
+    loadPortalRegistry(registryPath),
     readFile(portalTemplatePath, "utf8")
   ]);
+  const config = dashboardConfigFromRegistry(registry);
+  const productCatalog = productCatalogFromRegistry(registry);
   const [rawDashboard, productDetails] = await Promise.all([
     collectDashboardData({ config, fetchImpl, token, now }),
     loadProductDetails(detailsPath, productCatalog)

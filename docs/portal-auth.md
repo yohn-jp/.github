@@ -18,7 +18,7 @@ Create a GitHub App owned by `yohn-jp` with no webhook requirement and these rep
 
 Do not grant write permissions or unrelated organization permissions.
 
-Install the App only on repositories configured in [`dashboard/repositories.json`](../dashboard/repositories.json). When that source list changes, update the App installation repository selection to match it. The workflow derives its requested token repository list from the JSON file, so it does not maintain another repository allowlist.
+Install the App only on repositories listed or product-mapped in [`portal/registry.json`](../portal/registry.json). When the registry changes, update the App installation repository selection to match it. The workflow derives its requested token repository list from the validated registry, so it does not maintain another repository allowlist.
 
 ## Workflow configuration
 

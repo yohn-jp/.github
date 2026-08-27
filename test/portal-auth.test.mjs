@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import yaml from "js-yaml";
 import { resolvePortalCollectionToken } from "../scripts/build-dashboard.mjs";
+import {
+  dashboardConfigFromRegistry,
+  loadPortalRegistry
+} from "../scripts/portal-registry.mjs";
 
 const APP_TOKEN_ACTION =
   "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1";
@@ -46,7 +50,7 @@ test("Pages workflow mints bounded App token from configured repository scope", 
   const token = namedStep(steps, "Create portal collection token");
   const build = namedStep(steps, "Generate portal and dashboard data");
 
-  assert.match(scope.run, /dashboard\/repositories\.json/);
+  assert.match(scope.run, /portal\/registry\.json/);
   assert.match(scope.run, /config\.repositories\.join/);
   assert.match(scope.run, /owner=\$\{config\.organization\}/);
 
@@ -70,16 +74,17 @@ test("Pages workflow mints bounded App token from configured repository scope", 
   assert.doesNotMatch(source, /GH_TOKEN:\s*\$\{\{/);
 });
 
-test("workflow repository scope comes from dashboard config rather than duplicate allowlist", async () => {
-  const [source, configSource] = await Promise.all([
+test("workflow repository scope comes from the portal registry projection", async () => {
+  const [source, registry] = await Promise.all([
     readFile(".github/workflows/dashboard-pages.yml", "utf8"),
-    readFile("dashboard/repositories.json", "utf8")
+    loadPortalRegistry("portal/registry.json")
   ]);
-  const config = JSON.parse(configSource);
+  const config = dashboardConfigFromRegistry(registry);
   const workflow = yaml.load(source);
   const scope = namedStep(buildSteps(workflow), "Resolve portal collection scope");
 
-  assert.match(scope.run, /config\.repositories/);
+  assert.match(scope.run, /portal\/registry\.json/);
+  assert.match(scope.run, /dashboardConfigFromRegistry/);
   for (const repository of config.repositories) {
     assert.doesNotMatch(
       scope.run,

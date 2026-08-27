@@ -25,7 +25,7 @@ Linked PR identity always preserves repository, PR number, canonical URL, title,
 
 ## Authentication boundary
 
-The workflow's built-in `GITHUB_TOKEN` belongs to the `.github` repository and is not treated as organization-wide read authority. The preferred complete path is a short-lived installation token from a dedicated read-only GitHub App installed on the repositories listed in `dashboard/repositories.json`. The workflow exposes that token only to the build process as `PORTAL_GITHUB_TOKEN`.
+The workflow's built-in `GITHUB_TOKEN` belongs to the `.github` repository and is not treated as organization-wide read authority. The preferred complete path is a short-lived installation token from a dedicated read-only GitHub App installed on the repositories derived from `portal/registry.json`. The workflow exposes that token only to the build process as `PORTAL_GITHUB_TOKEN`.
 
 If the App is not configured, REST requests for public repository/Issue/dependency data run unauthenticated. GitHub GraphQL requires authentication, so Issue→PR linkage is then reported as unavailable and the snapshot remains explicitly incomplete rather than inferring links.
 

@@ -248,10 +248,12 @@ test("graph nodes preserve linked PR detail for selected open issues", () => {
 test("portal build publishes linked PR data without browser credentials", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "yohn-jp-pr-links-"));
   const outputDirectory = join(temporaryDirectory, "site");
-  const configPath = join(temporaryDirectory, "repositories.json");
+  const registryPath = join(temporaryDirectory, "registry.json");
+  const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
+  registry.collectionRepositories = ["example"];
   await writeFile(
-    configPath,
-    JSON.stringify({ organization: "yohn-jp", repositories: ["example"] })
+    registryPath,
+    JSON.stringify(registry)
   );
 
   const fetchImpl = async (url, options) => {
@@ -281,16 +283,20 @@ test("portal build publishes linked PR data without browser credentials", async 
     }
 
     assert.equal(options.headers.Authorization, "Bearer build-token");
-    if (url.endsWith("/repos/yohn-jp/example")) {
+    const repositoryMatch = url.match(/\/repos\/yohn-jp\/([^/]+)$/);
+    if (repositoryMatch) {
+      const name = repositoryMatch[1];
       return response({
-        id: 1,
-        name: "example",
-        full_name: "yohn-jp/example",
-        html_url: "https://github.com/yohn-jp/example",
+        id: name,
+        name,
+        full_name: `yohn-jp/${name}`,
+        html_url: `https://github.com/yohn-jp/${name}`,
         visibility: "public"
       });
     }
-    if (url.includes("/repos/yohn-jp/example/issues")) {
+    if (url.includes("/issues")) {
+      const repository = url.match(/\/repos\/yohn-jp\/([^/]+)\/issues/)?.[1];
+      if (repository !== "example") return response([]);
       return response([
         {
           id: 11,
@@ -310,7 +316,7 @@ test("portal build publishes linked PR data without browser credentials", async 
   try {
     const data = await buildDashboard({
       outputDirectory,
-      configPath,
+      registryPath,
       fetchImpl,
       token: "build-token",
       now: () => new Date("2026-08-23T03:00:00Z")
