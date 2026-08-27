@@ -63,6 +63,7 @@ test("Pages workflow mints bounded App token from configured repository scope", 
     token.with.repositories,
     "${{ steps.portal-scope.outputs.repositories }}"
   );
+  assert.equal(token.with["permission-contents"], "read");
   assert.equal(token.with["permission-issues"], "read");
   assert.equal(token.with["permission-pull-requests"], "read");
   assert.equal(token.with["permission-metadata"], "read");
