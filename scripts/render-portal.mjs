@@ -135,7 +135,7 @@ function renderProductCard(product, t, locale) {
   <div class="product-card-topline">
     <span class="product-index">${String(product.order / 10).padStart(2, "0")}</span>
     <span class="status-dot" aria-hidden="true"></span>
-    <span class="product-status">${escapeHtml(content.status)}</span>
+    <span class="product-status">${escapeHtml(product.status)}</span>
   </div>
   <p class="product-role">${escapeHtml(content.role)}</p>
   <h3>${escapeHtml(product.name)}</h3>
@@ -315,7 +315,7 @@ export function renderProductOverviewPage(
         <p class="eyebrow">${escapeHtml(productContent.role)}</p>
         <h1>${escapeHtml(product.name)}</h1>
         <p class="product-page-summary">${escapeHtml(productContent.summary)}</p>
-        <div class="product-meta"><span>${escapeHtml(productContent.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.repository"))}</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">${escapeHtml(t("portal.product.documentation"))}</a></div>
+        <div class="product-meta"><span>${escapeHtml(product.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.repository"))}</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">${escapeHtml(t("portal.product.documentation"))}</a></div>
       </section>
 
       <section class="product-why-wrap"><div class="shell product-why"><p class="eyebrow">${escapeHtml(t("portal.product.why"))}</p><p class="why-copy">${escapeHtml(detailContent.why)}</p></div></section>
@@ -330,7 +330,7 @@ export function renderProductOverviewPage(
         <div class="concept-grid">${renderCoreSections(detailContent)}</div>
       </section>
 
-      <section class="maturity-wrap"><div class="shell maturity-block"><p class="eyebrow">${escapeHtml(t("portal.product.currentMaturity"))}</p><h2>${escapeHtml(productContent.status)}</h2><p>${escapeHtml(detailContent.maturity)}</p></div></section>
+      <section class="maturity-wrap"><div class="shell maturity-block"><p class="eyebrow">${escapeHtml(t("portal.product.currentMaturity"))}</p><h2>${escapeHtml(product.status)}</h2><p>${escapeHtml(detailContent.maturity)}</p></div></section>
 
       <section class="shell product-relations"><p class="eyebrow">${escapeHtml(t("portal.product.relationships"))}</p><h2>${escapeHtml(t("portal.product.fitsSystem"))}</h2><ul>${relationships}</ul></section>
       <section class="shell product-next"><div><p class="eyebrow">${escapeHtml(t("portal.product.publicWork"))}</p><h2>${escapeHtml(t("portal.product.followImplementation", { name: product.name }))}</h2><p>${escapeHtml(t("portal.product.prefilteredWork"))}</p></div><a class="button dark" href="${workHref}">${escapeHtml(t("portal.product.openWork", { name: product.name }))}</a></section>

@@ -39,6 +39,23 @@ test("loads the versioned six-product portal catalog deterministically", async (
   }
 });
 
+test("keeps product identity and status locale-independent", async () => {
+  const catalog = await loadProductCatalog("portal/registry.json");
+  for (const product of catalog.products) {
+    assert.equal(typeof product.id, "string");
+    assert.equal(typeof product.name, "string");
+    assert.equal(typeof product.repository, "string");
+    assert.equal(typeof product.status, "string");
+    assert.ok(product.status.length > 0);
+    assert.equal(product.locales.en.status, undefined);
+    assert.equal(product.locales.ja.status, undefined);
+    for (const relation of product.relationships) {
+      assert.equal(typeof relation.product, "string");
+      assert.equal(typeof relation.type, "string");
+    }
+  }
+});
+
 test("rejects missing required product locale content", async () => {
   const catalog = await loadProductCatalog("portal/registry.json");
   const invalid = clone(catalog);

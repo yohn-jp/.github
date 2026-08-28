@@ -17,10 +17,7 @@
         "en": "Coordinates bounded coding-agent sessions, workflow state, context projection, and MCP routing while delegating physical Git and governed GitHub mutation to dedicated authorities.",
         "ja": "境界付きのコーディングエージェントセッション、ワークフロー状態、コンテキスト投影、MCPルーティングを調整し、物理Gitと統制されたGitHub変更を各権限主体へ委譲します。"
       },
-      "status": {
-        "en": "Active dogfood · pre-1.0",
-        "ja": "アクティブなdogfood · 1.0未満"
-      },
+      "status": "Active dogfood · pre-1.0",
       "owns": {
         "en": [
           "Managed coding-agent session orchestration and workflow state",
@@ -94,10 +91,7 @@
         "en": "Provides local session, worktree, branch, resource-claim, authorization, Git mutation, reconciliation, and conservative cleanup authority for parallel coding agents.",
         "ja": "並行するコーディングエージェントのために、ローカルsession、worktree、ブランチ、リソース要求、認可、Git変更、調整、保守的なクリーンアップの権限を提供します。"
       },
-      "status": {
-        "en": "Active standalone runtime",
-        "ja": "アクティブな独立ランタイム"
-      },
+      "status": "Active standalone runtime",
       "owns": {
         "en": [
           "Session identity and exclusive worktree/branch ownership",
@@ -157,10 +151,7 @@
         "en": "Compiles repository-native Issue Forms and pull-request templates into deterministic typed contracts, validates structured input, renders canonical artifacts, and governs owned GitHub mutations.",
         "ja": "リポジトリネイティブのIssueフォームとPull Requestテンプレートを決定的な型付き契約へコンパイルし、構造化入力を検証し、正規アーティファクトを描画し、所有するGitHub変更を統制します。"
       },
-      "status": {
-        "en": "Active governed CLI",
-        "ja": "アクティブな統制CLI"
-      },
+      "status": "Active governed CLI",
       "owns": {
         "en": [
           "Typed contracts derived from native Issue/PR templates",
@@ -228,10 +219,7 @@
         "en": "Projects explicit source adapters and semantic contracts into bounded views with deterministic provenance, completeness, loss metadata, and rendering.",
         "ja": "明示的なソースアダプターと意味契約を、決定的なプロヴナンス、完全性、損失メタデータ、描画を伴う境界付きビューへ投影します。"
       },
-      "status": {
-        "en": "Active v0 semantic-view engine",
-        "ja": "アクティブなv0意味ビューエンジン"
-      },
+      "status": "Active v0 semantic-view engine",
       "owns": {
         "en": [
           "Deterministic source decoding and semantic-contract validation",
@@ -289,10 +277,7 @@
         "en": "Early-stage semantic-authority work focused on immutable provider evidence, provenance-preserving observations, explicit entity correlation, and evidence-driven canonical repository semantics.",
         "ja": "不変のプロバイダー証拠、プロヴナンスを保持した観測、明示的なエンティティ相関、証拠駆動の正規リポジトリ意味論に取り組む初期段階の意味権限プロジェクトです。"
       },
-      "status": {
-        "en": "Early architecture and provider-evidence programme",
-        "ja": "初期アーキテクチャとプロバイダー証拠プログラム"
-      },
+      "status": "Early architecture and provider-evidence programme",
       "owns": {
         "en": [
           "Intended repository semantic-authority boundary",
@@ -352,10 +337,7 @@
         "en": "Wraps deterministic CLI/API tools such as Alibaba OpenCodeReview and Inari as stdio MCP adapters, and exposes any of them remotely to a host LLM (ChatGPT) through a generic transport gateway and a Cloudflare Access-protected Worker.",
         "ja": "Alibaba OpenCodeReviewやInariなどの決定的なCLI/APIツールをstdio MCPアダプターとしてラップし、汎用トランスポートゲートウェイとCloudflare Accessで保護されたWorkerを通じてホストLLM（ChatGPT）へリモート公開します。"
       },
-      "status": {
-        "en": "Active dogfood · pre-1.0",
-        "ja": "アクティブなdogfood · 1.0未満"
-      },
+      "status": "Active dogfood · pre-1.0",
       "owns": {
         "en": [
           "Deterministic stdio MCP adapters wrapping fixed CLI executables",

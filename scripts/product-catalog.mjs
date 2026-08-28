@@ -64,10 +64,6 @@ function localizedProductContent(product, path) {
               entry.summary,
               `${path}.locales.${locale}.summary`
             ),
-            status: requiredString(
-              entry.status,
-              `${path}.locales.${locale}.status`
-            ),
             owns: stringList(entry.owns, `${path}.locales.${locale}.owns`),
             doesNotOwn: stringList(
               entry.doesNotOwn,
@@ -85,7 +81,6 @@ function localizedProductContent(product, path) {
       {
         role: localizedString(product.role, `${path}.role`)[locale],
         summary: localizedString(product.summary, `${path}.summary`)[locale],
-        status: localizedString(product.status, `${path}.status`)[locale],
         owns: localizedStringList(product.owns, `${path}.owns`)[locale],
         doesNotOwn: localizedStringList(
           product.doesNotOwn,
@@ -164,7 +159,7 @@ function normalizeProduct(product, index) {
       `${path}.documentation`
     ),
     summary: locales.en.summary,
-    status: locales.en.status,
+    status: requiredString(product.status, `${path}.status`),
     owns: locales.en.owns,
     doesNotOwn: locales.en.doesNotOwn,
     locales,

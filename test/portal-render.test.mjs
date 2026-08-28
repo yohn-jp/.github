@@ -231,6 +231,7 @@ test("build publishes root and stable product routes", async () => {
         id: entry.id,
         name: entry.name,
         repository: entry.repository,
+        status: entry.status,
         relationships: entry.relationships.map(({ product, type }) => ({
           product,
           type
