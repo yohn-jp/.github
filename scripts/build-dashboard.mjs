@@ -24,11 +24,13 @@ const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
 const PORTAL_DIRECTORY = join(REPOSITORY_ROOT, "portal");
 const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 const GRAPH_DIRECTORY = join(DASHBOARD_DIRECTORY, "graph");
+const GOVERNANCE_DIRECTORY = join(DASHBOARD_DIRECTORY, "governance");
 
 const PORTAL_COPY_FILES = ["styles.css", "product.css"];
 const ROOT_COPY_FILES = ["messages.js"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];
+const GOVERNANCE_FILES = ["index.html", "governance.css", "governance.js"];
 
 export function resolvePortalLocales({ locale, locales } = {}) {
   const requested = Array.isArray(locales) ? locales : SUPPORTED_LOCALES;
@@ -86,11 +88,13 @@ export async function buildDashboard({
     const workDirectory = join(variantDirectory, "work");
     const workDataDirectory = join(workDirectory, "data");
     const graphOutputDirectory = join(workDirectory, "graph");
+    const governanceOutputDirectory = join(workDirectory, "governance");
     await Promise.all([
       mkdir(portalDataDirectory, { recursive: true }),
       mkdir(productDirectory, { recursive: true }),
       mkdir(workDataDirectory, { recursive: true }),
-      mkdir(graphOutputDirectory, { recursive: true })
+      mkdir(graphOutputDirectory, { recursive: true }),
+      mkdir(governanceOutputDirectory, { recursive: true })
     ]);
 
     for (const file of PORTAL_COPY_FILES) {
@@ -159,6 +163,22 @@ export async function buildDashboard({
           renderLocalizedHtml(await readFile(source, "utf8"), {
             locale: variantLocale,
             path: "work/graph/",
+            localized
+          })
+        );
+      } else {
+        await copyFile(source, target);
+      }
+    }
+    for (const file of GOVERNANCE_FILES) {
+      const source = join(GOVERNANCE_DIRECTORY, file);
+      const target = join(governanceOutputDirectory, file);
+      if (file.endsWith(".html")) {
+        await writeFile(
+          target,
+          renderLocalizedHtml(await readFile(source, "utf8"), {
+            locale: variantLocale,
+            path: "work/governance/",
             localized
           })
         );

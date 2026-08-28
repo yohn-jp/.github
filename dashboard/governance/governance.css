@@ -1,0 +1,288 @@
+.governance-content {
+  padding: 72px 0 100px;
+}
+
+.governance-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 34px;
+}
+
+.governance-header h1 {
+  margin: 0;
+  font-size: clamp(3rem, 8vw, 6.2rem);
+  letter-spacing: -0.07em;
+  line-height: 0.95;
+}
+
+.governance-lede {
+  max-width: 700px;
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 1.04rem;
+  line-height: 1.7;
+}
+
+.governance-status-banner {
+  margin-bottom: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+
+.governance-status-banner.complete {
+  border-color: #abefc6;
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.governance-status-banner.partial {
+  border-color: #fedf89;
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.governance-status-banner.failed,
+.governance-status-banner.load-error {
+  border-color: #fecdca;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.governance-status-banner p {
+  margin: 0;
+}
+
+.governance-status-title {
+  margin-bottom: 4px !important;
+  font-weight: 800;
+}
+
+.governance-status-detail {
+  font-size: 0.9rem;
+}
+
+.governance-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.governance-metric {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 22px;
+  box-shadow: var(--shadow-soft);
+}
+
+.governance-metric-value {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 2.4rem;
+  font-weight: 850;
+  letter-spacing: -0.05em;
+}
+
+.governance-metric-label,
+.governance-repository-meta,
+.governance-rate,
+.governance-empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.governance-section {
+  margin-top: 68px;
+}
+
+.governance-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.governance-section-heading h2,
+.governance-two-column h2 {
+  margin: 0;
+}
+
+.governance-section-heading > p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.repository-health,
+.violation-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.governance-repository {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1fr) minmax(0, 1.4fr) minmax(180px, 1fr)
+    auto;
+  align-items: center;
+  gap: 16px;
+  border-block: 1px solid var(--line);
+  background: var(--surface);
+  padding: 16px;
+}
+
+.governance-repository + .governance-repository {
+  border-top: 0;
+}
+
+.governance-repository.unavailable {
+  background: var(--warning-soft);
+}
+
+.governance-repository-name {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.governance-repository-name a {
+  color: var(--ink);
+}
+
+.governance-repository-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.governance-count-valid {
+  color: var(--success);
+}
+
+.governance-count-invalid {
+  color: var(--danger);
+}
+
+.governance-count-unknown {
+  color: var(--warning);
+}
+
+.governance-rate {
+  text-align: right;
+}
+
+.governance-rate strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.15rem;
+}
+
+.governance-two-column {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.2fr);
+  gap: 48px;
+}
+
+.violation-summary {
+  margin-top: 20px;
+}
+
+.violation-group {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.violation-group:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.violation-group-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.violation-group-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.governance-issue-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.governance-issue-columns h3 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+.governance-issue-list {
+  border-top: 1px solid var(--line);
+}
+
+.governance-issue {
+  border-bottom: 1px solid var(--line);
+  padding: 11px 0;
+}
+
+.governance-issue a {
+  display: block;
+  font-weight: 750;
+}
+
+.governance-issue-meta {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 800px) {
+  .governance-header,
+  .governance-section-heading {
+    display: block;
+  }
+
+  .governance-header .generated-at {
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  .governance-repository {
+    grid-template-columns: minmax(140px, 1fr) auto;
+  }
+
+  .governance-repository-counts,
+  .governance-rate {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .governance-two-column {
+    grid-template-columns: 1fr;
+    gap: 52px;
+  }
+}
+
+@media (max-width: 560px) {
+  .governance-metrics,
+  .governance-issue-columns {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,6 +9,7 @@ on:
       - "messages.js"
       - "scripts/build-dashboard.mjs"
       - "scripts/dashboard-data.mjs"
+      - "scripts/governance-health.mjs"
       - "scripts/portal-registry.mjs"
       - "scripts/inari-governance.mjs"
       - "scripts/product-catalog.mjs"

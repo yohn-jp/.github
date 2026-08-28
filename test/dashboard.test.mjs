@@ -380,6 +380,14 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
       join(outputDirectory, "work", "app.js"),
       "utf8"
     );
+    const governanceIndex = await readFile(
+      join(outputDirectory, "work", "governance", "index.html"),
+      "utf8"
+    );
+    const governanceApp = await readFile(
+      join(outputDirectory, "work", "governance", "governance.js"),
+      "utf8"
+    );
     const data = JSON.parse(
       await readFile(
         join(outputDirectory, "work", "data", "dashboard.json"),
@@ -401,8 +409,19 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
     }
     assert.match(workIndex, /href="\.\.\/"/);
     assert.match(workApp, /fetch\("\.\/data\/dashboard\.json"/);
+    assert.match(governanceIndex, /Governance health/);
+    assert.match(governanceApp, /fetch\("\.\.\/data\/dashboard\.json"/);
+    assert.match(governanceApp, /health\.overall/);
     assert.equal(data.metrics.issueCount, 1);
     assert.equal(data.schemaVersion, 4);
+    assert.deepEqual(data.governanceHealth.overall, {
+      valid: 0,
+      invalid: 0,
+      unknown: 1,
+      total: 1,
+      known: 0,
+      complianceRate: null
+    });
     assert.equal(data.issues[0].title, "Portal issue");
     assert.deepEqual(
       data.source.repositories,

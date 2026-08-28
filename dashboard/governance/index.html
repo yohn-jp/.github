@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- Canonical site origin: https://dev.yohn.jp/ -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content=""
+      data-message-content="governance.meta.description"
+    />
+    <link rel="canonical" href="{{CANONICAL_URL}}" />
+    {{HREFLANG_LINKS}}
+    <title data-message="governance.title"></title>
+    <link rel="stylesheet" href="../../styles.css" />
+    <link rel="stylesheet" href="../work.css" />
+    <link rel="stylesheet" href="./governance.css" />
+    <script type="module" src="./governance.js"></script>
+  </head>
+  <body class="governance-page">
+    <header class="site-nav-wrap">
+      <nav
+        class="shell site-nav"
+        aria-label=""
+        data-message-aria-label="governance.nav.primary"
+      >
+        <a
+          class="brand"
+          href="../../"
+          aria-label=""
+          data-message-aria-label="governance.nav.home"
+          ><span class="brand-slash">/</span><span>yohn-jp</span></a
+        >
+        <div class="nav-links">
+          <a href="../../#products" data-message="governance.nav.products"></a>
+          <a href="../../#system" data-message="governance.nav.system"></a>
+          <a href="../" data-message="governance.nav.work"></a>
+          <a
+            aria-current="page"
+            href="./"
+            data-message="governance.nav.governance"
+          ></a>
+          <a href="../graph/" data-message="governance.nav.graph"></a>
+          <a
+            href="https://github.com/yohn-jp"
+            rel="noreferrer"
+            data-message="governance.nav.github"
+          ></a>
+        </div>
+        {{LANGUAGE_SELECTOR}}
+      </nav>
+    </header>
+
+    <main class="shell governance-content">
+      <header class="governance-header" aria-labelledby="governance-title">
+        <div>
+          <p class="eyebrow" data-message="governance.header.eyebrow"></p>
+          <h1 id="governance-title" data-message="governance.header.title"></h1>
+          <p class="governance-lede" data-message="governance.header.lede"></p>
+        </div>
+        <p
+          id="generated-at"
+          class="generated-at"
+          data-message="governance.snapshot.loading"
+        ></p>
+      </header>
+
+      <section
+        id="dataset-status"
+        class="governance-status-banner"
+        role="status"
+        aria-live="polite"
+      ></section>
+
+      <section
+        class="governance-summary"
+        aria-label=""
+        data-message-aria-label="governance.metrics.aria"
+      >
+        <div id="governance-metrics" class="governance-metrics"></div>
+      </section>
+
+      <section class="governance-section" aria-labelledby="repositories-title">
+        <div class="governance-section-heading">
+          <div>
+            <p
+              class="eyebrow"
+              data-message="governance.repositories.eyebrow"
+            ></p>
+            <h2
+              id="repositories-title"
+              data-message="governance.repositories.title"
+            ></h2>
+          </div>
+          <p data-message="governance.repositories.body"></p>
+        </div>
+        <div id="repository-health" class="repository-health"></div>
+      </section>
+
+      <section class="governance-section governance-two-column">
+        <div>
+          <p class="eyebrow" data-message="governance.violations.eyebrow"></p>
+          <h2 data-message="governance.violations.title"></h2>
+          <div id="violation-summary" class="violation-summary"></div>
+        </div>
+        <div>
+          <p class="eyebrow" data-message="governance.issues.eyebrow"></p>
+          <h2 data-message="governance.issues.title"></h2>
+          <div class="governance-issue-columns">
+            <section>
+              <h3 data-message="governance.issues.invalid"></h3>
+              <div
+                id="invalid-issues"
+                class="governance-issue-list"
+                role="list"
+              ></div>
+            </section>
+            <section>
+              <h3 data-message="governance.issues.unknown"></h3>
+              <div
+                id="unknown-issues"
+                class="governance-issue-list"
+                role="list"
+              ></div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell footer">
+      <span data-message="governance.footer.sourceOfTruth"></span>
+      <div>
+        <a href="../" data-message="governance.footer.work"></a
+        ><a href="../../" data-message="governance.footer.portalHome"></a
+        ><a
+          href="https://github.com/yohn-jp/.github/issues"
+          rel="noreferrer"
+          data-message="governance.footer.issues"
+        ></a>
+      </div>
+    </footer>
+  </body>
+</html>
