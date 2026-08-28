@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
+import { SUPPORTED_LOCALES } from "../messages.js";
 
 export const PRODUCT_CATALOG_SCHEMA_VERSION = 1;
+export const PRODUCT_CONTENT_LOCALES = SUPPORTED_LOCALES;
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const RELATION_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -16,7 +18,77 @@ function stringList(value, path) {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(`${path} must be a non-empty array`);
   }
-  return value.map((entry, index) => requiredString(entry, `${path}[${index}]`));
+  return value.map((entry, index) =>
+    requiredString(entry, `${path}[${index}]`)
+  );
+}
+
+function record(value, path) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${path} must be an object`);
+  }
+  return value;
+}
+
+function localizedString(value, path) {
+  const source = record(value, path);
+  return Object.fromEntries(
+    PRODUCT_CONTENT_LOCALES.map((locale) => [
+      locale,
+      requiredString(source[locale], `${path}.${locale}`)
+    ])
+  );
+}
+
+function localizedStringList(value, path) {
+  const source = record(value, path);
+  return Object.fromEntries(
+    PRODUCT_CONTENT_LOCALES.map((locale) => [
+      locale,
+      stringList(source[locale], `${path}.${locale}`)
+    ])
+  );
+}
+
+function localizedProductContent(product, path) {
+  if (product.locales !== undefined) {
+    const source = record(product.locales, `${path}.locales`);
+    return Object.fromEntries(
+      PRODUCT_CONTENT_LOCALES.map((locale) => {
+        const entry = record(source[locale], `${path}.locales.${locale}`);
+        return [
+          locale,
+          {
+            role: requiredString(entry.role, `${path}.locales.${locale}.role`),
+            summary: requiredString(
+              entry.summary,
+              `${path}.locales.${locale}.summary`
+            ),
+            owns: stringList(entry.owns, `${path}.locales.${locale}.owns`),
+            doesNotOwn: stringList(
+              entry.doesNotOwn,
+              `${path}.locales.${locale}.doesNotOwn`
+            )
+          }
+        ];
+      })
+    );
+  }
+
+  return Object.fromEntries(
+    PRODUCT_CONTENT_LOCALES.map((locale) => [
+      locale,
+      {
+        role: localizedString(product.role, `${path}.role`)[locale],
+        summary: localizedString(product.summary, `${path}.summary`)[locale],
+        owns: localizedStringList(product.owns, `${path}.owns`)[locale],
+        doesNotOwn: localizedStringList(
+          product.doesNotOwn,
+          `${path}.doesNotOwn`
+        )[locale]
+      }
+    ])
+  );
 }
 
 function repositoryUrl(value, path) {
@@ -46,7 +118,9 @@ function normalizeRelationship(relation, productId, index) {
   }
   const product = requiredString(relation.product, `${path}.product`);
   const type = requiredString(relation.type, `${path}.type`);
-  const label = requiredString(relation.label, `${path}.label`);
+  const labels = relation.localizedLabel
+    ? localizedString(relation.localizedLabel, `${path}.localizedLabel`)
+    : localizedString(relation.label, `${path}.label`);
   if (!ID_PATTERN.test(product)) {
     throw new Error(`${path}.product must be a stable product id`);
   }
@@ -56,7 +130,7 @@ function normalizeRelationship(relation, productId, index) {
   if (product === productId) {
     throw new Error(`${path} cannot reference its own product`);
   }
-  return { product, type, label };
+  return { product, type, label: labels.en, localizedLabel: labels };
 }
 
 function normalizeProduct(product, index) {
@@ -65,24 +139,30 @@ function normalizeProduct(product, index) {
     throw new Error(`${path} must be an object`);
   }
   const id = requiredString(product.id, `${path}.id`);
-  if (!ID_PATTERN.test(id)) throw new Error(`${path}.id must be a stable product id`);
+  if (!ID_PATTERN.test(id))
+    throw new Error(`${path}.id must be a stable product id`);
   if (!Number.isInteger(product.order) || product.order < 0) {
     throw new Error(`${path}.order must be a non-negative integer`);
   }
   if (!Array.isArray(product.relationships)) {
     throw new Error(`${path}.relationships must be an array`);
   }
+  const locales = localizedProductContent(product, path);
   return {
     id,
     order: product.order,
     name: requiredString(product.name, `${path}.name`),
-    role: requiredString(product.role, `${path}.role`),
+    role: locales.en.role,
     repository: repositoryUrl(product.repository, `${path}.repository`),
-    documentation: requiredString(product.documentation, `${path}.documentation`),
-    summary: requiredString(product.summary, `${path}.summary`),
+    documentation: requiredString(
+      product.documentation,
+      `${path}.documentation`
+    ),
+    summary: locales.en.summary,
     status: requiredString(product.status, `${path}.status`),
-    owns: stringList(product.owns, `${path}.owns`),
-    doesNotOwn: stringList(product.doesNotOwn, `${path}.doesNotOwn`),
+    owns: locales.en.owns,
+    doesNotOwn: locales.en.doesNotOwn,
+    locales,
     relationships: product.relationships.map((relation, relationIndex) =>
       normalizeRelationship(relation, id, relationIndex)
     )
@@ -105,7 +185,8 @@ export function validateProductCatalog(catalog) {
   const products = catalog.products.map(normalizeProduct);
   const ids = new Set();
   for (const product of products) {
-    if (ids.has(product.id)) throw new Error(`Duplicate product id: ${product.id}`);
+    if (ids.has(product.id))
+      throw new Error(`Duplicate product id: ${product.id}`);
     ids.add(product.id);
   }
   for (const product of products) {
@@ -129,7 +210,10 @@ export function validateProductCatalog(catalog) {
 
 export async function loadProductCatalog(path) {
   const source = JSON.parse(await readFile(path, "utf8"));
-  if (!Object.hasOwn(source, "organization") || !Object.hasOwn(source, "collectionRepositories")) {
+  if (
+    !Object.hasOwn(source, "organization") ||
+    !Object.hasOwn(source, "collectionRepositories")
+  ) {
     throw new Error("Product catalog source must be a portal registry");
   }
   const { productCatalogFromRegistry } = await import("./portal-registry.mjs");

@@ -30,6 +30,36 @@ function list(items, className = "boundary-list") {
   return `<ul class="${className}">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
+function localizedProductContent(product, locale) {
+  const content = product?.locales?.[locale];
+  if (!content) {
+    throw new Error(
+      `Missing localized product content for ${product?.id ?? "unknown"}:${locale}`
+    );
+  }
+  return content;
+}
+
+function localizedDetailContent(detail, locale) {
+  const content = detail?.locales?.[locale];
+  if (!content) {
+    throw new Error(
+      `Missing localized product detail for ${detail?.id ?? "unknown"}:${locale}`
+    );
+  }
+  return content;
+}
+
+function localizedRelationshipLabel(relation, locale) {
+  const label = relation?.localizedLabel?.[locale];
+  if (!label) {
+    throw new Error(
+      `Missing localized relationship label for ${relation?.product ?? "unknown"}:${locale}`
+    );
+  }
+  return label;
+}
+
 export function normalizePortalLocale(locale) {
   const base = normalizeLocale(locale).split("-")[0];
   return SUPPORTED_LOCALES.includes(base) ? base : "en";
@@ -98,7 +128,8 @@ export function renderLocaleSelector({ locale = "en", path = "", t } = {}) {
   )}</span>${links}</div>`;
 }
 
-function renderProductCard(product, t) {
+function renderProductCard(product, t, locale) {
+  const content = localizedProductContent(product, locale);
   return `
 <article class="product-card" data-product="${escapeHtml(product.id)}">
   <div class="product-card-topline">
@@ -106,9 +137,9 @@ function renderProductCard(product, t) {
     <span class="status-dot" aria-hidden="true"></span>
     <span class="product-status">${escapeHtml(product.status)}</span>
   </div>
-  <p class="product-role">${escapeHtml(product.role)}</p>
+  <p class="product-role">${escapeHtml(content.role)}</p>
   <h3>${escapeHtml(product.name)}</h3>
-  <p class="product-summary">${escapeHtml(product.summary)}</p>
+  <p class="product-summary">${escapeHtml(content.summary)}</p>
   <div class="product-actions">
     <a class="text-link" href="${productPath(product.id)}">${escapeHtml(t("portal.product.explore", { name: product.name }))}</a>
     <a class="quiet-link" href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.github"))}</a>
@@ -116,14 +147,15 @@ function renderProductCard(product, t) {
 </article>`;
 }
 
-function renderSystemNode(product) {
+function renderSystemNode(product, locale) {
+  const content = localizedProductContent(product, locale);
   return `<a class="system-node" data-product="${escapeHtml(product.id)}" href="${productPath(product.id)}">
-  <span class="system-node-role">${escapeHtml(product.role)}</span>
+  <span class="system-node-role">${escapeHtml(content.role)}</span>
   <strong>${escapeHtml(product.name)}</strong>
 </a>`;
 }
 
-function renderRelationships(catalog) {
+function renderRelationships(catalog, locale) {
   const byId = new Map(
     catalog.products.map((product) => [product.id, product])
   );
@@ -138,7 +170,7 @@ function renderRelationships(catalog) {
     .map(
       ({ source, relation, target }) => `<li>
   <a href="${productPath(source.id)}">${escapeHtml(source.name)}</a>
-  <span>${escapeHtml(relation.label)}</span>
+  <span>${escapeHtml(localizedRelationshipLabel(relation, locale))}</span>
   <a href="${productPath(target.id)}">${escapeHtml(target.name)}</a>
 </li>`
     )
@@ -191,17 +223,21 @@ export function renderPortalHome(template, catalog, locale, options = {}) {
   output = replaceOnce(
     output,
     "{{PRODUCT_CARDS}}",
-    catalog.products.map((product) => renderProductCard(product, t)).join("\n")
+    catalog.products
+      .map((product) => renderProductCard(product, t, resolvedLocale))
+      .join("\n")
   );
   output = replaceOnce(
     output,
     "{{SYSTEM_NODES}}",
-    catalog.products.map(renderSystemNode).join("\n")
+    catalog.products
+      .map((product) => renderSystemNode(product, resolvedLocale))
+      .join("\n")
   );
   output = replaceOnce(
     output,
     "{{RELATIONSHIPS}}",
-    renderRelationships(catalog)
+    renderRelationships(catalog, resolvedLocale)
   );
   return renderLocalizedHtml(output, {
     locale: resolvedLocale,
@@ -235,11 +271,13 @@ export function renderProductOverviewPage(
   const resolvedLocale = normalizePortalLocale(locale ?? "en");
   const localized = options.localized ?? locale !== undefined;
   const t = (key, values = {}) => message(key, values, resolvedLocale);
+  const productContent = localizedProductContent(product, resolvedLocale);
+  const detailContent = localizedDetailContent(detail, resolvedLocale);
   const byId = new Map(catalog.products.map((entry) => [entry.id, entry]));
   const relationships = product.relationships
     .map((relation) => {
       const target = byId.get(relation.product);
-      return `<li><span>${escapeHtml(relation.label)}</span><a href="../${escapeHtml(target.id)}/">${escapeHtml(target.name)}</a></li>`;
+      return `<li><span>${escapeHtml(localizedRelationshipLabel(relation, resolvedLocale))}</span><a href="../${escapeHtml(target.id)}/">${escapeHtml(target.name)}</a></li>`;
     })
     .join("");
   const workHref = `../../work/?repository=${encodeURIComponent(repositoryFullName(product))}`;
@@ -256,7 +294,7 @@ export function renderProductOverviewPage(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="${escapeHtml(product.summary)}" />
+    <meta name="description" content="${escapeHtml(productContent.summary)}" />
     <link rel="canonical" href="${escapeHtml(metadata.canonical)}" />
     ${metadata.links}
     <title>${escapeHtml(t("portal.product.title", { name: product.name }))}</title>
@@ -274,25 +312,25 @@ export function renderProductOverviewPage(
     <main>
       <section class="shell product-hero">
         <a class="back-link" href="../../#products">${escapeHtml(t("portal.product.backToProducts"))}</a>
-        <p class="eyebrow">${escapeHtml(product.role)}</p>
+        <p class="eyebrow">${escapeHtml(productContent.role)}</p>
         <h1>${escapeHtml(product.name)}</h1>
-        <p class="product-page-summary">${escapeHtml(product.summary)}</p>
+        <p class="product-page-summary">${escapeHtml(productContent.summary)}</p>
         <div class="product-meta"><span>${escapeHtml(product.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.repository"))}</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">${escapeHtml(t("portal.product.documentation"))}</a></div>
       </section>
 
-      <section class="product-why-wrap"><div class="shell product-why"><p class="eyebrow">${escapeHtml(t("portal.product.why"))}</p><p class="why-copy">${escapeHtml(detail.why)}</p></div></section>
+      <section class="product-why-wrap"><div class="shell product-why"><p class="eyebrow">${escapeHtml(t("portal.product.why"))}</p><p class="why-copy">${escapeHtml(detailContent.why)}</p></div></section>
 
       <section class="shell boundary-grid" aria-label="${escapeHtml(t("portal.product.boundaryLabel"))}">
-        <article class="boundary-panel"><p class="eyebrow">${escapeHtml(t("portal.product.owns"))}</p><h2>${escapeHtml(t("portal.product.authority"))}</h2>${list(product.owns)}</article>
-        <article class="boundary-panel muted-panel"><p class="eyebrow">${escapeHtml(t("portal.product.doesNotOwn"))}</p><h2>${escapeHtml(t("portal.product.boundary"))}</h2>${list(product.doesNotOwn)}</article>
+        <article class="boundary-panel"><p class="eyebrow">${escapeHtml(t("portal.product.owns"))}</p><h2>${escapeHtml(t("portal.product.authority"))}</h2>${list(productContent.owns)}</article>
+        <article class="boundary-panel muted-panel"><p class="eyebrow">${escapeHtml(t("portal.product.doesNotOwn"))}</p><h2>${escapeHtml(t("portal.product.boundary"))}</h2>${list(productContent.doesNotOwn)}</article>
       </section>
 
       <section class="shell concept-section" aria-labelledby="concepts-${escapeHtml(product.id)}">
         <div class="section-head compact-head"><div><p class="eyebrow">${escapeHtml(t("portal.product.coreModel"))}</p><h2 id="concepts-${escapeHtml(product.id)}">${escapeHtml(t("portal.product.howItWorks", { name: product.name }))}</h2></div><p>${escapeHtml(t("portal.product.operationalDetail"))}</p></div>
-        <div class="concept-grid">${renderCoreSections(detail)}</div>
+        <div class="concept-grid">${renderCoreSections(detailContent)}</div>
       </section>
 
-      <section class="maturity-wrap"><div class="shell maturity-block"><p class="eyebrow">${escapeHtml(t("portal.product.currentMaturity"))}</p><h2>${escapeHtml(product.status)}</h2><p>${escapeHtml(detail.maturity)}</p></div></section>
+      <section class="maturity-wrap"><div class="shell maturity-block"><p class="eyebrow">${escapeHtml(t("portal.product.currentMaturity"))}</p><h2>${escapeHtml(product.status)}</h2><p>${escapeHtml(detailContent.maturity)}</p></div></section>
 
       <section class="shell product-relations"><p class="eyebrow">${escapeHtml(t("portal.product.relationships"))}</p><h2>${escapeHtml(t("portal.product.fitsSystem"))}</h2><ul>${relationships}</ul></section>
       <section class="shell product-next"><div><p class="eyebrow">${escapeHtml(t("portal.product.publicWork"))}</p><h2>${escapeHtml(t("portal.product.followImplementation", { name: product.name }))}</h2><p>${escapeHtml(t("portal.product.prefilteredWork"))}</p></div><a class="button dark" href="${workHref}">${escapeHtml(t("portal.product.openWork", { name: product.name }))}</a></section>

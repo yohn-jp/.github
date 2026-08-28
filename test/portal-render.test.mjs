@@ -53,6 +53,8 @@ test("localized renderers emit route-specific language metadata and switching", 
   assert.match(home, /hreflang="ja" href="https:\/\/dev\.yohn\.jp\/ja\/"/);
   assert.match(home, /data-locale-switch="en" href="\/en\/"/);
   assert.match(home, /プロダクト/);
+  assert.match(home, /コーディングエージェントのオーケストレーション/);
+  assert.doesNotMatch(home, /Coding-agent orchestration and context runtime/);
 
   const product = catalog.products.find((entry) => entry.id === "nawabari");
   const detail = details.products.find((entry) => entry.id === "nawabari");
@@ -76,6 +78,9 @@ test("localized renderers emit route-specific language metadata and switching", 
     productPage,
     /href="\.\.\/\.\.\/work\/\?repository=yohn-jp%2Fnawabari"/
   );
+  assert.match(productPage, /独立したGit\/session所有権ランタイム/);
+  assert.match(productPage, /セッションとリソースの所有権/);
+  assert.doesNotMatch(productPage, /Standalone Git\/session ownership runtime/);
   assert.equal(localizedPortalPath("ja", "work/graph/"), "/ja/work/graph/");
 
   const metadata = renderLocaleMetadata({ locale: "en", path: "work/" });
@@ -202,13 +207,40 @@ test("build publishes root and stable product routes", async () => {
       );
       assert.match(workApp, /preserveLocaleQuery/);
       assert.match(graph, /data-locale-switch="en"/);
-      assert.ok(
-        await readFile(
-          join(outputDirectory, locale, "products", "nawabari", "index.html"),
-          "utf8"
-        )
+      const product = await readFile(
+        join(outputDirectory, locale, "products", "nawabari", "index.html"),
+        "utf8"
+      );
+      assert.match(
+        product,
+        locale === "ja"
+          ? /セッションとリソースの所有権/
+          : /Session and resource ownership/
       );
     }
+    const [englishCatalog, japaneseCatalog] = await Promise.all(
+      ["en", "ja"].map((locale) =>
+        readFile(
+          join(outputDirectory, locale, "data", "products.json"),
+          "utf8"
+        ).then(JSON.parse)
+      )
+    );
+    const identityProjection = (catalog) =>
+      catalog.products.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        repository: entry.repository,
+        status: entry.status,
+        relationships: entry.relationships.map(({ product, type }) => ({
+          product,
+          type
+        }))
+      }));
+    assert.deepEqual(
+      identityProjection(englishCatalog),
+      identityProjection(japaneseCatalog)
+    );
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
