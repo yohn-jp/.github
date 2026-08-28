@@ -21,10 +21,12 @@ import {
   formatSnapshotAge as formatLocaleSnapshotAge,
   hydrateMessages,
   localeDate,
-  message
+  message,
+  preserveLocaleQuery
 } from "../messages.js";
 
 hydrateMessages(document);
+preserveLocaleQuery(document);
 
 const t = (key, values = {}) => message(key, values);
 
@@ -555,6 +557,7 @@ function syncUrl() {
     "",
     `${location.pathname}${query}${location.hash}`
   );
+  preserveLocaleQuery(document);
 }
 
 function showLoadError(error) {

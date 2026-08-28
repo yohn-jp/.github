@@ -2,8 +2,11 @@ import {
   message,
   normalizeLocale,
   resolveHtmlLocale,
-  resolveHtmlMessages
+  resolveHtmlMessages,
+  SUPPORTED_LOCALES
 } from "../messages.js";
+
+const SITE_ORIGIN = "https://dev.yohn.jp";
 
 function escapeHtml(value) {
   return String(value)
@@ -25,6 +28,74 @@ function repositoryFullName(product) {
 
 function list(items, className = "boundary-list") {
   return `<ul class="${className}">${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+export function normalizePortalLocale(locale) {
+  const base = normalizeLocale(locale).split("-")[0];
+  return SUPPORTED_LOCALES.includes(base) ? base : "en";
+}
+
+function logicalPath(value = "") {
+  const path = String(value).replace(/^\/+/, "");
+  return path && !path.endsWith("/") ? `${path}/` : path;
+}
+
+export function localizedPortalPath(locale, path = "") {
+  const resolvedLocale = normalizePortalLocale(locale);
+  const suffix = logicalPath(path);
+  return `/${resolvedLocale}/${suffix}`;
+}
+
+function portalUrl(path) {
+  return `${SITE_ORIGIN}${path}`;
+}
+
+export function renderLocaleMetadata({
+  locale = "en",
+  path = "",
+  localized = true
+} = {}) {
+  const resolvedLocale = normalizePortalLocale(locale);
+  const canonicalPath = localized
+    ? localizedPortalPath(resolvedLocale, path)
+    : `/${logicalPath(path)}`;
+  const links = SUPPORTED_LOCALES.map(
+    (targetLocale) =>
+      `<link rel="alternate" hreflang="${targetLocale}" href="${escapeHtml(
+        portalUrl(localizedPortalPath(targetLocale, path))
+      )}" />`
+  );
+  links.push(
+    `<link rel="alternate" hreflang="x-default" href="${escapeHtml(
+      portalUrl(localizedPortalPath("en", path))
+    )}" />`
+  );
+  return {
+    canonical: portalUrl(canonicalPath),
+    links: links.join("\n    ")
+  };
+}
+
+export function renderLocaleSelector({ locale = "en", path = "", t } = {}) {
+  const resolvedLocale = normalizePortalLocale(locale);
+  const translate =
+    t ?? ((key, values = {}) => message(key, values, resolvedLocale));
+  const links = SUPPORTED_LOCALES.map((targetLocale) => {
+    const label =
+      targetLocale === "ja"
+        ? translate("portal.locale.japanese")
+        : translate("portal.locale.english");
+    const current =
+      targetLocale === resolvedLocale ? ' aria-current="page"' : "";
+    return `<a data-locale-switch="${targetLocale}" href="${escapeHtml(
+      localizedPortalPath(targetLocale, path)
+    )}" hreflang="${targetLocale}" lang="${targetLocale}"${current}>${escapeHtml(label)}</a>`;
+  }).join("");
+  return `<div class="locale-switcher" aria-label="${escapeHtml(
+    translate("portal.locale.selector")
+  )}"><span class="locale-switcher-label">${escapeHtml(
+    translate("portal.locale.selector")
+  )}</span>${links}</div>`;
 }
 
 function renderProductCard(product, t) {
@@ -83,8 +154,38 @@ function replaceOnce(template, token, value) {
   return template.replace(token, value);
 }
 
-export function renderPortalHome(template, catalog, locale) {
-  const resolvedLocale = resolveHtmlLocale(template, locale);
+export function renderLocalizedHtml(
+  template,
+  { locale = "en", path = "", localized = true, t } = {}
+) {
+  const resolvedLocale = normalizePortalLocale(locale);
+  const translate =
+    t ?? ((key, values = {}) => message(key, values, resolvedLocale));
+  const metadata = renderLocaleMetadata({
+    locale: resolvedLocale,
+    path,
+    localized
+  });
+  let output = String(template);
+  output = replaceOnce(
+    output,
+    "{{CANONICAL_URL}}",
+    escapeHtml(metadata.canonical)
+  );
+  output = replaceOnce(output, "{{HREFLANG_LINKS}}", metadata.links);
+  output = replaceOnce(
+    output,
+    "{{LANGUAGE_SELECTOR}}",
+    renderLocaleSelector({ locale: resolvedLocale, path, t: translate })
+  );
+  return resolveHtmlMessages(output, resolvedLocale);
+}
+
+export function renderPortalHome(template, catalog, locale, options = {}) {
+  const resolvedLocale = normalizePortalLocale(
+    resolveHtmlLocale(template, locale)
+  );
+  const localized = options.localized ?? locale !== undefined;
   const t = (key, values = {}) => message(key, values, resolvedLocale);
   let output = template;
   output = replaceOnce(
@@ -102,7 +203,12 @@ export function renderPortalHome(template, catalog, locale) {
     "{{RELATIONSHIPS}}",
     renderRelationships(catalog)
   );
-  return resolveHtmlMessages(output, resolvedLocale);
+  return renderLocalizedHtml(output, {
+    locale: resolvedLocale,
+    path: options.path ?? "",
+    localized,
+    t
+  });
 }
 
 function renderCoreSections(detail) {
@@ -121,11 +227,13 @@ export function renderProductOverviewPage(
   product,
   catalog,
   detail,
-  locale = "en"
+  locale,
+  options = {}
 ) {
   if (!detail || detail.id !== product.id)
     throw new Error(`Product detail mismatch for ${product.id}`);
-  const resolvedLocale = normalizeLocale(locale);
+  const resolvedLocale = normalizePortalLocale(locale ?? "en");
+  const localized = options.localized ?? locale !== undefined;
   const t = (key, values = {}) => message(key, values, resolvedLocale);
   const byId = new Map(catalog.products.map((entry) => [entry.id, entry]));
   const relationships = product.relationships
@@ -135,6 +243,13 @@ export function renderProductOverviewPage(
     })
     .join("");
   const workHref = `../../work/?repository=${encodeURIComponent(repositoryFullName(product))}`;
+  const productPathname =
+    options.path ?? `products/${encodeURIComponent(product.id)}/`;
+  const metadata = renderLocaleMetadata({
+    locale: resolvedLocale,
+    path: productPathname,
+    localized
+  });
 
   return `<!doctype html>
 <html lang="${escapeHtml(resolvedLocale)}">
@@ -142,7 +257,8 @@ export function renderProductOverviewPage(
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="${escapeHtml(product.summary)}" />
-    <link rel="canonical" href="https://dev.yohn.jp/products/${escapeHtml(product.id)}/" />
+    <link rel="canonical" href="${escapeHtml(metadata.canonical)}" />
+    ${metadata.links}
     <title>${escapeHtml(t("portal.product.title", { name: product.name }))}</title>
     <link rel="stylesheet" href="../../styles.css" />
     <link rel="stylesheet" href="../../product.css" />
@@ -152,6 +268,7 @@ export function renderProductOverviewPage(
       <nav class="shell site-nav" aria-label="${escapeHtml(t("portal.nav.primary"))}">
         <a class="brand" href="../../" aria-label="${escapeHtml(t("portal.nav.home"))}"><span class="brand-slash">/</span><span>yohn-jp</span></a>
         <div class="nav-links"><a href="../../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="${workHref}">${escapeHtml(t("portal.nav.work"))}</a></div>
+        ${renderLocaleSelector({ locale: resolvedLocale, path: productPathname, t })}
       </nav>
     </header>
     <main>

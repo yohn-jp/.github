@@ -4,9 +4,14 @@ import {
   layoutDependencyGraph
 } from "./graph-model.js";
 import { buildProductRepositoryIndex } from "../work-model.js";
-import { hydrateMessages, message } from "../../messages.js";
+import {
+  hydrateMessages,
+  message,
+  preserveLocaleQuery
+} from "../../messages.js";
 
 hydrateMessages(document);
+preserveLocaleQuery(document);
 
 const t = (key, values = {}) => message(key, values);
 

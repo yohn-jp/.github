@@ -7,6 +7,7 @@ import {
   formatSnapshotAge,
   localeDate,
   normalizeLocale,
+  preserveLocaleQuery,
   resolveHtmlLocale,
   resolveHtmlMessages,
   resolveMessage,
@@ -67,6 +68,81 @@ test("locale resolution prefers exact catalog matches before base fallback", () 
   );
 });
 
+test("English and Japanese catalogs expose the same complete UI contract", () => {
+  assert.deepEqual(
+    Object.keys(MESSAGE_CATALOG.en).sort(),
+    Object.keys(MESSAGE_CATALOG.ja).sort()
+  );
+  assert.equal(
+    resolveMessage("portal.nav.products", {}, { locale: "ja" }),
+    "プロダクト"
+  );
+  assert.notEqual(
+    resolveMessage("work.filters.searchPlaceholder", {}, { locale: "ja" }),
+    resolveMessage("work.filters.searchPlaceholder", {}, { locale: "en" })
+  );
+});
+
+test("Japanese catalog translates every governance Work message", () => {
+  const governanceKeys = [
+    "work.metrics.governanceValid",
+    "work.metrics.governanceInvalid",
+    "work.metrics.governanceUnknown",
+    "work.filters.governance",
+    "work.governance.filter.all",
+    "work.governance.filter.valid",
+    "work.governance.filter.invalid",
+    "work.governance.filter.unknown",
+    "work.governance.status.valid",
+    "work.governance.status.invalid",
+    "work.governance.status.unknown",
+    "work.governance.violations.one",
+    "work.governance.violations.other",
+    "work.governance.violations.unspecified",
+    "work.governance.violations.noDetail"
+  ];
+  for (const key of governanceKeys) {
+    assert.notEqual(
+      MESSAGE_CATALOG.ja[key],
+      MESSAGE_CATALOG.en[key],
+      `${key} must not fall back to English`
+    );
+  }
+});
+
+test("locale links preserve Work query and hash when switching", () => {
+  const links = [
+    {
+      getAttribute: () => "/ja/work/",
+      setAttribute(name, value) {
+        this[name] = value;
+      }
+    },
+    {
+      getAttribute: () => "/en/work/",
+      setAttribute(name, value) {
+        this[name] = value;
+      }
+    }
+  ];
+  preserveLocaleQuery(
+    { querySelectorAll: () => links },
+    {
+      href: "https://dev.yohn.jp/en/work/?view=invalid&q=contract&governance=invalid#issues",
+      search: "?view=invalid&q=contract&governance=invalid",
+      hash: "#issues"
+    }
+  );
+  assert.equal(
+    links[0].href,
+    "/ja/work/?view=invalid&q=contract&governance=invalid#issues"
+  );
+  assert.equal(
+    links[1].href,
+    "/en/work/?view=invalid&q=contract&governance=invalid#issues"
+  );
+});
+
 test("message interpolation is explicit and missing keys fail", () => {
   assert.equal(
     resolveMessage(
@@ -112,6 +188,17 @@ test("HTML message directives resolve content and attributes without fallback", 
   );
 });
 
+test("HTML message directives support formatted closing tags", () => {
+  const html = resolveHtmlMessages(
+    '<label><span data-message="work.filters.governance"></span\n></label>',
+    "ja"
+  );
+  assert.match(
+    html,
+    /data-message="work\.filters\.governance">ガバナンス<\/span\s*>/
+  );
+});
+
 test("date and relative-time helpers use Intl formatting", () => {
   const originalNow = Date.now;
   Date.now = () => Date.parse("2026-08-27T12:00:00Z");
@@ -125,6 +212,11 @@ test("date and relative-time helpers use Intl formatting", () => {
       formatSnapshotAge("2026-08-27T10:00:00Z", "en-US"),
       "2 hours old"
     );
+    assert.match(
+      formatRelativeTime("2026-08-27T11:55:00Z", "ja"),
+      /更新.*分前/
+    );
+    assert.match(localeDate("2026-08-27T11:00:00Z", "ja"), /2026/);
   } finally {
     Date.now = originalNow;
   }
