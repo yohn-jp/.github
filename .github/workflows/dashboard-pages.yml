@@ -48,6 +48,11 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+        with:
+          package_json_file: package.json
+
       - name: Install portal build dependencies
         run: pnpm install --frozen-lockfile
 
