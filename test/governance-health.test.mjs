@@ -1,0 +1,133 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  aggregateGovernanceHealth,
+  governanceState
+} from "../scripts/governance-health.mjs";
+
+function issue(repository, number, governance) {
+  return {
+    id: `${repository}-${number}`,
+    repository: {
+      id: repository,
+      name: repository,
+      fullName: `yohn-jp/${repository}`,
+      url: `https://github.com/yohn-jp/${repository}`
+    },
+    number,
+    title: `Issue ${number}`,
+    url: `https://github.com/yohn-jp/${repository}/issues/${number}`,
+    governance
+  };
+}
+
+test("aggregates projected governance into three-state organization health", () => {
+  const issues = [
+    issue("alpha", 1, {
+      status: "valid",
+      valid: true,
+      classification: "valid",
+      violations: []
+    }),
+    issue("alpha", 2, {
+      status: "invalid",
+      valid: false,
+      classification: "semantic",
+      violations: [{ code: "FIELD_MISSING" }, { code: "FIELD_MISSING" }]
+    }),
+    issue("alpha", 3, {
+      status: "unavailable",
+      valid: null,
+      classification: "unknown",
+      violations: []
+    })
+  ];
+  const health = aggregateGovernanceHealth({
+    issues,
+    repositories: [
+      {
+        id: "alpha-id",
+        name: "alpha",
+        fullName: "yohn-jp/alpha",
+        url: "https://github.com/yohn-jp/alpha",
+        fetchStatus: "ok",
+        openIssueCount: 3
+      },
+      {
+        id: "beta-id",
+        name: "beta",
+        fullName: "yohn-jp/beta",
+        url: "https://github.com/yohn-jp/beta",
+        fetchStatus: "error",
+        error: { message: "source unavailable" }
+      }
+    ],
+    snapshotStatus: "partial"
+  });
+
+  assert.equal(governanceState(issues[0]), "valid");
+  assert.equal(governanceState(issues[1]), "invalid");
+  assert.equal(governanceState(issues[2]), "unknown");
+  assert.deepEqual(health.overall, {
+    valid: 1,
+    invalid: 1,
+    unknown: 1,
+    total: 3,
+    known: 2,
+    complianceRate: 0.5
+  });
+  assert.deepEqual(health.repositories[0], {
+    id: "alpha-id",
+    name: "alpha",
+    fullName: "yohn-jp/alpha",
+    url: "https://github.com/yohn-jp/alpha",
+    fetchStatus: "ok",
+    valid: 1,
+    invalid: 1,
+    unknown: 1,
+    total: 3,
+    known: 2,
+    complianceRate: 0.5,
+    issueCount: 3,
+    error: null
+  });
+  assert.equal(health.repositories[1].valid, null);
+  assert.equal(health.repositories[1].complianceRate, null);
+  assert.equal(health.snapshot.complete, false);
+  assert.equal(health.snapshot.unavailableRepositories, 1);
+  assert.deepEqual(health.violations.classifications, [
+    { classification: "semantic", count: 1 }
+  ]);
+  assert.deepEqual(health.violations.codes, [
+    { code: "FIELD_MISSING", count: 2 }
+  ]);
+  assert.equal(health.issues.invalid[0].url, issues[1].url);
+  assert.equal(health.issues.unknown[0].url, issues[2].url);
+});
+
+test("does not calculate compliance for empty or unknown-only evidence", () => {
+  const health = aggregateGovernanceHealth({
+    issues: [
+      issue("empty", 1, {
+        status: "unavailable",
+        valid: null,
+        violations: []
+      })
+    ],
+    repositories: [
+      {
+        name: "empty",
+        fullName: "yohn-jp/empty",
+        url: "https://github.com/yohn-jp/empty",
+        fetchStatus: "ok",
+        openIssueCount: 1
+      }
+    ],
+    snapshotStatus: "complete"
+  });
+
+  assert.equal(health.overall.complianceRate, null);
+  assert.equal(health.repositories[0].complianceRate, null);
+  assert.equal(health.overall.unknown, 1);
+  assert.equal(health.snapshot.complete, false);
+});

@@ -17,7 +17,8 @@ import {
 const sourceFiles = [
   "portal/index.html",
   "dashboard/index.html",
-  "dashboard/graph/index.html"
+  "dashboard/graph/index.html",
+  "dashboard/governance/index.html"
 ];
 
 test("all static UI message keys resolve from the English catalog", async () => {
@@ -100,6 +101,47 @@ test("Japanese catalog translates every governance Work message", () => {
     "work.governance.violations.other",
     "work.governance.violations.unspecified",
     "work.governance.violations.noDetail"
+  ];
+  for (const key of governanceKeys) {
+    assert.notEqual(
+      MESSAGE_CATALOG.ja[key],
+      MESSAGE_CATALOG.en[key],
+      `${key} must not fall back to English`
+    );
+  }
+});
+
+test("Japanese catalog translates every governance health message", () => {
+  const governanceKeys = [
+    "portal.nav.governance",
+    "portal.work.openGovernance",
+    "work.nav.governance",
+    "work.distribution.governanceLink",
+    "work.footer.governance",
+    "governance.title",
+    "governance.meta.description",
+    "governance.nav.governance",
+    "governance.header.eyebrow",
+    "governance.header.title",
+    "governance.header.lede",
+    "governance.snapshot.loading",
+    "governance.snapshot.complete",
+    "governance.snapshot.partial",
+    "governance.snapshot.failed",
+    "governance.snapshot.unavailable",
+    "governance.snapshot.detail",
+    "governance.metrics.valid",
+    "governance.metrics.invalid",
+    "governance.metrics.unknown",
+    "governance.repositories.title",
+    "governance.repositories.body",
+    "governance.repository.rateUnavailable",
+    "governance.violations.title",
+    "governance.issues.title",
+    "governance.issues.invalid",
+    "governance.issues.unknown",
+    "governance.load.failedTitle",
+    "governance.footer.work"
   ];
   for (const key of governanceKeys) {
     assert.notEqual(

@@ -2,6 +2,7 @@ import {
   collectIssueGovernance,
   createIssueGovernanceReader
 } from "./inari-governance.mjs";
+import { aggregateGovernanceHealth } from "./governance-health.mjs";
 
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2022-11-28";
@@ -504,6 +505,11 @@ export async function collectDashboardData({
       : failedRepositories === repositories.length
         ? "failed"
         : "partial";
+  const governanceHealth = aggregateGovernanceHealth({
+    issues,
+    repositories,
+    snapshotStatus: status
+  });
 
   return {
     schemaVersion: DASHBOARD_SCHEMA_VERSION,
@@ -529,6 +535,7 @@ export async function collectDashboardData({
     },
     repositories,
     issues,
+    governanceHealth,
     errors
   };
 }
