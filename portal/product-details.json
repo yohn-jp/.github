@@ -3,145 +3,331 @@
   "products": [
     {
       "id": "mottainai",
-      "why": "Coding agents often inherit orchestration through prompts, shell fragments, ad-hoc polling, and unbounded tool output. Mottainai turns that ambient behavior into an explicit runtime: one place to coordinate bounded work, preserve evidence, and route operations to the authority that actually owns them.",
+      "why": {
+        "en": "Coding agents often inherit orchestration through prompts, shell fragments, ad-hoc polling, and unbounded tool output. Mottainai turns that ambient behavior into an explicit runtime: one place to coordinate bounded work, preserve evidence, and route operations to the authority that actually owns them.",
+        "ja": "コーディングエージェントは、プロンプトやシェル断片、場当たり的なポーリング、境界のないツール出力を通じてオーケストレーションを引き継ぎがちです。Mottainaiはその暗黙の振る舞いを明示的なランタイムに変え、境界付きの作業を調整し、証拠を保持し、実際に所有する権限へ操作を届ける場所を提供します。"
+      },
       "core": [
         {
-          "title": "Managed agent sessions",
-          "body": "Task start/run and Manager surfaces coordinate durable coding-agent work, including concurrent sessions, bounded scope preview, needs-attention state, and controlled terminal interaction. Zellij can provide terminal transport, but Mottainai owns orchestration state rather than terminal persistence itself."
+          "title": {
+            "en": "Managed agent sessions",
+            "ja": "管理されたエージェントセッション"
+          },
+          "body": {
+            "en": "Task start/run and Manager surfaces coordinate durable coding-agent work, including concurrent sessions, bounded scope preview, needs-attention state, and controlled terminal interaction. Zellij can provide terminal transport, but Mottainai owns orchestration state rather than terminal persistence itself.",
+            "ja": "Task start/runとManagerの接続面は、並行セッション、境界付きスコープのプレビュー、要対応状態、制御されたターミナル操作を含む永続的なコーディングエージェント作業を調整します。Zellijはターミナル転送を提供できますが、Mottainaiが所有するのはターミナルの永続性ではなくオーケストレーション状態です。"
+          }
         },
         {
-          "title": "Governed repository execution",
-          "body": "Task meaning and workflow policy stay in Mottainai. Physical worktree, branch, session, resource-claim, commit, push, and cleanup authority stays behind Nawabari. Governed Issue and pull-request mutation stays behind Inari. Missing companion authority fails closed instead of becoming an implicit direct fallback."
+          "title": {
+            "en": "Governed repository execution",
+            "ja": "統制されたリポジトリ実行"
+          },
+          "body": {
+            "en": "Task meaning and workflow policy stay in Mottainai. Physical worktree, branch, session, resource-claim, commit, push, and cleanup authority stays behind Nawabari. Governed Issue and pull-request mutation stays behind Inari. Missing companion authority fails closed instead of becoming an implicit direct fallback.",
+            "ja": "タスクの意味とワークフローポリシーはMottainaiに残ります。物理worktree、ブランチ、セッション、リソース要求、commit、push、クリーンアップの権限はNawabariの背後に置かれます。統制されたIssueとPull Requestの変更はInariの背後に置かれます。補助権限がない場合は暗黙の直接フォールバックにせずfail closedします。"
+          }
         },
         {
-          "title": "Bounded context runtime",
-          "body": "Raw tool and process results can be retained as full local evidence while models receive deterministic summaries, facts, diagnostics, metrics, and retrieval references under byte/token budgets. Producer or parse failures are represented as failures, not as genuine empty results."
+          "title": {
+            "en": "Bounded context runtime",
+            "ja": "境界付きコンテキストランタイム"
+          },
+          "body": {
+            "en": "Raw tool and process results can be retained as full local evidence while models receive deterministic summaries, facts, diagnostics, metrics, and retrieval references under byte/token budgets. Producer or parse failures are represented as failures, not as genuine empty results.",
+            "ja": "生のツールとプロセスの結果を完全なローカル証拠として保持しながら、モデルにはバイト/トークン予算内で決定的な要約、事実、診断、メトリクス、検索参照を渡せます。生成や解析の失敗は、本当の空結果ではなく失敗として表現します。"
+          }
         },
         {
-          "title": "MCP gateway and managed processes",
-          "body": "Mottainai exposes a standard MCP stdio boundary, can aggregate upstream MCP tools, and provides finite managed-process handles so waiting and result retention do not require repeated model polling turns."
+          "title": {
+            "en": "MCP gateway and managed processes",
+            "ja": "MCPゲートウェイと管理プロセス"
+          },
+          "body": {
+            "en": "Mottainai exposes a standard MCP stdio boundary, can aggregate upstream MCP tools, and provides finite managed-process handles so waiting and result retention do not require repeated model polling turns.",
+            "ja": "Mottainaiは標準MCP stdio境界を公開し、上流MCPツールを集約でき、有限の管理プロセスハンドルを提供します。待機や結果保持のためにモデルが繰り返しポーリングするターンは必要ありません。"
+          }
         }
       ],
-      "maturity": "Mottainai is pre-1.0 and in active dogfood. Its authority split is deliberate, while Manager, local Runtime, companion contracts, and operational ergonomics continue to harden across minor releases."
+      "maturity": {
+        "en": "Mottainai is pre-1.0 and in active dogfood. Its authority split is deliberate, while Manager, local Runtime, companion contracts, and operational ergonomics continue to harden across minor releases.",
+        "ja": "Mottainaiは1.0未満で、活発なdogfood段階です。権限分割は意図的なものであり、Manager、ローカルRuntime、補助契約、運用上の使いやすさはマイナーリリースを通じて強化されています。"
+      }
     },
     {
       "id": "nawabari",
-      "why": "Parallel coding agents need a physical repository ownership model that does not depend on GitHub, an orchestrator, or prompt discipline. Nawabari makes local session identity, worktree ownership, mutable branches, claims, and destructive cleanup explicit and machine-verifiable.",
+      "why": {
+        "en": "Parallel coding agents need a physical repository ownership model that does not depend on GitHub, an orchestrator, or prompt discipline. Nawabari makes local session identity, worktree ownership, mutable branches, claims, and destructive cleanup explicit and machine-verifiable.",
+        "ja": "並行するコーディングエージェントには、GitHubやオーケストレーター、プロンプト規律に依存しない物理リポジトリ所有モデルが必要です。Nawabariはローカルセッション識別子、worktree所有権、可変ブランチ、要求、破壊的クリーンアップを明示し、機械で検証可能にします。"
+      },
       "core": [
         {
-          "title": "Standalone machine contract",
-          "body": "Nawabari exposes versioned capability and JSON result contracts that work without GitHub, Mottainai, an LLM, or network access. Session identities, failure codes, result schemas, and recovery actions are machine-facing integration surfaces rather than conventions hidden in human output."
+          "title": {
+            "en": "Standalone machine contract",
+            "ja": "独立したマシン契約"
+          },
+          "body": {
+            "en": "Nawabari exposes versioned capability and JSON result contracts that work without GitHub, Mottainai, an LLM, or network access. Session identities, failure codes, result schemas, and recovery actions are machine-facing integration surfaces rather than conventions hidden in human output.",
+            "ja": "Nawabariは、GitHub、Mottainai、LLM、ネットワークアクセスなしで動作する、バージョン付きの能力とJSON結果の契約を公開します。セッション識別子、失敗コード、結果スキーマ、復旧アクションは、人間向け出力に隠れた慣習ではなく、マシン向けの統合接続面です。"
+          }
         },
         {
-          "title": "Session and resource ownership",
-          "body": "Each active session owns one dedicated worktree and mutable branch. Versioned read, write, and exclusive-write resource claims describe caller-declared access authority, with conflict semantics, generation/CAS checks, atomic replacement, transitions, and explicit release operations."
+          "title": {
+            "en": "Session and resource ownership",
+            "ja": "セッションとリソースの所有権"
+          },
+          "body": {
+            "en": "Each active session owns one dedicated worktree and mutable branch. Versioned read, write, and exclusive-write resource claims describe caller-declared access authority, with conflict semantics, generation/CAS checks, atomic replacement, transitions, and explicit release operations.",
+            "ja": "各アクティブセッションは専用のworktreeと可変ブランチを1つずつ所有します。バージョン付きのread、write、exclusive-writeリソース要求は呼び出し元が宣言したアクセス権限を表し、競合の意味論、generation/CASチェック、アトミック置換、遷移、明示的な解放操作を備えます。"
+          }
         },
         {
-          "title": "Evidence and Git mutation",
-          "body": "Session-addressed checkpoints, repository snapshots, bounded diffs, commit, and push operations revalidate repository/worktree/branch identity and expose exact evidence. Nawabari does not attach Issue meaning or orchestration semantics to those physical observations."
+          "title": {
+            "en": "Evidence and Git mutation",
+            "ja": "証拠とGit変更"
+          },
+          "body": {
+            "en": "Session-addressed checkpoints, repository snapshots, bounded diffs, commit, and push operations revalidate repository/worktree/branch identity and expose exact evidence. Nawabari does not attach Issue meaning or orchestration semantics to those physical observations.",
+            "ja": "セッションに対応するチェックポイント、リポジトリスナップショット、境界付きdiff、commit、push操作は、リポジトリ/worktree/ブランチの識別子を再検証し、正確な証拠を公開します。Nawabariはそれらの物理的観測にIssueの意味やオーケストレーションの意味論を付与しません。"
+          }
         },
         {
-          "title": "Conservative reconciliation and cleanup",
-          "body": "Close, doctor, and garbage collection prefer retaining recoverable state over guessing that work is disposable or integrated. Explicit discard is the sole destructive abandonment path and revalidates ownership immediately before physical Git mutation."
+          "title": {
+            "en": "Conservative reconciliation and cleanup",
+            "ja": "保守的な調整とクリーンアップ"
+          },
+          "body": {
+            "en": "Close, doctor, and garbage collection prefer retaining recoverable state over guessing that work is disposable or integrated. Explicit discard is the sole destructive abandonment path and revalidates ownership immediately before physical Git mutation.",
+            "ja": "close、doctor、ガベージコレクションは、作業が破棄可能または統合済みだと推測するより、復旧可能な状態を保持することを優先します。明示的なdiscardだけが破壊的に放棄する経路であり、物理Git変更の直前に所有権を再検証します。"
+          }
         },
         {
-          "title": "Optional protected execution",
-          "body": "On supported Linux hosts, protected session execution can place the owned worktree inside a bubblewrap-based filesystem/process boundary. Capability detection is explicit and fail-closed; unsupported protection never silently falls back while claiming isolation."
+          "title": {
+            "en": "Optional protected execution",
+            "ja": "オプションの保護実行"
+          },
+          "body": {
+            "en": "On supported Linux hosts, protected session execution can place the owned worktree inside a bubblewrap-based filesystem/process boundary. Capability detection is explicit and fail-closed; unsupported protection never silently falls back while claiming isolation.",
+            "ja": "対応するLinuxホストでは、保護されたセッション実行により、所有するworktreeをbubblewrapベースのファイルシステム/プロセス境界内に置けます。能力検出は明示的かつfail-closedであり、対応しない保護機能が分離を主張したまま暗黙にフォールバックすることはありません。"
+          }
         }
       ],
-      "maturity": "Nawabari is an active standalone runtime with a broad machine contract. Its default boundary is ownership/authorization rather than a universal OS sandbox; protected execution is an explicit additional Linux capability."
+      "maturity": {
+        "en": "Nawabari is an active standalone runtime with a broad machine contract. Its default boundary is ownership/authorization rather than a universal OS sandbox; protected execution is an explicit additional Linux capability.",
+        "ja": "Nawabariは広いマシン契約を持つアクティブな独立ランタイムです。デフォルトの境界は普遍的なOSサンドボックスではなく所有権/認可であり、保護実行はLinux向けの明示的な追加能力です。"
+      }
     },
     {
       "id": "inari",
-      "why": "Repository governance becomes unreliable when agents repeatedly reconstruct Markdown templates and policy rules from prose. Inari compiles repository-native Issue Forms and pull-request templates into typed semantic contracts so structured intent can be validated before any GitHub mutation occurs.",
+      "why": {
+        "en": "Repository governance becomes unreliable when agents repeatedly reconstruct Markdown templates and policy rules from prose. Inari compiles repository-native Issue Forms and pull-request templates into typed semantic contracts so structured intent can be validated before any GitHub mutation occurs.",
+        "ja": "エージェントが文章からMarkdownテンプレートとポリシー規則を繰り返し再構成すると、リポジトリのガバナンスは信頼できなくなります。InariはリポジトリネイティブのIssueフォームとPull Requestテンプレートを型付き意味契約へコンパイルし、GitHub変更の前に構造化された意図を検証できるようにします。"
+      },
       "core": [
         {
-          "title": "Native templates as governance input",
-          "body": "Inari discovers supported repository-native Issue and pull-request templates, compiles their structure plus small policy overlays where native Markdown lacks semantics, and exposes deterministic machine-readable schemas. It does not require a proprietary replacement issue body format."
+          "title": {
+            "en": "Native templates as governance input",
+            "ja": "ガバナンス入力としてのネイティブテンプレート"
+          },
+          "body": {
+            "en": "Inari discovers supported repository-native Issue and pull-request templates, compiles their structure plus small policy overlays where native Markdown lacks semantics, and exposes deterministic machine-readable schemas. It does not require a proprietary replacement issue body format.",
+            "ja": "Inariは対応するリポジトリネイティブのIssueとPull Requestテンプレートを発見し、その構造と、ネイティブMarkdownに意味論がない部分の小さなポリシーオーバーレイをコンパイルして、決定的な機械可読スキーマを公開します。独自の代替Issue本文形式は要求しません。"
+          }
         },
         {
-          "title": "Validate, render, then mutate",
-          "body": "Create paths validate semantic JSON, render canonical Markdown, parse and revalidate the exact rendered artifact, then pass an opaque validated-rendered capability into the GitHub mutation adapter. Invalid, stale, ambiguous, or round-trip-inconsistent state fails before mutation."
+          "title": {
+            "en": "Validate, render, then mutate",
+            "ja": "検証、描画、その後に変更"
+          },
+          "body": {
+            "en": "Create paths validate semantic JSON, render canonical Markdown, parse and revalidate the exact rendered artifact, then pass an opaque validated-rendered capability into the GitHub mutation adapter. Invalid, stale, ambiguous, or round-trip-inconsistent state fails before mutation.",
+            "ja": "作成経路は意味JSONを検証し、正規Markdownを描画し、描画された正確なアーティファクトを解析・再検証してから、不透明な検証済み描画能力をGitHub変更アダプターへ渡します。無効、古い、曖昧、または往復整合しない状態は変更前に失敗します。"
+          }
         },
         {
-          "title": "Existing-artifact governance",
-          "body": "Canonical get/check/explain/edit/normalize/sync surfaces reconstruct supported semantic values from existing Issues and pull requests. Unsupported or ambiguous artifacts stay unavailable rather than being guessed into a convenient shape."
+          "title": {
+            "en": "Existing-artifact governance",
+            "ja": "既存アーティファクトのガバナンス"
+          },
+          "body": {
+            "en": "Canonical get/check/explain/edit/normalize/sync surfaces reconstruct supported semantic values from existing Issues and pull requests. Unsupported or ambiguous artifacts stay unavailable rather than being guessed into a convenient shape.",
+            "ja": "正規のget/check/explain/edit/normalize/sync接続面は、既存のIssueとPull Requestから対応する意味値を再構成します。非対応または曖昧なアーティファクトは、都合のよい形に推測せず利用不可のまま保持します。"
+          }
         },
         {
-          "title": "Strict superset of gh",
-          "body": "The `inari` executable governs only the Issue/PR/template surfaces it owns. Other commands pass through to the real GitHub CLI with original argv and exit status, so callers do not need a second ad-hoc routing table."
+          "title": {
+            "en": "Strict superset of gh",
+            "ja": "ghの厳密なスーパーセット"
+          },
+          "body": {
+            "en": "The `inari` executable governs only the Issue/PR/template surfaces it owns. Other commands pass through to the real GitHub CLI with original argv and exit status, so callers do not need a second ad-hoc routing table.",
+            "ja": "`inari`実行ファイルが統制するのは、所有するIssue/PR/テンプレート接続面だけです。その他のコマンドは元のargvと終了ステータスのまま実体のGitHub CLIへパススルーされるため、呼び出し元に別の場当たり的なルーティング表は必要ありません。"
+          }
         }
       ],
-      "maturity": "Inari is an active governance CLI and library boundary. Its contract is intentionally narrow: it governs repository-defined Issue/PR artifacts and mutations, not generic GitHub search, review summarization, or physical Git state."
+      "maturity": {
+        "en": "Inari is an active governance CLI and library boundary. Its contract is intentionally narrow: it governs repository-defined Issue/PR artifacts and mutations, not generic GitHub search, review summarization, or physical Git state.",
+        "ja": "InariはアクティブなガバナンスCLIとライブラリの境界です。契約は意図的に狭く、リポジトリが定義したIssue/PRアーティファクトと変更を統制します。汎用GitHub検索、レビュー要約、物理Git状態は対象外です。"
+      }
     },
     {
       "id": "suzukuri",
-      "why": "Raw source and tool output are often too large for a consumer context, but naive truncation destroys meaning and hides what was lost. Suzukuri makes projection explicit: the caller chooses an adapter and semantic view, and the engine must either preserve required meaning inside a hard budget or fail visibly.",
+      "why": {
+        "en": "Raw source and tool output are often too large for a consumer context, but naive truncation destroys meaning and hides what was lost. Suzukuri makes projection explicit: the caller chooses an adapter and semantic view, and the engine must either preserve required meaning inside a hard budget or fail visibly.",
+        "ja": "生のソースやツール出力は利用者のコンテキストには大きすぎることがありますが、単純な切り詰めは意味を壊し、失われたものを隠します。Suzukuriは投影を明示化し、呼び出し元がアダプターと意味ビューを選び、エンジンが厳格な予算内で必要な意味を保持するか、明示的に失敗することを求めます。"
+      },
       "core": [
         {
-          "title": "Explicit projection core",
-          "body": "Adapters decode a declared source family, semantic contracts define what a view may claim, views choose bounded meaning, and renderers project the result. Adapter/view selection is caller-driven; parse failure never silently switches to a weaker fallback."
+          "title": {
+            "en": "Explicit projection core",
+            "ja": "明示的な投影コア"
+          },
+          "body": {
+            "en": "Adapters decode a declared source family, semantic contracts define what a view may claim, views choose bounded meaning, and renderers project the result. Adapter/view selection is caller-driven; parse failure never silently switches to a weaker fallback.",
+            "ja": "アダプターは宣言されたソース種別をデコードし、意味契約はビューが主張できる内容を定義し、ビューは境界付きの意味を選び、レンダラーは結果を投影します。アダプター/ビューの選択は呼び出し元が行い、解析失敗が弱いフォールバックへ暗黙に切り替わることはありません。"
+          }
         },
         {
-          "title": "Repository-local profiles",
-          "body": "Versioned profile documents bind source expectations, adapter, view, hard UTF-8 budget, and renderer into reusable named projections. Profiles describe projection intent but do not contain source data or infer a task."
+          "title": {
+            "en": "Repository-local profiles",
+            "ja": "リポジトリローカルプロファイル"
+          },
+          "body": {
+            "en": "Versioned profile documents bind source expectations, adapter, view, hard UTF-8 budget, and renderer into reusable named projections. Profiles describe projection intent but do not contain source data or infer a task.",
+            "ja": "バージョン付きプロファイル文書は、ソースの期待、アダプター、ビュー、厳格なUTF-8予算、レンダラーを再利用可能な名前付き投影へ結び付けます。プロファイルは投影の意図を記述しますが、ソースデータを含めず、タスクも推測しません。"
+          }
         },
         {
-          "title": "Provenance and loss semantics",
-          "body": "Every projection can carry component identities, source provenance, deterministic digest, completeness, and machine-readable loss metadata. Required meaning that cannot fit returns an explicit budget failure rather than a falsely complete view."
+          "title": {
+            "en": "Provenance and loss semantics",
+            "ja": "プロヴナンスと損失の意味論"
+          },
+          "body": {
+            "en": "Every projection can carry component identities, source provenance, deterministic digest, completeness, and machine-readable loss metadata. Required meaning that cannot fit returns an explicit budget failure rather than a falsely complete view.",
+            "ja": "すべての投影は、コンポーネント識別子、ソースプロヴナンス、決定的ダイジェスト、完全性、機械可読な損失メタデータを持てます。収まらない必須の意味は、完全に見えるビューではなく明示的な予算超過失敗を返します。"
+          }
         },
         {
-          "title": "Finite semantic support",
-          "body": "Git diffs/status, test results, diagnostics, TypeScript source, repository profiles, and an explicitly weak generic-text adapter are separate supported families. Unsupported producers or languages fail validation instead of widening claims implicitly."
+          "title": {
+            "en": "Finite semantic support",
+            "ja": "有限の意味サポート"
+          },
+          "body": {
+            "en": "Git diffs/status, test results, diagnostics, TypeScript source, repository profiles, and an explicitly weak generic-text adapter are separate supported families. Unsupported producers or languages fail validation instead of widening claims implicitly.",
+            "ja": "Gitのdiff/status、テスト結果、診断、TypeScriptソース、リポジトリプロファイル、明示的に弱い汎用テキストアダプターは、別々に対応する種別です。非対応の生成元や言語は、主張を暗黙に広げず検証に失敗します。"
+          }
         }
       ],
-      "maturity": "Suzukuri is an active v0 semantic-view engine with deterministic conformance and package evidence. It is intentionally not an orchestrator, persistent semantic database, network service, or model-driven interpretation layer."
+      "maturity": {
+        "en": "Suzukuri is an active v0 semantic-view engine with deterministic conformance and package evidence. It is intentionally not an orchestrator, persistent semantic database, network service, or model-driven interpretation layer.",
+        "ja": "Suzukuriは決定的な適合性とパッケージ証拠を備えたアクティブなv0意味ビューエンジンです。オーケストレーター、永続的な意味データベース、ネットワークサービス、モデル駆動の解釈レイヤーではありません。"
+      }
     },
     {
       "id": "wabachi",
-      "why": "A repository semantic authority cannot treat whichever compiler, indexer, graph, or model emits the richest output as canonical truth. Wabachi is exploring a provenance-first authority model where immutable producer evidence is retained, comparable observations are correlated explicitly, ambiguity remains visible, and only a later admission boundary can create durable canonical declarations.",
+      "why": {
+        "en": "A repository semantic authority cannot treat whichever compiler, indexer, graph, or model emits the richest output as canonical truth. Wabachi is exploring a provenance-first authority model where immutable producer evidence is retained, comparable observations are correlated explicitly, ambiguity remains visible, and only a later admission boundary can create durable canonical declarations.",
+        "ja": "リポジトリの意味権限は、最も豊かな出力を生成したコンパイラー、インデクサー、グラフ、モデルを正規の真実として扱うことはできません。Wabachiはプロヴナンスを優先する権限モデルを探究し、不変の生成者証拠を保持し、比較可能な観測を明示的に相関させ、曖昧性を見えるままにし、後段の受け入れ境界だけが永続的な正規宣言を作れるようにします。"
+      },
       "core": [
         {
-          "title": "Immutable provider evidence",
-          "body": "The current programme pins repository revisions and provider identities, executes heterogeneous deterministic producers through a common boundary, and retains provider-native output separately from normalized representations so later schema work does not require destructive re-interpretation."
+          "title": {
+            "en": "Immutable provider evidence",
+            "ja": "不変のプロバイダー証拠"
+          },
+          "body": {
+            "en": "The current programme pins repository revisions and provider identities, executes heterogeneous deterministic producers through a common boundary, and retains provider-native output separately from normalized representations so later schema work does not require destructive re-interpretation.",
+            "ja": "現在のプログラムはリポジトリリビジョンとプロバイダー識別子を固定し、異種の決定的な生成元を共通境界で実行し、プロバイダー固有の出力を正規化表現とは分離して保持します。そのため、後のスキーマ作業で破壊的な再解釈を必要としません。"
+          }
         },
         {
-          "title": "Correlation with explicit ambiguity",
-          "body": "Provider-native symbols may describe the same logical entity differently. Wabachi's planned correlation model records matched, probable, ambiguous, and unmatched outcomes with deterministic evidence instead of guessing away uncertainty to improve apparent coverage."
+          "title": {
+            "en": "Correlation with explicit ambiguity",
+            "ja": "明示的な曖昧性を伴う相関"
+          },
+          "body": {
+            "en": "Provider-native symbols may describe the same logical entity differently. Wabachi's planned correlation model records matched, probable, ambiguous, and unmatched outcomes with deterministic evidence instead of guessing away uncertainty to improve apparent coverage.",
+            "ja": "プロバイダー固有のシンボルは、同じ論理エンティティを異なる形で記述することがあります。Wabachiの計画する相関モデルは、見かけのカバレッジを上げるために不確実性を推測で消さず、matched、probable、ambiguous、unmatchedの結果を決定的な証拠とともに記録します。"
+          }
         },
         {
-          "title": "Minimal provenance-preserving facts",
-          "body": "Comparable observations can be normalized into a small versioned fact envelope while keeping producer, revision, source location, derivation authority, and references to native evidence. Normalization is evidence organization, not automatic canonical admission."
+          "title": {
+            "en": "Minimal provenance-preserving facts",
+            "ja": "プロヴナンスを保持する最小の事実"
+          },
+          "body": {
+            "en": "Comparable observations can be normalized into a small versioned fact envelope while keeping producer, revision, source location, derivation authority, and references to native evidence. Normalization is evidence organization, not automatic canonical admission.",
+            "ja": "比較可能な観測は、小さなバージョン付き事実エンベロープへ正規化できます。その際、生成元、リビジョン、ソース位置、導出権限、ネイティブ証拠への参照を保持します。正規化は証拠の整理であり、自動的な正規受け入れではありません。"
+          }
         },
         {
-          "title": "Semantic authority beyond provider matrices",
-          "body": "Provider coverage/overlap/disagreement matrices are evaluation tooling, not the final product model. Architecture work separates regenerable evidence and derived state from proposed claims and durable admitted declarations, with explicit freshness, mutation, identity, and completeness contracts still under design."
+          "title": {
+            "en": "Semantic authority beyond provider matrices",
+            "ja": "プロバイダーマトリクスを超える意味権限"
+          },
+          "body": {
+            "en": "Provider coverage/overlap/disagreement matrices are evaluation tooling, not the final product model. Architecture work separates regenerable evidence and derived state from proposed claims and durable admitted declarations, with explicit freshness, mutation, identity, and completeness contracts still under design.",
+            "ja": "プロバイダーのカバレッジ/重複/不一致マトリクスは評価ツールであり、最終的なプロダクトモデルではありません。アーキテクチャ作業では、再生成可能な証拠と導出状態を、提案された主張や永続的に受け入れられた宣言から分離します。鮮度、変更、識別子、完全性の明示的な契約はまだ設計中です。"
+          }
         }
       ],
-      "maturity": "Wabachi is early-stage architecture and provider-evidence work. Its public README is still placeholder-level; current authoritative intent is primarily captured in architecture/tracking Issues such as #5 and #24. The portal therefore describes the programme and boundary, not a finished CLI or stable semantic schema."
+      "maturity": {
+        "en": "Wabachi is early-stage architecture and provider-evidence work. Its public README is still placeholder-level; current authoritative intent is primarily captured in architecture/tracking Issues such as #5 and #24. The portal therefore describes the programme and boundary, not a finished CLI or stable semantic schema.",
+        "ja": "Wabachiは初期段階のアーキテクチャとプロバイダー証拠の取り組みです。公開READMEはまだプレースホルダーレベルで、現在の権威ある意図は#5や#24などのアーキテクチャ/追跡Issueに主に記録されています。そのためポータルは完成したCLIや安定した意味スキーマではなく、プログラムと境界を説明します。"
+      }
     },
     {
       "id": "majiwari",
-      "why": "A coding agent hosted outside the local machine (ChatGPT) still needs to call deterministic, narrowly-scoped tools -- not a general shell. Majiwari keeps that exposure explicit: adapters know what a wrapped tool means, the gateway knows only MCP transport, and remote reachability is a separate, Access-protected concern layered on top of both.",
+      "why": {
+        "en": "A coding agent hosted outside the local machine (ChatGPT) still needs to call deterministic, narrowly-scoped tools -- not a general shell. Majiwari keeps that exposure explicit: adapters know what a wrapped tool means, the gateway knows only MCP transport, and remote reachability is a separate, Access-protected concern layered on top of both.",
+        "ja": "ローカルマシンの外部（ChatGPT）でホストされるコーディングエージェントにも、汎用シェルではなく決定的で範囲を限定したツールを呼び出す仕組みが必要です。Majiwariはその公開を明示的に保ち、アダプターはラップしたツールの意味を理解し、ゲートウェイはMCP転送だけを扱い、リモート到達性は両者の上に重なるAccess保護された別の関心として扱います。"
+      },
       "core": [
         {
-          "title": "Deterministic adapters, not reimplementation",
-          "body": "Each adapter wraps one fixed CLI -- Alibaba OpenCodeReview or Inari (gh-inari) -- as stdio MCP tools with fixed executables, `shell: false`, and argument arrays. Adapters translate MCP calls; they do not reimplement review reasoning or template governance."
+          "title": {
+            "en": "Deterministic adapters, not reimplementation",
+            "ja": "再実装ではなく決定的なアダプター"
+          },
+          "body": {
+            "en": "Each adapter wraps one fixed CLI -- Alibaba OpenCodeReview or Inari (gh-inari) -- as stdio MCP tools with fixed executables, `shell: false`, and argument arrays. Adapters translate MCP calls; they do not reimplement review reasoning or template governance.",
+            "ja": "各アダプターは、Alibaba OpenCodeReviewまたはInari（gh-inari）の固定CLIを、固定実行ファイル、`shell: false`、引数配列を備えたstdio MCPツールとしてラップします。アダプターはMCP呼び出しを変換しますが、レビュー推論やテンプレートガバナンスを再実装しません。"
+          }
         },
         {
-          "title": "Generic transport gateway",
-          "body": "`gateway/` converts any stdio MCP server to Streamable HTTP with no adapter-specific logic, binds to `127.0.0.1` only, and never inspects the tools it proxies -- the same gateway fronts OCR, Inari, or any other stdio MCP server given to it."
+          "title": {
+            "en": "Generic transport gateway",
+            "ja": "汎用トランスポートゲートウェイ"
+          },
+          "body": {
+            "en": "`gateway/` converts any stdio MCP server to Streamable HTTP with no adapter-specific logic, binds to `127.0.0.1` only, and never inspects the tools it proxies -- the same gateway fronts OCR, Inari, or any other stdio MCP server given to it.",
+            "ja": "`gateway/`はアダプター固有ロジックなしで任意のstdio MCPサーバーをStreamable HTTPへ変換し、`127.0.0.1`だけにバインドし、プロキシするツールを検査しません。同じゲートウェイがOCR、Inari、その他渡されたstdio MCPサーバーの前段になります。"
+          }
         },
         {
-          "title": "Access-protected remote exposure",
-          "body": "A Cloudflare Named Tunnel (outbound-only), a Worker behind Access Managed OAuth on `/mcp`, and a Workers VPC Service binding let ChatGPT reach the gateway without a public hostname or open inbound port."
+          "title": {
+            "en": "Access-protected remote exposure",
+            "ja": "Accessで保護されたリモート公開"
+          },
+          "body": {
+            "en": "A Cloudflare Named Tunnel (outbound-only), a Worker behind Access Managed OAuth on `/mcp`, and a Workers VPC Service binding let ChatGPT reach the gateway without a public hostname or open inbound port.",
+            "ja": "Cloudflare Named Tunnel（外向きのみ）、`/mcp`でAccess Managed OAuthの背後に置いたWorker、Workers VPC Service bindingにより、公開ホスト名や開放された受信ポートなしでChatGPTがゲートウェイへ到達できます。"
+          }
         },
         {
-          "title": "Resident local runtime",
-          "body": "The resident runtime composes multiple trusted adapters on one loopback ingress and shared HTTP listener, owning config, adapter lifecycle, and signals, while `gateway/` only attaches MCP bridges. It never accepts arbitrary commands, modules, URLs, or environment maps."
+          "title": {
+            "en": "Resident local runtime",
+            "ja": "常駐ローカルランタイム"
+          },
+          "body": {
+            "en": "The resident runtime composes multiple trusted adapters on one loopback ingress and shared HTTP listener, owning config, adapter lifecycle, and signals, while `gateway/` only attaches MCP bridges. It never accepts arbitrary commands, modules, URLs, or environment maps.",
+            "ja": "常駐ランタイムは、1つのloopback入口と共有HTTPリスナー上で複数の信頼されたアダプターを構成し、設定、アダプターのライフサイクル、シグナルを所有します。一方、`gateway/`はMCPブリッジを接続するだけです。任意のコマンド、モジュール、URL、環境マップを受け付けません。"
+          }
         }
       ],
-      "maturity": "Majiwari is pre-1.0 and in active dogfood. OCR delegation is its first adapter, not its purpose; Inari is the second. It preserves upstream attribution for both wrapped tools and is intended to converge upstream rather than fork their behavior."
+      "maturity": {
+        "en": "Majiwari is pre-1.0 and in active dogfood. OCR delegation is its first adapter, not its purpose; Inari is the second. It preserves upstream attribution for both wrapped tools and is intended to converge upstream rather than fork their behavior.",
+        "ja": "Majiwariは1.0未満で、活発なdogfood段階です。OCR委譲は最初のアダプターであって目的そのものではなく、Inariが2番目です。両方のラップ対象ツールについて上流の帰属を保持し、挙動をフォークするのではなく上流へ収束することを意図しています。"
+      }
     }
   ]
 }

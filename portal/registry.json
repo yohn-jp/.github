@@ -7,41 +7,76 @@
       "id": "mottainai",
       "order": 10,
       "name": "Mottainai",
-      "role": "Coding-agent orchestration and context runtime",
+      "role": {
+        "en": "Coding-agent orchestration and context runtime",
+        "ja": "コーディングエージェントのオーケストレーションとコンテキストランタイム"
+      },
       "repository": "https://github.com/yohn-jp/mottainai",
       "documentation": "https://github.com/yohn-jp/mottainai#readme",
-      "summary": "Coordinates bounded coding-agent sessions, workflow state, context projection, and MCP routing while delegating physical Git and governed GitHub mutation to dedicated authorities.",
-      "status": "Active dogfood · pre-1.0",
-      "owns": [
-        "Managed coding-agent session orchestration and workflow state",
-        "Bounded context projection, retained evidence, and MCP routing",
-        "Manager experience for concurrent governed agent work"
-      ],
-      "doesNotOwn": [
-        "Physical worktree, branch, resource-claim, and Git mutation authority",
-        "Canonical Issue and pull-request template governance",
-        "Repository semantic authority or provider-evidence admission"
-      ],
+      "summary": {
+        "en": "Coordinates bounded coding-agent sessions, workflow state, context projection, and MCP routing while delegating physical Git and governed GitHub mutation to dedicated authorities.",
+        "ja": "境界付きのコーディングエージェントセッション、ワークフロー状態、コンテキスト投影、MCPルーティングを調整し、物理Gitと統制されたGitHub変更を各権限主体へ委譲します。"
+      },
+      "status": {
+        "en": "Active dogfood · pre-1.0",
+        "ja": "アクティブなdogfood · 1.0未満"
+      },
+      "owns": {
+        "en": [
+          "Managed coding-agent session orchestration and workflow state",
+          "Bounded context projection, retained evidence, and MCP routing",
+          "Manager experience for concurrent governed agent work"
+        ],
+        "ja": [
+          "管理されたコーディングエージェントセッションのオーケストレーションとワークフロー状態",
+          "境界付きコンテキスト投影、保持された証拠、MCPルーティング",
+          "並行する統制エージェント作業のマネージャー体験"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Physical worktree, branch, resource-claim, and Git mutation authority",
+          "Canonical Issue and pull-request template governance",
+          "Repository semantic authority or provider-evidence admission"
+        ],
+        "ja": [
+          "物理worktree、ブランチ、リソース要求、Git変更の権限",
+          "正規のIssueとPull Requestテンプレートのガバナンス",
+          "リポジトリ意味論の権限またはプロバイダー証拠の受け入れ"
+        ]
+      },
       "relationships": [
         {
           "product": "nawabari",
           "type": "delegates-to",
-          "label": "Delegates physical Git/worktree/session authority"
+          "label": {
+            "en": "Delegates physical Git/worktree/session authority",
+            "ja": "物理Git/worktree/sessionの権限へ委譲"
+          }
         },
         {
           "product": "inari",
           "type": "delegates-to",
-          "label": "Delegates governed GitHub Issue/PR mutation"
+          "label": {
+            "en": "Delegates governed GitHub Issue/PR mutation",
+            "ja": "統制されたGitHub Issue/PR変更を委譲"
+          }
         },
         {
           "product": "suzukuri",
           "type": "complements",
-          "label": "Uses a separate bounded semantic-view boundary"
+          "label": {
+            "en": "Uses a separate bounded semantic-view boundary",
+            "ja": "独立した境界付き意味ビューの境界を利用"
+          }
         },
         {
           "product": "wabachi",
           "type": "adjacent-to",
-          "label": "Keeps orchestration separate from repository semantic authority"
+          "label": {
+            "en": "Keeps orchestration separate from repository semantic authority",
+            "ja": "オーケストレーションをリポジトリ意味権限から分離"
+          }
         }
       ]
     },
@@ -49,32 +84,62 @@
       "id": "nawabari",
       "order": 20,
       "name": "Nawabari",
-      "role": "Standalone Git/session ownership runtime",
+      "role": {
+        "en": "Standalone Git/session ownership runtime",
+        "ja": "独立したGit/session所有権ランタイム"
+      },
       "repository": "https://github.com/yohn-jp/nawabari",
       "documentation": "https://github.com/yohn-jp/nawabari#readme",
-      "summary": "Provides local session, worktree, branch, resource-claim, authorization, Git mutation, reconciliation, and conservative cleanup authority for parallel coding agents.",
-      "status": "Active standalone runtime",
-      "owns": [
-        "Session identity and exclusive worktree/branch ownership",
-        "Versioned resource claims, authorization, and mutation safety",
-        "Commit, push, reconciliation, conservative close/discard, and cleanup",
-        "Optional Linux protected session execution boundary"
-      ],
-      "doesNotOwn": [
-        "GitHub Issue, pull-request, review, or merge semantics",
-        "Task meaning, coding-agent orchestration, or workflow policy",
-        "Semantic source projection or repository semantic truth"
-      ],
+      "summary": {
+        "en": "Provides local session, worktree, branch, resource-claim, authorization, Git mutation, reconciliation, and conservative cleanup authority for parallel coding agents.",
+        "ja": "並行するコーディングエージェントのために、ローカルsession、worktree、ブランチ、リソース要求、認可、Git変更、調整、保守的なクリーンアップの権限を提供します。"
+      },
+      "status": {
+        "en": "Active standalone runtime",
+        "ja": "アクティブな独立ランタイム"
+      },
+      "owns": {
+        "en": [
+          "Session identity and exclusive worktree/branch ownership",
+          "Versioned resource claims, authorization, and mutation safety",
+          "Commit, push, reconciliation, conservative close/discard, and cleanup",
+          "Optional Linux protected session execution boundary"
+        ],
+        "ja": [
+          "セッション識別子と排他的なworktree/ブランチ所有権",
+          "バージョン付きリソース要求、認可、変更の安全性",
+          "commit、push、調整、保守的なclose/discard、クリーンアップ",
+          "オプションのLinux保護セッション実行境界"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "GitHub Issue, pull-request, review, or merge semantics",
+          "Task meaning, coding-agent orchestration, or workflow policy",
+          "Semantic source projection or repository semantic truth"
+        ],
+        "ja": [
+          "GitHub Issue、Pull Request、レビュー、マージの意味論",
+          "タスクの意味、コーディングエージェントのオーケストレーション、ワークフローポリシー",
+          "意味ソースの投影またはリポジトリの意味論的真実"
+        ]
+      },
       "relationships": [
         {
           "product": "mottainai",
           "type": "serves",
-          "label": "Supplies physical repository/session authority to orchestration"
+          "label": {
+            "en": "Supplies physical repository/session authority to orchestration",
+            "ja": "オーケストレーションへ物理リポジトリ/sessionの権限を提供"
+          }
         },
         {
           "product": "inari",
           "type": "separates-from",
-          "label": "Keeps local Git authority separate from GitHub governance"
+          "label": {
+            "en": "Keeps local Git authority separate from GitHub governance",
+            "ja": "ローカルGitの権限をGitHubガバナンスから分離"
+          }
         }
       ]
     },
@@ -82,37 +147,70 @@
       "id": "inari",
       "order": 30,
       "name": "Inari",
-      "role": "Governed GitHub CLI and contract compiler",
+      "role": {
+        "en": "Governed GitHub CLI and contract compiler",
+        "ja": "統制されたGitHub CLIと契約コンパイラー"
+      },
       "repository": "https://github.com/yohn-jp/gh-inari",
       "documentation": "https://github.com/yohn-jp/gh-inari#readme",
-      "summary": "Compiles repository-native Issue Forms and pull-request templates into deterministic typed contracts, validates structured input, renders canonical artifacts, and governs owned GitHub mutations.",
-      "status": "Active governed CLI",
-      "owns": [
-        "Typed contracts derived from native Issue/PR templates",
-        "Structured validation, canonical rendering, and governed mutations",
-        "Canonical artifact reads, checks, normalization, edit, and sync",
-        "Transparent passthrough to real gh for commands outside its authority"
-      ],
-      "doesNotOwn": [
-        "Physical Git/worktree/session ownership",
-        "Generic GitHub search or token-efficient repository summarization",
-        "Coding-agent orchestration or semantic source projection"
-      ],
+      "summary": {
+        "en": "Compiles repository-native Issue Forms and pull-request templates into deterministic typed contracts, validates structured input, renders canonical artifacts, and governs owned GitHub mutations.",
+        "ja": "リポジトリネイティブのIssueフォームとPull Requestテンプレートを決定的な型付き契約へコンパイルし、構造化入力を検証し、正規アーティファクトを描画し、所有するGitHub変更を統制します。"
+      },
+      "status": {
+        "en": "Active governed CLI",
+        "ja": "アクティブな統制CLI"
+      },
+      "owns": {
+        "en": [
+          "Typed contracts derived from native Issue/PR templates",
+          "Structured validation, canonical rendering, and governed mutations",
+          "Canonical artifact reads, checks, normalization, edit, and sync",
+          "Transparent passthrough to real gh for commands outside its authority"
+        ],
+        "ja": [
+          "ネイティブIssue/PRテンプレートから導出された型付き契約",
+          "構造化検証、正規描画、統制された変更",
+          "正規アーティファクトの読み取り、チェック、正規化、編集、同期",
+          "権限外のコマンドを実体のghへ透過的にパススルーする経路"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Physical Git/worktree/session ownership",
+          "Generic GitHub search or token-efficient repository summarization",
+          "Coding-agent orchestration or semantic source projection"
+        ],
+        "ja": [
+          "物理Git/worktree/sessionの所有権",
+          "汎用GitHub検索またはトークン効率を意図したリポジトリ要約",
+          "コーディングエージェントのオーケストレーションまたは意味ソース投影"
+        ]
+      },
       "relationships": [
         {
           "product": "mottainai",
           "type": "serves",
-          "label": "Supplies governed GitHub mutation authority to orchestration"
+          "label": {
+            "en": "Supplies governed GitHub mutation authority to orchestration",
+            "ja": "オーケストレーションへ統制されたGitHub変更の権限を提供"
+          }
         },
         {
           "product": "nawabari",
           "type": "separates-from",
-          "label": "Keeps provider governance separate from physical Git authority"
+          "label": {
+            "en": "Keeps provider governance separate from physical Git authority",
+            "ja": "プロバイダーのガバナンスを物理Gitの権限から分離"
+          }
         },
         {
           "product": "majiwari",
           "type": "serves",
-          "label": "Is wrapped as a governed MCP adapter for remote exposure"
+          "label": {
+            "en": "Is wrapped as a governed MCP adapter for remote exposure",
+            "ja": "リモート公開向けの統制MCPアダプターとしてラップされる"
+          }
         }
       ]
     },
@@ -120,31 +218,60 @@
       "id": "suzukuri",
       "order": 40,
       "name": "Suzukuri",
-      "role": "Deterministic bounded semantic view engine",
+      "role": {
+        "en": "Deterministic bounded semantic view engine",
+        "ja": "決定的で境界付きの意味ビューエンジン"
+      },
       "repository": "https://github.com/yohn-jp/suzukuri",
       "documentation": "https://github.com/yohn-jp/suzukuri#readme",
-      "summary": "Projects explicit source adapters and semantic contracts into bounded views with deterministic provenance, completeness, loss metadata, and rendering.",
-      "status": "Active v0 semantic-view engine",
-      "owns": [
-        "Deterministic source decoding and semantic-contract validation",
-        "Explicit adapter/view selection and bounded projection",
-        "Projection provenance, completeness, loss semantics, and rendering"
-      ],
-      "doesNotOwn": [
-        "Task classification, orchestration, or execution policy",
-        "Source lifetime, persistent source storage, or network/model services",
-        "Canonical repository semantic authority"
-      ],
+      "summary": {
+        "en": "Projects explicit source adapters and semantic contracts into bounded views with deterministic provenance, completeness, loss metadata, and rendering.",
+        "ja": "明示的なソースアダプターと意味契約を、決定的なプロヴナンス、完全性、損失メタデータ、描画を伴う境界付きビューへ投影します。"
+      },
+      "status": {
+        "en": "Active v0 semantic-view engine",
+        "ja": "アクティブなv0意味ビューエンジン"
+      },
+      "owns": {
+        "en": [
+          "Deterministic source decoding and semantic-contract validation",
+          "Explicit adapter/view selection and bounded projection",
+          "Projection provenance, completeness, loss semantics, and rendering"
+        ],
+        "ja": [
+          "決定的なソースデコードと意味契約の検証",
+          "明示的なアダプター/ビュー選択と境界付き投影",
+          "投影のプロヴナンス、完全性、損失の意味論、描画"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Task classification, orchestration, or execution policy",
+          "Source lifetime, persistent source storage, or network/model services",
+          "Canonical repository semantic authority"
+        ],
+        "ja": [
+          "タスク分類、オーケストレーション、実行ポリシー",
+          "ソースのライフタイム、永続ソースストレージ、ネットワーク/モデルサービス",
+          "正規のリポジトリ意味権限"
+        ]
+      },
       "relationships": [
         {
           "product": "mottainai",
           "type": "complements",
-          "label": "Provides a bounded semantic projection boundary beside orchestration"
+          "label": {
+            "en": "Provides a bounded semantic projection boundary beside orchestration",
+            "ja": "オーケストレーションの隣に境界付き意味投影の境界を提供"
+          }
         },
         {
           "product": "wabachi",
           "type": "projects-from",
-          "label": "Remains a projection layer distinct from semantic authority"
+          "label": {
+            "en": "Remains a projection layer distinct from semantic authority",
+            "ja": "意味権限とは異なる投影レイヤーとして留まる"
+          }
         }
       ]
     },
@@ -152,32 +279,62 @@
       "id": "wabachi",
       "order": 50,
       "name": "Wabachi",
-      "role": "Repository semantic authority and provider-evidence programme",
+      "role": {
+        "en": "Repository semantic authority and provider-evidence programme",
+        "ja": "リポジトリ意味権限とプロバイダー証拠プログラム"
+      },
       "repository": "https://github.com/yohn-jp/wabachi",
       "documentation": "https://github.com/yohn-jp/wabachi/issues/5",
-      "summary": "Early-stage semantic-authority work focused on immutable provider evidence, provenance-preserving observations, explicit entity correlation, and evidence-driven canonical repository semantics.",
-      "status": "Early architecture and provider-evidence programme",
-      "owns": [
-        "Intended repository semantic-authority boundary",
-        "Provider execution evidence and provenance-preserving observations",
-        "Explicit correlation, ambiguity, and derived semantic fact modelling"
-      ],
-      "doesNotOwn": [
-        "Agent orchestration or context-window projection",
-        "Physical Git/worktree/session authority",
-        "GitHub Issue/PR governance",
-        "Provider output as canonical truth merely because a producer emitted it"
-      ],
+      "summary": {
+        "en": "Early-stage semantic-authority work focused on immutable provider evidence, provenance-preserving observations, explicit entity correlation, and evidence-driven canonical repository semantics.",
+        "ja": "不変のプロバイダー証拠、プロヴナンスを保持した観測、明示的なエンティティ相関、証拠駆動の正規リポジトリ意味論に取り組む初期段階の意味権限プロジェクトです。"
+      },
+      "status": {
+        "en": "Early architecture and provider-evidence programme",
+        "ja": "初期アーキテクチャとプロバイダー証拠プログラム"
+      },
+      "owns": {
+        "en": [
+          "Intended repository semantic-authority boundary",
+          "Provider execution evidence and provenance-preserving observations",
+          "Explicit correlation, ambiguity, and derived semantic fact modelling"
+        ],
+        "ja": [
+          "想定するリポジトリ意味権限の境界",
+          "プロバイダー実行証拠とプロヴナンスを保持した観測",
+          "明示的な相関、曖昧性、導出された意味事実のモデル化"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Agent orchestration or context-window projection",
+          "Physical Git/worktree/session authority",
+          "GitHub Issue/PR governance",
+          "Provider output as canonical truth merely because a producer emitted it"
+        ],
+        "ja": [
+          "エージェントのオーケストレーションまたはコンテキストウィンドウ投影",
+          "物理Git/worktree/sessionの権限",
+          "GitHub Issue/PRガバナンス",
+          "生成者が出力したというだけでプロバイダー出力を正規の真実とすること"
+        ]
+      },
       "relationships": [
         {
           "product": "suzukuri",
           "type": "separates-from",
-          "label": "Keeps semantic authority distinct from bounded presentation views"
+          "label": {
+            "en": "Keeps semantic authority distinct from bounded presentation views",
+            "ja": "意味権限を境界付きプレゼンテーションビューから分離"
+          }
         },
         {
           "product": "mottainai",
           "type": "adjacent-to",
-          "label": "Keeps semantic authority separate from execution orchestration"
+          "label": {
+            "en": "Keeps semantic authority separate from execution orchestration",
+            "ja": "意味権限を実行オーケストレーションから分離"
+          }
         }
       ]
     },
@@ -185,27 +342,54 @@
       "id": "majiwari",
       "order": 60,
       "name": "Majiwari",
-      "role": "Deterministic MCP adapter gateway for remote agent exposure",
+      "role": {
+        "en": "Deterministic MCP adapter gateway for remote agent exposure",
+        "ja": "リモートエージェント公開向けの決定的MCPアダプターゲートウェイ"
+      },
       "repository": "https://github.com/yohn-jp/majiwari",
       "documentation": "https://github.com/yohn-jp/majiwari#readme",
-      "summary": "Wraps deterministic CLI/API tools such as Alibaba OpenCodeReview and Inari as stdio MCP adapters, and exposes any of them remotely to a host LLM (ChatGPT) through a generic transport gateway and a Cloudflare Access-protected Worker.",
-      "status": "Active dogfood · pre-1.0",
-      "owns": [
-        "Deterministic stdio MCP adapters wrapping fixed CLI executables",
-        "Generic stdio MCP -> Streamable HTTP transport gateway with no adapter-specific logic",
-        "Cloudflare Tunnel/Worker/Access Managed OAuth exposure of the gateway to ChatGPT",
-        "Resident local runtime composing multiple trusted adapters on one loopback ingress"
-      ],
-      "doesNotOwn": [
-        "Code review reasoning, Issue/PR template governance rules, or any other wrapped tool's domain logic",
-        "Physical Git/worktree/session authority or GitHub mutation semantics beyond translating adapter calls",
-        "Coding-agent orchestration or workflow state"
-      ],
+      "summary": {
+        "en": "Wraps deterministic CLI/API tools such as Alibaba OpenCodeReview and Inari as stdio MCP adapters, and exposes any of them remotely to a host LLM (ChatGPT) through a generic transport gateway and a Cloudflare Access-protected Worker.",
+        "ja": "Alibaba OpenCodeReviewやInariなどの決定的なCLI/APIツールをstdio MCPアダプターとしてラップし、汎用トランスポートゲートウェイとCloudflare Accessで保護されたWorkerを通じてホストLLM（ChatGPT）へリモート公開します。"
+      },
+      "status": {
+        "en": "Active dogfood · pre-1.0",
+        "ja": "アクティブなdogfood · 1.0未満"
+      },
+      "owns": {
+        "en": [
+          "Deterministic stdio MCP adapters wrapping fixed CLI executables",
+          "Generic stdio MCP -> Streamable HTTP transport gateway with no adapter-specific logic",
+          "Cloudflare Tunnel/Worker/Access Managed OAuth exposure of the gateway to ChatGPT",
+          "Resident local runtime composing multiple trusted adapters on one loopback ingress"
+        ],
+        "ja": [
+          "固定CLI実行ファイルをラップする決定的なstdio MCPアダプター",
+          "アダプター固有ロジックを持たない汎用stdio MCP -> Streamable HTTPトランスポートゲートウェイ",
+          "Cloudflare Tunnel/Worker/Access Managed OAuthによるChatGPTへのゲートウェイ公開",
+          "複数の信頼されたアダプターを1つのloopback入口で構成する常駐ローカルランタイム"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Code review reasoning, Issue/PR template governance rules, or any other wrapped tool's domain logic",
+          "Physical Git/worktree/session authority or GitHub mutation semantics beyond translating adapter calls",
+          "Coding-agent orchestration or workflow state"
+        ],
+        "ja": [
+          "コードレビューの推論、Issue/PRテンプレートのガバナンス規則、その他のラップ対象ツールのドメインロジック",
+          "物理Git/worktree/sessionの権限、またはアダプター呼び出しの変換を超えるGitHub変更の意味論",
+          "コーディングエージェントのオーケストレーションまたはワークフロー状態"
+        ]
+      },
       "relationships": [
         {
           "product": "inari",
           "type": "delegates-to",
-          "label": "Wraps gh-inari as a governed MCP adapter, translating calls without reimplementing governance"
+          "label": {
+            "en": "Wraps gh-inari as a governed MCP adapter, translating calls without reimplementing governance",
+            "ja": "ガバナンスを再実装せず呼び出しを変換し、gh-inariを統制MCPアダプターとしてラップ"
+          }
         }
       ]
     }
