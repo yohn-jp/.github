@@ -16,7 +16,7 @@ on:
       node-version:
         description: Node.js version used across all jobs.
         type: string
-        default: "22"
+        default: "24"
       committed-dist:
         description: >-
           Verify the committed dist/ directory is byte-identical to a fresh

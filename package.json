@@ -5,7 +5,7 @@
   "description": "Organization-wide GitHub metadata defaults, reusable workflows, and metadata validation for yohn-jp repositories.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dashboard:build": "node scripts/build-dashboard.mjs",
