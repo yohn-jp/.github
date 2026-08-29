@@ -108,14 +108,15 @@ function isRateLimitedError(error) {
 
 function isPermissionError(error) {
   const status = errorStatus(error);
-  if ([401, 403, 404].includes(status) && !isRateLimitedError(error)) {
-    return true;
-  }
-  return errorChain(error).some((candidate) =>
+  const explicitPermissionEvidence = errorChain(error).some((candidate) =>
     /bad credentials|insufficient.*permission|permission.*denied|requires authentication|resource not accessible by integration/iu.test(
       [candidate?.message, candidate?.details?.stderr].filter(Boolean).join(" ")
     )
   );
+  if (status === 401) return true;
+  if (status === 403) return !isRateLimitedError(error);
+  if (status === 404) return explicitPermissionEvidence;
+  return explicitPermissionEvidence;
 }
 
 export function governanceFailureReason(error) {

@@ -55,6 +55,48 @@ test("governance preflight distinguishes insufficient permissions", async () => 
   assert.equal(result.diagnostics[0].status, 403);
 });
 
+test("governance preflight treats a missing 404 source as an Inari contract failure", async () => {
+  const result = await preflightIssueGovernance({
+    repository,
+    token: "installation-token",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/repos/yohn-jp/example")) {
+        return response({ default_branch: "main" });
+      }
+      return response({ message: "Not Found" }, 404);
+    }
+  });
+
+  assert.equal(result.status, "unavailable");
+  assert.equal(
+    result.reason,
+    GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE
+  );
+  assert.equal(result.diagnostics[0].code, "INARI_CONTRACT_UNAVAILABLE");
+  assert.equal(result.diagnostics[0].status, 404);
+});
+
+test("governance preflight recognizes explicit permission evidence in a 404", async () => {
+  const result = await preflightIssueGovernance({
+    repository,
+    token: "installation-token",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/repos/yohn-jp/example")) {
+        return response({ default_branch: "main" });
+      }
+      return response(
+        { message: "Resource not accessible by integration" },
+        404
+      );
+    }
+  });
+
+  assert.equal(result.status, "unavailable");
+  assert.equal(result.reason, GOVERNANCE_REASON_CODES.INSUFFICIENT_PERMISSIONS);
+  assert.equal(result.diagnostics[0].code, "INSUFFICIENT_PERMISSIONS");
+  assert.equal(result.diagnostics[0].status, 404);
+});
+
 test("governance preflight classifies contract blob permission failures", async () => {
   const result = await preflightIssueGovernance({
     repository,
