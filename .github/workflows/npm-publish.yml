@@ -15,11 +15,11 @@ on:
       node-version:
         description: Node.js version used for build/test/publish.
         type: string
-        default: "22"
+        default: "24"
       smoke-test-node-versions:
         description: Comma-separated Node.js versions to smoke-test the packed tarball on.
         type: string
-        default: "22,24"
+        default: "24"
       npm-cli-version:
         description: >-
           Minimum npm CLI version required for OIDC Trusted Publishing,
