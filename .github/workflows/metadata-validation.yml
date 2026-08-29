@@ -104,6 +104,12 @@ jobs:
         shell: bash
         run: |
           if [ -d .github/workflows ]; then
+            # -ignore suppresses a known actionlint schema gap: job.workflow_repository,
+            # job.workflow_sha, and job.workflow_ref are real, GA `job` context
+            # properties (used above to resolve the exact provider revision
+            # selected by the caller) that actionlint's embedded context schema does
+            # not yet include as of v1.7.12 (rhysd/actionlint#647, fix in
+            # progress as rhysd/actionlint#707).
             actionlint -color \
               -ignore 'property "workflow_repository" is not defined' \
               -ignore 'property "workflow_sha" is not defined' \
