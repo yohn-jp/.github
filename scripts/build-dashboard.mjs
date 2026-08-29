@@ -57,7 +57,9 @@ export async function buildDashboard({
   fetchImpl = globalThis.fetch,
   token = resolvePortalCollectionToken(),
   now,
-  governanceImpl
+  governanceImpl,
+  governancePreflight,
+  governancePreflightImpl
 } = {}) {
   const [registry, portalTemplate] = await Promise.all([
     loadPortalRegistry(registryPath),
@@ -66,7 +68,15 @@ export async function buildDashboard({
   const config = dashboardConfigFromRegistry(registry);
   const productCatalog = productCatalogFromRegistry(registry);
   const [rawDashboard, productDetails] = await Promise.all([
-    collectDashboardData({ config, fetchImpl, token, now, governanceImpl }),
+    collectDashboardData({
+      config,
+      fetchImpl,
+      token,
+      now,
+      governanceImpl,
+      governancePreflight,
+      governancePreflightImpl
+    }),
     loadProductDetails(detailsPath, productCatalog)
   ]);
   const data = await hydrateDashboardPullRequests({

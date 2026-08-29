@@ -14,6 +14,7 @@ const elements = {
   generatedAt: document.querySelector("#generated-at"),
   status: document.querySelector("#dataset-status"),
   metrics: document.querySelector("#governance-metrics"),
+  diagnostics: document.querySelector("#collection-diagnostics"),
   repositories: document.querySelector("#repository-health"),
   violations: document.querySelector("#violation-summary"),
   invalidIssues: document.querySelector("#invalid-issues"),
@@ -48,31 +49,74 @@ function rate(value) {
       });
 }
 
+const diagnosticMessageKeys = Object.freeze({
+  "authentication-unavailable":
+    "governance.diagnostic.authentication-unavailable",
+  "insufficient-permissions": "governance.diagnostic.insufficient-permissions",
+  "inari-contract-unavailable":
+    "governance.diagnostic.inari-contract-unavailable",
+  "evaluator-failed": "governance.diagnostic.evaluator-failed",
+  "repository-source-unavailable":
+    "governance.diagnostic.repository-source-unavailable",
+  unknown: "governance.diagnostic.unknown"
+});
+
+function diagnosticLabel(reason) {
+  const key = diagnosticMessageKeys[reason];
+  return key ? t(key) : text(reason ?? "unknown");
+}
+
+function governanceCollectionStatus(health) {
+  const status = health?.collection?.status;
+  if (
+    status === "healthy" ||
+    status === "degraded" ||
+    status === "unavailable"
+  ) {
+    return status;
+  }
+  return health?.snapshot?.complete ? "healthy" : "degraded";
+}
+
 function showStatus(dashboard, health) {
   const snapshot = health?.snapshot;
-  const unavailableRepositories = snapshot?.unavailableRepositories ?? 0;
-  const unknownIssues =
-    snapshot?.unknownIssues ?? health?.overall?.unknown ?? 0;
-  const complete = Boolean(snapshot?.complete);
+  const collection = health?.collection;
+  const collectionStatus = governanceCollectionStatus(health);
   const status =
     dashboard.status === "failed"
       ? "failed"
-      : complete
+      : collectionStatus === "healthy"
         ? "complete"
-        : "partial";
+        : collectionStatus === "unavailable"
+          ? "unavailable"
+          : "partial";
   elements.status.className = `governance-status-banner ${status}`;
   elements.status.replaceChildren(
-    node("p", "governance-status-title", t(`governance.snapshot.${status}`)),
+    node(
+      "p",
+      "governance-status-title",
+      dashboard.status === "failed"
+        ? t("governance.snapshot.failed")
+        : t(`governance.collection.status.${collectionStatus}`)
+    ),
     node(
       "p",
       "governance-status-detail",
-      t("governance.snapshot.detail", {
-        available: snapshot?.availableRepositories ?? 0,
-        repositories:
-          snapshot?.repositoryCount ?? dashboard.metrics.repositoryCount,
-        unavailable: unavailableRepositories,
-        unknown: unknownIssues
-      })
+      collection
+        ? t("governance.collection.detail", {
+            healthy: collection.healthyRepositories ?? 0,
+            degraded: collection.degradedRepositories ?? 0,
+            unavailable: collection.unavailableRepositories ?? 0,
+            issues:
+              collection.unavailableIssues ?? health?.overall?.unknown ?? 0
+          })
+        : t("governance.snapshot.detail", {
+            available: snapshot?.availableRepositories ?? 0,
+            repositories:
+              snapshot?.repositoryCount ?? dashboard.metrics.repositoryCount,
+            unavailable: snapshot?.unavailableRepositories ?? 0,
+            unknown: snapshot?.unknownIssues ?? health?.overall?.unknown ?? 0
+          })
     )
   );
   elements.generatedAt.textContent = dashboard.generatedAt
@@ -101,29 +145,40 @@ function renderMetrics(overall) {
 }
 
 function renderRepository(repository) {
-  const unavailable = repository.fetchStatus !== "ok";
+  const governanceStatus =
+    repository.governance?.status ??
+    (repository.fetchStatus === "ok" ? "healthy" : "unavailable");
+  const unavailable = governanceStatus === "unavailable";
   const row = node(
     "article",
-    `governance-repository${unavailable ? " unavailable" : ""}`
+    `governance-repository governance-${governanceStatus}${
+      unavailable ? " unavailable" : ""
+    }`
   );
   const name = node("div", "governance-repository-name");
   name.append(link(repository.url, repository.fullName));
   row.append(name);
-  if (unavailable) {
-    row.append(
-      node(
-        "span",
-        "governance-repository-meta",
-        t("governance.repository.unavailable")
-      )
-    );
-    row.append(
-      node(
-        "span",
-        "governance-repository-meta",
-        text(repository.error?.message)
-      )
-    );
+  const statusMeta = node(
+    "span",
+    "governance-repository-meta",
+    t(`governance.repository.collection.${governanceStatus}`)
+  );
+  row.append(statusMeta);
+  const diagnostics = repository.governance?.diagnostics ?? [];
+  if (diagnostics.length > 0 || repository.fetchStatus !== "ok") {
+    const detail = node("span", "governance-repository-meta");
+    const messages = diagnostics.map((diagnostic) => {
+      const label = diagnosticLabel(diagnostic.reason);
+      const message = text(diagnostic.message);
+      return message === label ? label : `${label}: ${message}`;
+    });
+    if (repository.fetchStatus !== "ok" && repository.error?.message) {
+      messages.push(repository.error.message);
+    }
+    detail.textContent = messages.join(" ");
+    row.append(detail);
+  }
+  if (repository.fetchStatus !== "ok") {
     row.append(node("span", "governance-rate", rate(null)));
     return row;
   }
@@ -171,6 +226,38 @@ function renderRepositories(repositories) {
     return;
   }
   elements.repositories.replaceChildren(...repositories.map(renderRepository));
+}
+
+function renderDiagnostics(collection) {
+  const causes = collection?.causes ?? [];
+  if (!Array.isArray(causes) || causes.length === 0) {
+    elements.diagnostics.replaceChildren(
+      node("p", "governance-empty", t("governance.diagnostics.empty"))
+    );
+    return;
+  }
+  elements.diagnostics.replaceChildren(
+    ...causes.map((cause) => {
+      const item = node("article", "governance-diagnostic");
+      const heading = node("div", "governance-diagnostic-heading");
+      heading.append(
+        node("strong", "", diagnosticLabel(cause.reason)),
+        node(
+          "span",
+          "governance-diagnostic-count",
+          t("governance.diagnostic.count", {
+            repositories: cause.repositoryCount ?? 0,
+            issues: cause.issueCount ?? 0
+          })
+        )
+      );
+      item.append(heading);
+      for (const message of cause.messages ?? []) {
+        item.append(node("p", "governance-diagnostic-message", message));
+      }
+      return item;
+    })
+  );
 }
 
 function renderViolationGroup(kind, value, count) {
@@ -222,7 +309,13 @@ function renderIssueList(container, issues, emptyKey) {
         node(
           "span",
           "governance-issue-meta",
-          `${issue.repository.fullName}${t("common.separator")}${text(issue.reason)}`
+          `${issue.repository.fullName}${t("common.separator")}${diagnosticLabel(
+            issue.diagnostics?.[0]?.reason ?? issue.reason
+          )}${
+            issue.diagnostics?.[0]?.message
+              ? `: ${issue.diagnostics[0].message}`
+              : ""
+          }`
         )
       );
       return item;
@@ -237,6 +330,7 @@ function renderDashboard(dashboard) {
   }
   showStatus(dashboard, health);
   renderMetrics(health.overall);
+  renderDiagnostics(health.collection);
   renderRepositories(health.repositories);
   renderViolations(health.violations);
   renderIssueList(

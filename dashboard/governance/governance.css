@@ -46,6 +46,7 @@
 }
 
 .governance-status-banner.failed,
+.governance-status-banner.unavailable,
 .governance-status-banner.load-error {
   border-color: #fecdca;
   background: var(--danger-soft);
@@ -119,6 +120,37 @@
   font-size: 0.9rem;
 }
 
+.collection-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.governance-diagnostic {
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  padding: 14px 16px;
+}
+
+.governance-diagnostic-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.governance-diagnostic-count,
+.governance-diagnostic-message {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.governance-diagnostic-message {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
 .repository-health,
 .violation-summary {
   display: grid;
@@ -143,6 +175,14 @@
 
 .governance-repository.unavailable {
   background: var(--warning-soft);
+}
+
+.governance-repository.governance-degraded {
+  background: var(--warning-soft);
+}
+
+.governance-repository.governance-unavailable {
+  background: var(--danger-soft);
 }
 
 .governance-repository-name {

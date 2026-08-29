@@ -1,4 +1,9 @@
-export const GOVERNANCE_HEALTH_SCHEMA_VERSION = 1;
+import {
+  GOVERNANCE_REASON_CODES,
+  GOVERNANCE_COLLECTION_STATES
+} from "./inari-governance.mjs";
+
+export const GOVERNANCE_HEALTH_SCHEMA_VERSION = 2;
 export const GOVERNANCE_STATES = Object.freeze(["valid", "invalid", "unknown"]);
 
 function text(value, fallback = "") {
@@ -46,6 +51,74 @@ function repositoryKey(repository) {
   return text(repository?.fullName).toLowerCase();
 }
 
+function diagnosticCode(reason) {
+  switch (reason) {
+    case GOVERNANCE_REASON_CODES.AUTHENTICATION_UNAVAILABLE:
+      return "AUTHENTICATION_UNAVAILABLE";
+    case GOVERNANCE_REASON_CODES.INSUFFICIENT_PERMISSIONS:
+      return "INSUFFICIENT_PERMISSIONS";
+    case GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE:
+      return "INARI_CONTRACT_UNAVAILABLE";
+    case GOVERNANCE_REASON_CODES.EVALUATOR_FAILED:
+      return "EVALUATOR_FAILED";
+    case GOVERNANCE_REASON_CODES.REPOSITORY_SOURCE_UNAVAILABLE:
+      return "REPOSITORY_SOURCE_UNAVAILABLE";
+    default:
+      return "GOVERNANCE_UNAVAILABLE";
+  }
+}
+
+function diagnosticMessage(reason) {
+  switch (reason) {
+    case GOVERNANCE_REASON_CODES.AUTHENTICATION_UNAVAILABLE:
+      return "Portal collection authentication is unavailable.";
+    case GOVERNANCE_REASON_CODES.INSUFFICIENT_PERMISSIONS:
+      return "The portal collection credential lacks the required read permissions.";
+    case GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE:
+      return "Inari governance contract discovery or read failed.";
+    case GOVERNANCE_REASON_CODES.EVALUATOR_FAILED:
+      return "The Issue governance evaluator failed unexpectedly.";
+    case GOVERNANCE_REASON_CODES.REPOSITORY_SOURCE_UNAVAILABLE:
+      return "Repository source data is unavailable.";
+    default:
+      return "Governance evidence is unavailable for an unspecified reason.";
+  }
+}
+
+function normalizeDiagnostic(diagnostic, fallbackReason, fallbackStage) {
+  const reason = text(diagnostic?.reason, fallbackReason);
+  return {
+    code: text(diagnostic?.code, diagnosticCode(reason)),
+    reason,
+    stage: text(diagnostic?.stage, fallbackStage),
+    message: text(diagnostic?.message, diagnosticMessage(reason)),
+    ...(Number.isInteger(diagnostic?.status)
+      ? { status: diagnostic.status }
+      : {}),
+    ...(text(diagnostic?.path)
+      ? { path: text(diagnostic.path).slice(0, 240) }
+      : {}),
+    ...(text(diagnostic?.operation)
+      ? { operation: text(diagnostic.operation).slice(0, 240) }
+      : {})
+  };
+}
+
+function diagnosticsFor(value, fallbackReason, fallbackStage) {
+  const source = value?.governance ?? value;
+  const diagnostics = Array.isArray(source?.diagnostics)
+    ? source.diagnostics
+        .filter((diagnostic) => diagnostic && typeof diagnostic === "object")
+        .map((diagnostic) =>
+          normalizeDiagnostic(diagnostic, fallbackReason, fallbackStage)
+        )
+    : [];
+  if (diagnostics.length > 0) return diagnostics;
+  const reason = text(source?.reason, fallbackReason);
+  if (!reason) return [];
+  return [normalizeDiagnostic({ reason }, reason, fallbackStage)];
+}
+
 function issueReference(issue, status) {
   const repository = issue?.repository ?? {};
   const fullName = text(repository.fullName, "unknown/unknown");
@@ -68,6 +141,11 @@ function issueReference(issue, status) {
     status,
     classification: text(issue?.governance?.classification, "unknown"),
     reason: issue?.governance?.reason ?? null,
+    diagnostics: diagnosticsFor(
+      issue,
+      text(issue?.governance?.reason, "unknown"),
+      "evaluation"
+    ),
     violations: Array.isArray(issue?.governance?.violations)
       ? issue.governance.violations
       : []
@@ -107,8 +185,37 @@ function aggregateViolations(issues) {
   };
 }
 
+function repositoryGovernance(repository) {
+  const sourceAvailable = repository?.fetchStatus === "ok";
+  const configuredStatus = repository?.governance?.status;
+  const status = GOVERNANCE_COLLECTION_STATES.includes(configuredStatus)
+    ? configuredStatus
+    : sourceAvailable
+      ? "healthy"
+      : "unavailable";
+  const diagnostics = diagnosticsFor(
+    repository,
+    sourceAvailable
+      ? status === "unavailable"
+        ? GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE
+        : ""
+      : GOVERNANCE_REASON_CODES.REPOSITORY_SOURCE_UNAVAILABLE,
+    sourceAvailable ? "preflight" : "repository"
+  );
+  return {
+    status,
+    availability: status,
+    available: status !== "unavailable",
+    reason: diagnostics[0]?.reason ?? null,
+    diagnostics,
+    revision: repository?.governance?.revision ?? null,
+    contractCount: repository?.governance?.contractCount ?? 0
+  };
+}
+
 function repositoryHealth(repository, issues) {
   const available = repository?.fetchStatus === "ok";
+  const governance = repositoryGovernance(repository);
   if (!available) {
     return {
       id: repository?.id ?? `repository:${repositoryKey(repository)}`,
@@ -116,6 +223,7 @@ function repositoryHealth(repository, issues) {
       fullName: text(repository?.fullName, "unknown/unknown"),
       url: text(repository?.url),
       fetchStatus: repository?.fetchStatus ?? "unavailable",
+      governance,
       valid: null,
       invalid: null,
       unknown: null,
@@ -134,12 +242,98 @@ function repositoryHealth(repository, issues) {
     fullName: text(repository?.fullName, "unknown/unknown"),
     url: text(repository?.url),
     fetchStatus: "ok",
+    governance,
     ...aggregate,
     issueCount: Number.isInteger(repository?.openIssueCount)
       ? repository.openIssueCount
       : aggregate.total,
     error: null
   };
+}
+
+function addUnavailableCause(causes, diagnostic, kind) {
+  const reason = text(diagnostic?.reason, "unknown");
+  let cause = causes.get(reason);
+  if (!cause) {
+    cause = {
+      reason,
+      code: text(diagnostic?.code, diagnosticCode(reason)),
+      issueCount: 0,
+      repositoryCount: 0,
+      count: 0,
+      messages: []
+    };
+    causes.set(reason, cause);
+  }
+  if (kind === "issue") cause.issueCount += 1;
+  if (kind === "repository") cause.repositoryCount += 1;
+  cause.count = cause.issueCount + cause.repositoryCount;
+  const message = text(diagnostic?.message, diagnosticMessage(reason));
+  if (
+    message &&
+    !cause.messages.includes(message) &&
+    cause.messages.length < 3
+  ) {
+    cause.messages.push(message);
+  }
+}
+
+function unavailableCauses(issues, repositoryTotals) {
+  const causes = new Map();
+  for (const repository of repositoryTotals) {
+    const repositoryReasons = new Set();
+    for (const diagnostic of repository.governance?.diagnostics ?? []) {
+      if (repository.governance.status !== "healthy") {
+        const reason = text(diagnostic?.reason, "unknown");
+        if (repositoryReasons.has(reason)) continue;
+        repositoryReasons.add(reason);
+        addUnavailableCause(causes, diagnostic, "repository");
+      }
+    }
+  }
+  for (const issue of issues) {
+    if (governanceState(issue) !== "unknown") continue;
+    const issueReasons = new Set();
+    const diagnostics = diagnosticsFor(
+      issue,
+      text(issue?.governance?.reason, "unknown"),
+      "evaluation"
+    );
+    for (const diagnostic of diagnostics) {
+      const reason = text(diagnostic?.reason, "unknown");
+      if (issueReasons.has(reason)) continue;
+      issueReasons.add(reason);
+      addUnavailableCause(causes, diagnostic, "issue");
+    }
+  }
+  return [...causes.values()].sort(
+    (left, right) =>
+      right.count - left.count || left.reason.localeCompare(right.reason)
+  );
+}
+
+function collectionStatus(repositoryTotals, unknownIssues) {
+  const counts = {
+    healthy: repositoryTotals.filter(
+      (repository) => repository.governance.status === "healthy"
+    ).length,
+    degraded: repositoryTotals.filter(
+      (repository) => repository.governance.status === "degraded"
+    ).length,
+    unavailable: repositoryTotals.filter(
+      (repository) => repository.governance.status === "unavailable"
+    ).length
+  };
+  if (
+    repositoryTotals.length === 0 ||
+    counts.unavailable === repositoryTotals.length
+  ) {
+    return { status: "unavailable", ...counts };
+  }
+  if (counts.unavailable > 0 || counts.degraded > 0 || unknownIssues > 0) {
+    return { status: "degraded", ...counts };
+  }
+  return { status: "healthy", ...counts };
 }
 
 /**
@@ -185,7 +379,8 @@ export function aggregateGovernanceHealth({
           fullName: first.fullName,
           url: first.url,
           fetchStatus: "ok",
-          openIssueCount: repositoryIssues.length
+          openIssueCount: repositoryIssues.length,
+          governance: { status: "healthy", diagnostics: [] }
         },
         repositoryIssues
       )
@@ -193,30 +388,41 @@ export function aggregateGovernanceHealth({
   }
 
   const overall = totals(countsFor(issues));
-  const unavailableRepositories = repositoryTotals.filter(
-    (repository) => repository.fetchStatus !== "ok"
-  ).length;
   const invalidIssues = issues
     .filter((issue) => governanceState(issue) === "invalid")
     .map((issue) => issueReference(issue, "invalid"));
   const unknownIssues = issues
     .filter((issue) => governanceState(issue) === "unknown")
     .map((issue) => issueReference(issue, "unknown"));
+  const collection = collectionStatus(repositoryTotals, unknownIssues.length);
+  const causes = unavailableCauses(issues, repositoryTotals);
+  const sourceUnavailableRepositories = repositoryTotals.filter(
+    (repository) => repository.fetchStatus !== "ok"
+  ).length;
 
   return {
     schemaVersion: GOVERNANCE_HEALTH_SCHEMA_VERSION,
     snapshot: {
       status: snapshotStatus,
+      governanceStatus: collection.status,
       repositoryCount: repositories.length,
       availableRepositories: repositories.filter(
         (repository) => repository.fetchStatus === "ok"
       ).length,
-      unavailableRepositories,
+      sourceUnavailableRepositories,
+      unavailableRepositories: collection.unavailable,
+      degradedRepositories: collection.degraded,
+      healthyRepositories: collection.healthy,
       unknownIssues: unknownIssues.length,
-      complete:
-        snapshotStatus === "complete" &&
-        unavailableRepositories === 0 &&
-        unknownIssues.length === 0
+      complete: snapshotStatus === "complete" && collection.status === "healthy"
+    },
+    collection: {
+      status: collection.status,
+      healthyRepositories: collection.healthy,
+      degradedRepositories: collection.degraded,
+      unavailableRepositories: collection.unavailable,
+      unavailableIssues: unknownIssues.length,
+      causes
     },
     overall,
     repositories: repositoryTotals,

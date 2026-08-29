@@ -223,6 +223,12 @@ const ENGLISH_MESSAGES = Object.freeze({
   "governance.snapshot.unavailable": "Governance snapshot unavailable",
   "governance.snapshot.detail":
     "{available} of {repositories} repositories have a source snapshot. {unknown} Issues have unknown governance and {unavailable} repositories have unavailable source data.",
+  "governance.collection.status.healthy": "Governance collection healthy",
+  "governance.collection.status.degraded": "Governance collection degraded",
+  "governance.collection.status.unavailable":
+    "Governance collection unavailable",
+  "governance.collection.detail":
+    "{healthy} healthy, {degraded} degraded, and {unavailable} unavailable repositories; {issues} Issues have unavailable governance evidence.",
   "governance.metrics.aria": "Governance compliance totals",
   "governance.metrics.valid": "valid Issues",
   "governance.metrics.invalid": "invalid Issues",
@@ -241,6 +247,25 @@ const ENGLISH_MESSAGES = Object.freeze({
   "governance.repository.rateLabel": "compliance of known evidence",
   "governance.repository.rateUnavailable": "Not calculable",
   "governance.repository.unavailable": "Governance data unavailable",
+  "governance.repository.collection.healthy": "Governance collection healthy",
+  "governance.repository.collection.degraded": "Governance collection degraded",
+  "governance.repository.collection.unavailable":
+    "Governance collection unavailable",
+  "governance.diagnostics.eyebrow": "Collection diagnostics",
+  "governance.diagnostics.title": "Why evidence is unavailable.",
+  "governance.diagnostics.empty": "No governance collection diagnostics.",
+  "governance.diagnostic.count":
+    "{repositories} repositories · {issues} Issues",
+  "governance.diagnostic.authentication-unavailable":
+    "Authentication unavailable",
+  "governance.diagnostic.insufficient-permissions":
+    "Insufficient GitHub App permissions",
+  "governance.diagnostic.inari-contract-unavailable":
+    "Inari contract discovery or read failed",
+  "governance.diagnostic.evaluator-failed": "Unexpected evaluator failure",
+  "governance.diagnostic.repository-source-unavailable":
+    "Repository source unavailable",
+  "governance.diagnostic.unknown": "Unknown governance cause",
   "governance.violations.eyebrow": "Violation profile",
   "governance.violations.title": "Common classes and codes.",
   "governance.violations.classification": "Classification",
@@ -540,6 +565,11 @@ const JAPANESE_MESSAGES = Object.freeze({
   "governance.snapshot.unavailable": "ガバナンススナップショット利用不可",
   "governance.snapshot.detail":
     "{repositories}リポジトリ中{available}件にソーススナップショットがあります。ガバナンス不明のIssueは{unknown}件、ソースデータ利用不可のリポジトリは{unavailable}件です。",
+  "governance.collection.status.healthy": "ガバナンス収集は正常です",
+  "governance.collection.status.degraded": "ガバナンス収集は縮退しています",
+  "governance.collection.status.unavailable": "ガバナンス収集は利用できません",
+  "governance.collection.detail":
+    "正常{healthy}件、縮退{degraded}件、利用不可{unavailable}件のリポジトリです。ガバナンス証拠を利用できないIssueは{issues}件です。",
   "governance.metrics.aria": "ガバナンス準拠の合計",
   "governance.metrics.valid": "有効なIssue",
   "governance.metrics.invalid": "無効なIssue",
@@ -558,6 +588,22 @@ const JAPANESE_MESSAGES = Object.freeze({
   "governance.repository.rateLabel": "既知の証拠における準拠率",
   "governance.repository.rateUnavailable": "計算不可",
   "governance.repository.unavailable": "ガバナンスデータ利用不可",
+  "governance.repository.collection.healthy": "ガバナンス収集は正常",
+  "governance.repository.collection.degraded": "ガバナンス収集は縮退",
+  "governance.repository.collection.unavailable": "ガバナンス収集は利用不可",
+  "governance.diagnostics.eyebrow": "収集診断",
+  "governance.diagnostics.title": "証拠を利用できない理由。",
+  "governance.diagnostics.empty": "ガバナンス収集の診断はありません。",
+  "governance.diagnostic.count":
+    "リポジトリ{repositories}件 · Issue {issues}件",
+  "governance.diagnostic.authentication-unavailable": "認証利用不可",
+  "governance.diagnostic.insufficient-permissions": "GitHub App権限不足",
+  "governance.diagnostic.inari-contract-unavailable":
+    "Inari契約の発見または読み取り失敗",
+  "governance.diagnostic.evaluator-failed": "予期しないevaluator失敗",
+  "governance.diagnostic.repository-source-unavailable":
+    "リポジトリソース利用不可",
+  "governance.diagnostic.unknown": "原因不明のガバナンス問題",
   "governance.violations.eyebrow": "違反プロファイル",
   "governance.violations.title": "共通する分類とコード。",
   "governance.violations.classification": "分類",
