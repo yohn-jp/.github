@@ -46,7 +46,7 @@ test("collects native dependency edges without inferring from prose", async () =
     fetchImpl,
     now: () => new Date("2026-08-23T00:00:00Z")
   });
-  assert.equal(data.status, "complete");
+  assert.equal(data.status, "partial");
   assert.equal(data.metrics.dependencyEdges, 1);
   assert.equal(data.metrics.dependencyDataUnavailable, 0);
   const issue1 = data.issues.find((issue) => issue.number === 1);

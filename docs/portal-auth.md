@@ -41,6 +41,35 @@ The Pages workflow uses the GitHub-owned `actions/create-github-app-token` actio
 
 If `PORTAL_APP_CLIENT_ID` is unset, token creation is skipped. If the client ID is configured but the private key or App installation is invalid, the workflow fails rather than silently substituting another credential.
 
+## Governance collection contract
+
+Issue governance is a separate operational capability from public Issue
+collection. Before evaluating any Issue, the build runs an Inari preflight for
+each repository: it authenticates, discovers the repository-native governance
+contract, and reads the trusted contract source. Per-Issue evaluation does not
+start when that preflight is unavailable.
+
+The portal does not treat anonymous access as sufficient for governance. Public
+REST Issue collection may run anonymously, but Inari's repository contract
+authority requires the authenticated collection token. A missing or blank
+`PORTAL_GITHUB_TOKEN` produces an unavailable governance collection and leaves
+every Issue `unknown` with `valid: null`; unknown evidence is never compliant.
+
+Operational diagnostics use stable reasons:
+
+- `authentication-unavailable` — no collection token was provided;
+- `insufficient-permissions` — the token cannot read the required repository
+  source or Issue;
+- `inari-contract-unavailable` — Inari contract discovery or trusted-source
+  read failed;
+- `evaluator-failed` — an unexpected per-Issue evaluator failure;
+- `repository-source-unavailable` — public repository/Issue collection failed.
+
+The generated `governanceHealth.collection` projection reports `healthy`,
+`degraded`, or `unavailable` repository collection, with cause counts and
+bounded diagnostic messages. The Governance page renders these causes and the
+repository-level state. It does not recreate Inari validation semantics.
+
 ## Runtime boundary
 
 The generated collection token is passed only to the build step as:
@@ -53,11 +82,22 @@ PORTAL_GITHUB_TOKEN
 
 The token is never copied into `site/`, browser JavaScript, product data, or dashboard JSON. Existing browser-credential isolation tests guard this boundary.
 
-## Expected degraded mode
+## Expected Pages behavior
 
-Without App credentials the site still deploys:
+When `PORTAL_APP_CLIENT_ID` is unset, the token step is skipped deliberately.
+The Pages build still publishes the public portal, but it must be visibly
+degraded:
 
 - public repository and open-Issue REST data may load within anonymous API limits;
 - native dependency REST data may load where public access permits;
 - Issue→PR GraphQL linkage reports `unavailable` because authentication is absent;
-- the dashboard reports a partial snapshot rather than treating missing relationship evidence as an empty authoritative set.
+- governance preflight reports `authentication-unavailable`, all governance
+  projections remain `unknown`/`valid: null`, and the Governance page shows the
+  unavailable cause;
+- the generated dashboard status is `partial`; missing governance evidence is
+  never silently presented as a complete snapshot.
+
+If the App client ID is configured but the private key, installation, or
+requested permissions are invalid, App-token creation fails and the Pages
+build fails. It never substitutes `GITHUB_TOKEN`, `GH_TOKEN`, a PAT, or an
+anonymous result for the required governance capability.

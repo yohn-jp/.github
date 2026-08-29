@@ -82,6 +82,15 @@ test("aggregates projected governance into three-state organization health", () 
     fullName: "yohn-jp/alpha",
     url: "https://github.com/yohn-jp/alpha",
     fetchStatus: "ok",
+    governance: {
+      status: "healthy",
+      availability: "healthy",
+      available: true,
+      reason: null,
+      diagnostics: [],
+      revision: null,
+      contractCount: 0
+    },
     valid: 1,
     invalid: 1,
     unknown: 1,

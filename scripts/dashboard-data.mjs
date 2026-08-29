@@ -1,13 +1,19 @@
 import {
   collectIssueGovernance,
-  createIssueGovernanceReader
+  createGovernanceDiagnostic,
+  createIssueGovernanceReader,
+  GOVERNANCE_COLLECTION_STATES,
+  GOVERNANCE_REASON_CODES,
+  governanceFailureReason,
+  preflightIssueGovernance,
+  unavailableGovernance
 } from "./inari-governance.mjs";
 import { aggregateGovernanceHealth } from "./governance-health.mjs";
 
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 
-export const DASHBOARD_SCHEMA_VERSION = 4;
+export const DASHBOARD_SCHEMA_VERSION = 5;
 
 function getHeader(headers, name) {
   if (!headers) return null;
@@ -197,7 +203,9 @@ async function fetchJson(url, { fetchImpl, token }) {
     "X-GitHub-Api-Version": API_VERSION,
     "User-Agent": "yohn-jp-issue-dashboard"
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (typeof token === "string" && token.trim() !== "") {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const response = await fetchImpl(url, { headers });
   const text = await response.text();
   let body = null;
@@ -260,6 +268,265 @@ function fallbackRepository(configured) {
   };
 }
 
+function repositoryGovernance(preflight, diagnostics = []) {
+  const preflightDiagnostics = Array.isArray(preflight?.diagnostics)
+    ? preflight.diagnostics
+    : [];
+  const combined = [...preflightDiagnostics, ...diagnostics];
+  const status =
+    preflight?.status === "unavailable"
+      ? "unavailable"
+      : combined.length > 0 || preflight?.status === "degraded"
+        ? "degraded"
+        : "healthy";
+  const uniqueDiagnostics = [];
+  const seen = new Set();
+  for (const diagnostic of combined) {
+    if (!diagnostic || typeof diagnostic !== "object") continue;
+    const key = JSON.stringify([
+      diagnostic.reason,
+      diagnostic.stage,
+      diagnostic.message,
+      diagnostic.path,
+      diagnostic.issue
+    ]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    uniqueDiagnostics.push(diagnostic);
+  }
+  return {
+    status,
+    availability: status,
+    available: status !== "unavailable",
+    reason: uniqueDiagnostics[0]?.reason ?? null,
+    diagnostics: uniqueDiagnostics,
+    revision: preflight?.revision ?? null,
+    contractCount: preflight?.contractCount ?? 0
+  };
+}
+
+function unavailableRepositoryGovernance(repository, error, token = "") {
+  const reason =
+    typeof token === "string" &&
+    token.trim() !== "" &&
+    governanceFailureReason(error) ===
+      GOVERNANCE_REASON_CODES.INSUFFICIENT_PERMISSIONS
+      ? GOVERNANCE_REASON_CODES.INSUFFICIENT_PERMISSIONS
+      : GOVERNANCE_REASON_CODES.REPOSITORY_SOURCE_UNAVAILABLE;
+  const diagnostic = createGovernanceDiagnostic({
+    reason,
+    stage: "repository",
+    repository: repository.fullName,
+    message: error?.message
+      ? `Repository source collection failed: ${String(error.message).slice(0, 400)}`
+      : undefined,
+    error
+  });
+  return repositoryGovernance({
+    status: "unavailable",
+    diagnostics: [diagnostic]
+  });
+}
+
+function healthyGovernancePreflight(repository) {
+  return {
+    authority: "Inari",
+    status: "healthy",
+    availability: "healthy",
+    available: true,
+    reason: null,
+    diagnostics: [],
+    revision: null,
+    contractCount: null,
+    repository: repository.fullName,
+    reader: null
+  };
+}
+
+function normalizeGovernancePreflight(result, repository) {
+  const status =
+    result?.status ?? (result?.available === false ? "unavailable" : "healthy");
+  if (!GOVERNANCE_COLLECTION_STATES.includes(status)) {
+    return {
+      ...healthyGovernancePreflight(repository),
+      status: "unavailable",
+      availability: "unavailable",
+      available: false,
+      reason: GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE,
+      diagnostics: [
+        createGovernanceDiagnostic({
+          reason: GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE,
+          stage: "preflight",
+          repository: repository.fullName,
+          message: "Governance preflight returned an invalid collection state."
+        })
+      ],
+      reader: null
+    };
+  }
+  const diagnostics = Array.isArray(result?.diagnostics)
+    ? result.diagnostics.filter(
+        (diagnostic) => diagnostic && typeof diagnostic === "object"
+      )
+    : [];
+  const resolvedDiagnostics =
+    status !== "healthy" && diagnostics.length === 0
+      ? [
+          createGovernanceDiagnostic({
+            reason:
+              result?.reason ??
+              GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE,
+            stage: "preflight",
+            repository: repository.fullName
+          })
+        ]
+      : diagnostics;
+  return {
+    ...result,
+    authority: result?.authority ?? "Inari",
+    status,
+    availability: status,
+    available: status !== "unavailable",
+    reason: result?.reason ?? resolvedDiagnostics[0]?.reason ?? null,
+    diagnostics: resolvedDiagnostics,
+    revision: result?.revision ?? null,
+    contractCount: result?.contractCount ?? 0,
+    repository: result?.repository ?? repository.fullName,
+    reader: typeof result?.reader === "function" ? result.reader : null
+  };
+}
+
+function governanceErrorRecord(repository, issue, diagnostic) {
+  const status = Number.isInteger(diagnostic?.status)
+    ? diagnostic.status
+    : null;
+  return {
+    repository: repository.fullName,
+    ...(Number.isSafeInteger(issue?.number) ? { issue: issue.number } : {}),
+    stage: diagnostic?.stage ?? "governance",
+    code: diagnostic?.code ?? "GOVERNANCE_UNAVAILABLE",
+    reason: diagnostic?.reason ?? null,
+    status,
+    rateLimited: status === 429,
+    rateLimitRemaining: null,
+    message: String(
+      diagnostic?.message ?? "Governance evidence is unavailable."
+    ).slice(0, 500)
+  };
+}
+
+function projectionDiagnostics(governance) {
+  if (!Array.isArray(governance?.diagnostics)) return [];
+  return governance.diagnostics.filter(
+    (diagnostic) => diagnostic && typeof diagnostic === "object"
+  );
+}
+
+function normalizeGovernanceProjection(governance, repository, issue) {
+  if (!governance || typeof governance !== "object") {
+    return unavailableGovernance(GOVERNANCE_REASON_CODES.EVALUATOR_FAILED, {
+      stage: "evaluation",
+      repository: repository.fullName,
+      issue: issue.number,
+      message: "The governance evaluator returned no projection."
+    });
+  }
+  if (governance.status === "unavailable") {
+    const diagnostics = projectionDiagnostics(governance);
+    return {
+      ...governance,
+      valid: null,
+      reason:
+        typeof governance.reason === "string" && governance.reason !== ""
+          ? governance.reason
+          : GOVERNANCE_REASON_CODES.EVALUATOR_FAILED,
+      diagnostics:
+        diagnostics.length > 0
+          ? diagnostics
+          : [
+              createGovernanceDiagnostic({
+                reason:
+                  governance.reason ?? GOVERNANCE_REASON_CODES.EVALUATOR_FAILED,
+                stage: "evaluation",
+                repository: repository.fullName,
+                issue: issue.number,
+                message:
+                  "The governance evaluator returned unavailable evidence."
+              })
+            ]
+    };
+  }
+  if (governance.status !== "valid" && governance.status !== "invalid") {
+    return unavailableGovernance(GOVERNANCE_REASON_CODES.EVALUATOR_FAILED, {
+      stage: "evaluation",
+      repository: repository.fullName,
+      issue: issue.number,
+      message: `The governance evaluator returned unsupported status ${String(
+        governance.status
+      )}.`
+    });
+  }
+  return {
+    ...governance,
+    diagnostics: projectionDiagnostics(governance)
+  };
+}
+
+async function resolveGovernancePreflight({
+  repository,
+  rawIssues,
+  fetchImpl,
+  token,
+  governanceImpl,
+  governancePreflight,
+  governancePreflightImpl
+}) {
+  const customPreflight =
+    governancePreflight ??
+    governancePreflightImpl ??
+    (typeof governanceImpl?.preflight === "function"
+      ? governanceImpl.preflight
+      : null);
+  if (typeof customPreflight === "function") {
+    try {
+      return normalizeGovernancePreflight(
+        await customPreflight({
+          repository,
+          rawIssues,
+          fetchImpl,
+          token
+        }),
+        repository
+      );
+    } catch (error) {
+      return normalizeGovernancePreflight(
+        {
+          status: "unavailable",
+          diagnostics: [
+            createGovernanceDiagnostic({
+              reason: GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE,
+              stage: "preflight",
+              repository: repository.fullName,
+              error
+            })
+          ]
+        },
+        repository
+      );
+    }
+  }
+
+  return normalizeGovernancePreflight(
+    await preflightIssueGovernance({
+      repository,
+      rawIssues,
+      fetchImpl,
+      token
+    }),
+    repository
+  );
+}
+
 function endpointFor(configured, suffix = "") {
   return `${API_ROOT}/repos/${configured.owner}/${configured.name}${suffix}`;
 }
@@ -294,19 +561,6 @@ function governanceBucket(issue) {
     return "invalid";
   }
   return "unknown";
-}
-
-function unavailableGovernance(reason) {
-  return {
-    authority: "Inari",
-    status: "unavailable",
-    valid: null,
-    classification: "unknown",
-    template: null,
-    violations: [],
-    revision: null,
-    reason
-  };
 }
 
 async function hydrateDependencies({
@@ -354,7 +608,9 @@ export async function collectDashboardData({
   fetchImpl = globalThis.fetch,
   token = "",
   now = () => new Date(),
-  governanceImpl = collectIssueGovernance
+  governanceImpl = collectIssueGovernance,
+  governancePreflight,
+  governancePreflightImpl
 }) {
   if (typeof fetchImpl !== "function")
     throw new Error("A fetch implementation is required");
@@ -362,6 +618,7 @@ export async function collectDashboardData({
   const repositories = [];
   const issues = [];
   const errors = [];
+  const governanceErrors = [];
 
   for (const configured of configuredRepositories) {
     let repository;
@@ -382,6 +639,11 @@ export async function collectDashboardData({
       repository = fallbackRepository(configured);
       const record = errorRecord(configured, "repository", error);
       repository.error = record;
+      repository.governance = unavailableRepositoryGovernance(
+        repository,
+        error,
+        token
+      );
       repositories.push(repository);
       errors.push(record);
       continue;
@@ -405,6 +667,23 @@ export async function collectDashboardData({
             rawIssues
           })
         : undefined;
+      const preflight = await resolveGovernancePreflight({
+        repository,
+        rawIssues,
+        fetchImpl,
+        token,
+        governanceImpl,
+        governancePreflight,
+        governancePreflightImpl
+      });
+      if (preflight.diagnostics.length > 0) {
+        governanceErrors.push(
+          ...preflight.diagnostics.map((diagnostic) =>
+            governanceErrorRecord(repository, null, diagnostic)
+          )
+        );
+      }
+      const issueGovernanceDiagnostics = [];
       for (let index = 0; index < rawIssues.length; index += 1) {
         await hydrateDependencies({
           rawIssue: rawIssues[index],
@@ -415,40 +694,67 @@ export async function collectDashboardData({
           errors
         });
         let governance;
-        try {
-          governance = await governanceImpl({
-            issue: normalizedIssues[index],
-            repository,
-            rawIssues,
-            fetchImpl,
-            token,
-            reader: governanceReader
-          });
-        } catch (error) {
+        if (preflight.status === "unavailable") {
           governance = unavailableGovernance(
-            `governance-implementation-failed: ${String(
-              error?.message ?? error
-            ).slice(0, 500)}`
+            preflight.reason ??
+              GOVERNANCE_REASON_CODES.INARI_CONTRACT_UNAVAILABLE,
+            {
+              stage: "preflight",
+              repository: repository.fullName,
+              issue: normalizedIssues[index].number,
+              diagnostics: preflight.diagnostics
+            }
           );
+        } else {
+          try {
+            governance = await governanceImpl({
+              issue: normalizedIssues[index],
+              repository,
+              rawIssues,
+              fetchImpl,
+              token,
+              reader: preflight.reader ?? governanceReader,
+              preflight
+            });
+          } catch (error) {
+            governance = unavailableGovernance(
+              GOVERNANCE_REASON_CODES.EVALUATOR_FAILED,
+              {
+                stage: "evaluation",
+                repository: repository.fullName,
+                issue: normalizedIssues[index].number,
+                error
+              }
+            );
+          }
         }
-        normalizedIssues[index].governance =
-          governance && typeof governance === "object"
-            ? governance
-            : unavailableGovernance("governance-projection-unavailable");
-        if (
-          normalizedIssues[index].governance.status === "unavailable" &&
-          normalizedIssues[index].governance.reason !==
-            "authentication-unavailable"
-        ) {
-          errors.push(
-            errorRecord(
-              configured,
-              "governance",
-              new Error(normalizedIssues[index].governance.reason)
-            )
+        normalizedIssues[index].governance = normalizeGovernanceProjection(
+          governance,
+          repository,
+          normalizedIssues[index]
+        );
+        if (preflight.status !== "unavailable") {
+          const diagnostics = projectionDiagnostics(
+            normalizedIssues[index].governance
           );
+          issueGovernanceDiagnostics.push(...diagnostics);
+          if (normalizedIssues[index].governance.status === "unavailable") {
+            governanceErrors.push(
+              ...diagnostics.map((diagnostic) =>
+                governanceErrorRecord(
+                  repository,
+                  normalizedIssues[index],
+                  diagnostic
+                )
+              )
+            );
+          }
         }
       }
+      repository.governance = repositoryGovernance(
+        preflight,
+        issueGovernanceDiagnostics
+      );
       repository.openIssueCount = normalizedIssues.length;
       repository.fetchStatus = "ok";
       repositories.push(repository);
@@ -457,6 +763,11 @@ export async function collectDashboardData({
       const record = errorRecord(configured, "issues", error);
       repository.fetchStatus = "error";
       repository.error = record;
+      repository.governance = unavailableRepositoryGovernance(
+        repository,
+        error,
+        token
+      );
       repositories.push(repository);
       errors.push(record);
     }
@@ -499,7 +810,7 @@ export async function collectDashboardData({
       );
     }
   }
-  const status =
+  const sourceStatus =
     errors.length === 0
       ? "complete"
       : failedRepositories === repositories.length
@@ -508,8 +819,16 @@ export async function collectDashboardData({
   const governanceHealth = aggregateGovernanceHealth({
     issues,
     repositories,
-    snapshotStatus: status
+    snapshotStatus: sourceStatus
   });
+  const status =
+    sourceStatus === "failed"
+      ? "failed"
+      : sourceStatus === "partial" ||
+          governanceHealth.collection.status !== "healthy"
+        ? "partial"
+        : "complete";
+  const allErrors = [...errors, ...governanceErrors];
 
   return {
     schemaVersion: DASHBOARD_SCHEMA_VERSION,
@@ -531,11 +850,19 @@ export async function collectDashboardData({
       governanceValid: governanceCounts.valid,
       governanceInvalid: governanceCounts.invalid,
       governanceUnknown: governanceCounts.unknown,
-      governanceCompliance: governanceCounts
+      governanceCompliance: governanceCounts,
+      governanceCollectionStatus: governanceHealth.collection.status,
+      governanceRepositoriesHealthy:
+        governanceHealth.collection.healthyRepositories,
+      governanceRepositoriesDegraded:
+        governanceHealth.collection.degradedRepositories,
+      governanceRepositoriesUnavailable:
+        governanceHealth.collection.unavailableRepositories,
+      governanceUnavailableCauses: governanceHealth.collection.causes.length
     },
     repositories,
     issues,
     governanceHealth,
-    errors
+    errors: allErrors
   };
 }

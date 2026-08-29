@@ -144,12 +144,13 @@ test("projects Inari governance as valid, invalid, or unavailable per open Issue
     config,
     fetchImpl,
     token: "portal-token",
+    governancePreflight: async () => ({ status: "healthy" }),
     governanceImpl,
     now: () => new Date("2026-08-23T02:00:00Z")
   });
 
-  assert.equal(data.schemaVersion, 4);
-  assert.equal(data.status, "complete");
+  assert.equal(data.schemaVersion, 5);
+  assert.equal(data.status, "partial");
   assert.equal(data.metrics.governanceDataUnavailable, 1);
   assert.equal(data.metrics.governanceValid, 1);
   assert.equal(data.metrics.governanceInvalid, 1);
@@ -207,6 +208,7 @@ test("fails closed when governance projection is unavailable", async () => {
     config,
     fetchImpl,
     token: "portal-token",
+    governancePreflight: async () => ({ status: "healthy" }),
     governanceImpl: async () => {
       throw new Error("governance source unavailable");
     }
@@ -315,6 +317,7 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
   const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
   registry.collectionRepositories = ["example"];
   await writeFile(registryPath, JSON.stringify(registry));
+  let governanceEvaluations = 0;
 
   const fetchImpl = async (url, options) => {
     assert.equal(options.headers.Authorization, "Bearer build-token");
@@ -354,16 +357,20 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
       registryPath,
       fetchImpl,
       token: "build-token",
-      governanceImpl: async () => ({
-        authority: "Inari",
-        status: "unavailable",
-        valid: null,
-        classification: "unknown",
-        template: null,
-        violations: [],
-        revision: null,
-        reason: "test-fixture"
-      }),
+      governancePreflight: async () => ({ status: "healthy" }),
+      governanceImpl: async () => {
+        governanceEvaluations += 1;
+        return {
+          authority: "Inari",
+          status: "unavailable",
+          valid: null,
+          classification: "unknown",
+          template: null,
+          violations: [],
+          revision: null,
+          reason: "test-fixture"
+        };
+      },
       now: () => new Date("2026-08-23T03:00:00Z")
     });
 
@@ -410,10 +417,13 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
     assert.match(workIndex, /href="\.\.\/"/);
     assert.match(workApp, /fetch\("\.\/data\/dashboard\.json"/);
     assert.match(governanceIndex, /Governance health/);
+    assert.match(governanceIndex, /collection-diagnostics/);
     assert.match(governanceApp, /fetch\("\.\.\/data\/dashboard\.json"/);
     assert.match(governanceApp, /health\.overall/);
+    assert.match(governanceApp, /collection\?\.causes/);
     assert.equal(data.metrics.issueCount, 1);
-    assert.equal(data.schemaVersion, 4);
+    assert.equal(governanceEvaluations, 1);
+    assert.equal(data.schemaVersion, 5);
     assert.deepEqual(data.governanceHealth.overall, {
       valid: 0,
       invalid: 0,
