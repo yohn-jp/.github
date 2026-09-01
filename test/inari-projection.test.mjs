@@ -98,6 +98,19 @@ test("default Validation is a canonical checklist shared by render and validate"
     rendered
   );
 
+  const withoutReviewFocus = { ...fields };
+  delete withoutReviewFocus.review_focus;
+  const renderedWithoutReviewFocus = renderPullRequestArtifact(
+    contract,
+    withoutReviewFocus
+  );
+  const validatedWithoutReviewFocus = validateExistingPullRequestArtifact(
+    contract,
+    renderedWithoutReviewFocus
+  );
+  assert.equal(validatedWithoutReviewFocus.valid, true);
+  assert.deepEqual(validatedWithoutReviewFocus.parse.values, withoutReviewFocus);
+
   const incomplete = rendered.replace("- [x] Build", "- [ ] Build");
   const invalid = validateExistingPullRequestArtifact(contract, incomplete);
   assert.equal(invalid.valid, false);

@@ -12,6 +12,6 @@ templates:
         checklist:
           requireComplete: true
       - section: review_focus
-        required: true
+        required: false
   - template: release
     sections: []
