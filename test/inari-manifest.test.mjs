@@ -17,6 +17,13 @@ test("canonical Inari manifest matches the exact contract snapshot", async () =>
   assert.deepEqual(await validateInariManifest(process.cwd()), []);
 });
 
+test("canonical Inari manifest includes the PR policy overlay", async () => {
+  const manifest = await buildInariManifest(process.cwd());
+  assert.ok(
+    manifest.files.some(({ path }) => path === ".github/inari/pr-policy.yml")
+  );
+});
+
 test("changing a contract changes its manifest revision and file digest", async () => {
   const root = await mkdtemp(join(tmpdir(), "inari-manifest-"));
   try {
