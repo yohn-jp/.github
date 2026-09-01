@@ -11,6 +11,7 @@ const targets = Object.entries(sync);
 const requiredSnapshot = [
   ".github/PULL_REQUEST_TEMPLATE/release.md",
   ".github/inari/pull-requests/release.json",
+  ".github/inari/pr-policy.yml",
   ".github/inari/manifest.json"
 ];
 

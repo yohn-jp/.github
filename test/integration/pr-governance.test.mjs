@@ -98,6 +98,36 @@ test("ordinary Issue-bound PRs keep default contract auto-detection", async () =
   assert.equal(result.contract.templateIdentity.id, "default");
 });
 
+test("a synchronized consumer accepts an Inari-generated ordinary PR body without repair", async (t) => {
+  const fixtureRoot = await mkdtemp(
+    path.join(tmpdir(), "pr-governance-consumer-")
+  );
+  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
+
+  await mkdir(path.join(fixtureRoot, ".github"), { recursive: true });
+  await cp(
+    path.join(root, ".github", "PULL_REQUEST_TEMPLATE"),
+    path.join(fixtureRoot, ".github", "PULL_REQUEST_TEMPLATE"),
+    { recursive: true }
+  );
+  await cp(
+    path.join(root, ".github", "inari"),
+    path.join(fixtureRoot, ".github", "inari"),
+    { recursive: true }
+  );
+
+  const result = await validatePullRequest(
+    pullRequest("fix/125-inari-governance", defaultBody, fixtureRoot)
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.contract.templateIdentity.id, "default");
+  assert.deepEqual(result.result.parse.values.validation, [
+    "typecheck",
+    "tests",
+    "build"
+  ]);
+});
+
 test("auto-detected ordinary PR is not aborted by an unrelated release candidate's default-only policy", async (t) => {
   const fixtureRoot = await mkdtemp(path.join(tmpdir(), "pr-governance-ordinary-"));
   t.after(() => rm(fixtureRoot, { recursive: true, force: true }));

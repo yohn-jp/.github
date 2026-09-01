@@ -12,7 +12,9 @@ Implement the requested behavior.
 
 ## Validation
 
-Run the targeted regression tests.
+- [x] Typecheck
+- [x] Tests
+- [x] Build
 
 ## Review focus
 

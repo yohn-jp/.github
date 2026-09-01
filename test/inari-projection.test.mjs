@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { compileLocalGovernedContract } from "gh-inari/governance";
+import {
+  loadCanonicalMarkdownArtifact,
+  renderPullRequestArtifact,
+  validateExistingPullRequestArtifact
+} from "gh-inari/artifact";
 
 function expectedHeadings(contract) {
   return contract.sections
@@ -41,6 +47,76 @@ test("a changed PR section cannot silently pass with a stale projection", () => 
   assert.ok(
     projectionErrors(changed, markdown).includes(
       "missing generated heading: ## Delivered result"
+    )
+  );
+});
+
+test("default Validation is a canonical checklist shared by render and validate", async () => {
+  const contract = await compileLocalGovernedContract(
+    "pr",
+    process.cwd(),
+    "default"
+  );
+  const validation = contract.sections.find(
+    (section) => section.id === "validation"
+  )?.fields[0];
+
+  assert.equal(validation?.type, "checklist");
+  assert.deepEqual(
+    validation?.items.map(({ id, label }) => ({ id, label })),
+    [
+      { id: "typecheck", label: "Typecheck" },
+      { id: "tests", label: "Tests" },
+      { id: "build", label: "Build" }
+    ]
+  );
+  assert.deepEqual(
+    contract.supplementalConstraints.fields.find(
+      (field) => field.fieldId === "validation"
+    ),
+    { fieldId: "validation", checklistRequireComplete: true }
+  );
+
+  const fields = {
+    summary: "Deliver one canonical PR presentation contract.",
+    linked_issue: "Closes #125",
+    changes:
+      "Add the Inari validation checklist and synchronize its presentation policy.",
+    validation: ["typecheck", "tests", "build"],
+    review_focus:
+      "Review the generated projection and consumer synchronization."
+  };
+  const rendered = renderPullRequestArtifact(contract, fields);
+  const validated = validateExistingPullRequestArtifact(contract, rendered);
+  const normalized = loadCanonicalMarkdownArtifact(contract, rendered);
+
+  assert.equal(validated.valid, true);
+  assert.equal(normalized.valid, true);
+  assert.deepEqual(validated.parse.values, fields);
+  assert.equal(
+    renderPullRequestArtifact(contract, normalized.canonical),
+    rendered
+  );
+
+  const withoutReviewFocus = { ...fields };
+  delete withoutReviewFocus.review_focus;
+  const renderedWithoutReviewFocus = renderPullRequestArtifact(
+    contract,
+    withoutReviewFocus
+  );
+  const validatedWithoutReviewFocus = validateExistingPullRequestArtifact(
+    contract,
+    renderedWithoutReviewFocus
+  );
+  assert.equal(validatedWithoutReviewFocus.valid, true);
+  assert.deepEqual(validatedWithoutReviewFocus.parse.values, withoutReviewFocus);
+
+  const incomplete = rendered.replace("- [x] Build", "- [ ] Build");
+  const invalid = validateExistingPullRequestArtifact(contract, incomplete);
+  assert.equal(invalid.valid, false);
+  assert.ok(
+    invalid.violations.some(
+      (violation) => violation.code === "INPUT_CHECKLIST_INCOMPLETE"
     )
   );
 });

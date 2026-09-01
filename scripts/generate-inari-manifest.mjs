@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,6 +28,13 @@ export async function listInariContractFiles(root = REPOSITORY_ROOT) {
         path.join(INARI_DIRECTORY, domain, name).replaceAll(path.sep, "/")
       );
     }
+  }
+  const policy = path.join(root, INARI_DIRECTORY, "pr-policy.yml");
+  try {
+    await access(policy);
+    files.push(path.join(INARI_DIRECTORY, "pr-policy.yml"));
+  } catch {
+    // Older snapshots may not carry the optional PR policy overlay.
   }
   return files;
 }
