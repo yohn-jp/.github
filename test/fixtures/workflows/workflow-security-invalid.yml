@@ -1,0 +1,7 @@
+name: Invalid security fixture
+
+on:
+  pull_request:
+jobs:
+  invalid
+    runs-on: ubuntu-latest

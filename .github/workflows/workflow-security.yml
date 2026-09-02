@@ -1,0 +1,178 @@
+name: Workflow security
+
+# Reusable GitHub Actions workflow security gate.  The caller owns the
+# trigger; this workflow only audits the caller's checked-out workflow files.
+# Keep the deterministic organization checks in metadata-validation.yml:
+# validate-action-pins.mjs owns the complete reference policy and
+# metadata-validation.yml owns actionlint syntax/semantic validation.  This
+# lane adds zizmor's security audits that are not covered by either check.
+on:
+  workflow_call:
+    inputs:
+      workflow-paths:
+        description: >-
+          Space-separated workflow files or glob paths to audit. Paths are
+          relative to the consumer checkout.
+        type: string
+        default: .github/workflows/**
+      config-file:
+        description: >-
+          Optional consumer-owned zizmor configuration path. It must retain
+          the provider-owned unpinned-uses disablement.
+        type: string
+        default: ""
+      execution-mode:
+        description: >-
+          Invocation class used by the quality aggregate: pr, main, or
+          nightly. The scanner policy is otherwise deterministic.
+        type: string
+        default: pr
+    outputs:
+      status:
+        description: "success when the audit completed without findings, otherwise failure"
+        value: ${{ jobs.audit.outputs.status }}
+
+# The scanner does not need a write-capable token.  The job grants only the
+# read permission required by actions/checkout.
+permissions: {}
+
+jobs:
+  audit:
+    name: Audit workflow security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Validate gate inputs
+        id: validate-inputs
+        shell: bash
+        env:
+          CONFIG_FILE: ${{ inputs.config-file }}
+          EXECUTION_MODE: ${{ inputs.execution-mode }}
+          WORKFLOW_PATHS: ${{ inputs.workflow-paths }}
+        run: |
+          set -euo pipefail
+          case "$EXECUTION_MODE" in
+            pr|main|nightly) ;;
+            *)
+              echo "::error title=Workflow security configuration::execution-mode must be one of pr, main, or nightly (received: $EXECUTION_MODE)"
+              exit 1
+              ;;
+          esac
+          if [ -z "${WORKFLOW_PATHS//[[:space:]]/}" ]; then
+            echo "::error title=Workflow security configuration::workflow-paths must contain at least one workflow path"
+            exit 1
+          fi
+          if [ -n "$CONFIG_FILE" ]; then
+            case "$CONFIG_FILE" in
+              /*|../*|*/../*)
+                echo "::error title=Workflow security configuration::config-file must be a path inside the consumer workspace"
+                exit 1
+                ;;
+            esac
+            if [ ! -f "$CONFIG_FILE" ]; then
+              echo "::error title=Workflow security configuration::config-file was not found: $CONFIG_FILE"
+              exit 1
+            fi
+          fi
+
+      # The organization validator is the authority for pinning.  Disabling
+      # zizmor's overlapping unpinned-uses audit avoids duplicate diagnostics
+      # while preserving zizmor's independent security audits below.
+      - name: Configure distinct zizmor audits
+        id: configure
+        if: inputs.config-file == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > zizmor-gate.yml <<'EOF'
+          rules:
+            unpinned-uses:
+              disable: true
+          EOF
+
+      # Probe the policy with an intentionally unpinned action.  The filename
+      # includes the run id so a consumer config cannot pre-emptively ignore
+      # this provider-owned assertion.  The configured unpinned-uses rule must
+      # suppress this one finding; a malformed or re-enabled policy fails the
+      # same scanner invocation below.
+      - name: Prepare pin-policy probe
+        id: probe
+        shell: bash
+        env:
+          PROBE_FILE: .zizmor-policy-probe-${{ github.run_id }}.yml
+        run: |
+          set -euo pipefail
+          cat > "$PROBE_FILE" <<'EOF'
+          name: Provider pin-policy probe
+          on: push
+          permissions: {}
+          jobs:
+            probe:
+              runs-on: ubuntu-latest
+              permissions: {}
+              steps:
+                - uses: actions/checkout@v4
+                  with:
+                    persist-credentials: false
+                - run: echo "pin policy probe"
+          EOF
+          echo "path=$PROBE_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Run zizmor security audit
+        id: scan
+        continue-on-error: true
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          # Scan only the workflow collection; composite actions and other
+          # metadata have separate authorities in the organization gate.
+          inputs: ${{ inputs.workflow-paths }} ${{ steps.probe.outputs.path }}
+          collect: workflows
+          version: "1.25.0"
+          persona: regular
+          online-audits: false
+          advanced-security: false
+          annotations: false
+          color: false
+          token: ""
+          config: ${{ inputs.config-file || 'zizmor-gate.yml' }}
+          # Empty workflow directories are valid for a consumer; do not turn
+          # that case into a misleading scanner failure.
+          fail-on-no-inputs: false
+
+      - name: Report audit status
+        id: report
+        if: always()
+        shell: bash
+        env:
+          CONFIG_OUTCOME: ${{ steps.configure.outcome }}
+          INPUT_OUTCOME: ${{ steps.validate-inputs.outcome }}
+          SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "$INPUT_OUTCOME" = "success" ] && \
+             { [ "$CONFIG_OUTCOME" = "success" ] || [ "$CONFIG_OUTCOME" = "skipped" ]; } && \
+             [ "$SCAN_OUTCOME" = "success" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+            echo "Workflow security audit completed without findings."
+          else
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+            echo "::error title=Workflow security audit failed::zizmor reported findings or the gate configuration could not be evaluated; inspect the diagnostics above and fix the referenced workflow path/rule."
+            exit 1
+          fi
+
+      - name: Remove scanner configuration
+        if: always()
+        shell: bash
+        env:
+          PROBE_FILE: ${{ steps.probe.outputs.path }}
+        run: rm -f zizmor-gate.yml "$PROBE_FILE"
+
+    outputs:
+      status: ${{ steps.report.outputs.status }}
