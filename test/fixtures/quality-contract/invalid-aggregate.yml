@@ -1,0 +1,15 @@
+schema-version: 1
+kind: organization-quality-ci-contract
+aggregate:
+  workflow: organization-quality.yml
+  job-id: quality
+  status: quality
+  condition: success
+  result-policy:
+    pass: [success]
+    fail: [failure]
+defaults:
+  runner: ubuntu-latest
+  permissions: { contents: read }
+  forbidden-keys: [strategy.matrix, github.repository, github.repository_owner]
+lanes: {}

@@ -26,6 +26,12 @@ See [`docs/typescript-cli-ci.md`](docs/typescript-cli-ci.md) for the
 (`committed-dist`, `release-docs-fast-path`, `conformance-script`), and the
 stable `verify` required-status gate consumer Rulesets should point at.
 
+## Organization quality CI
+
+See [`docs/quality-ci.md`](docs/quality-ci.md) for the provider/consumer
+boundary, explicit lane interfaces, least-privilege permissions, and stable
+`quality` aggregate status for the independently composed quality lanes.
+
 ## Reusable CodeQL
 
 See [`docs/codeql.md`](docs/codeql.md) for the
