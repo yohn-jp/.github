@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import {
   validateQualityContract,
-  validateQualityWorkflowSource
+  validateQualityWorkflowSource,
+  validateAggregateInputForwarding
 } from "../scripts/validate-quality-contract.mjs";
 
 function load(path) {
@@ -56,4 +57,40 @@ test("quality workflow wiring rejects repository conditionals and matrices", () 
   );
   assert.ok(errors.some((error) => error.includes("repository identity")));
   assert.ok(errors.some((error) => error.includes("matrices")));
+});
+
+test("the canonical aggregate forwards every lane's workflow_call inputs", () => {
+  const contract = load(".github/quality-ci-contract.yml");
+  const aggregateDoc = load(`.github/workflows/${contract.aggregate.workflow}`);
+  assert.deepEqual(
+    validateAggregateInputForwarding(
+      aggregateDoc,
+      ".github/workflows/organization-quality.yml",
+      contract.lanes
+    ),
+    []
+  );
+});
+
+test("aggregate forwarding check catches a lane input the aggregate never forwards", () => {
+  const aggregateDoc = load(
+    "test/fixtures/quality-contract/aggregate-missing-forward.yml"
+  );
+  const errors = validateAggregateInputForwarding(
+    aggregateDoc,
+    "aggregate-missing-forward.yml",
+    {
+      "test-effectiveness": { workflow: "test-effectiveness.yml" }
+    }
+  );
+  assert.ok(
+    errors.some((error) =>
+      error.includes("jobs.test-effectiveness.with.property-seed is missing")
+    )
+  );
+  assert.ok(
+    errors.some((error) =>
+      error.includes("jobs.test-effectiveness.with.node-version is missing")
+    )
+  );
 });

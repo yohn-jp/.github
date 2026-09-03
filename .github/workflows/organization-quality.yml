@@ -5,11 +5,16 @@ name: Organization quality
 # quality lanes and exposes one stable, fail-closed status (`quality`) for
 # Rulesets to require. See docs/quality-ci.md for the full contract.
 #
-# Each lane is enabled by a consumer supplying its required input(s); an
-# unset/empty lane input keeps that lane's own job selection at `skipped`
-# without failing the aggregate. Lane workflows already select PR head vs.
-# push/schedule revision semantics internally (see docs/quality-ci.md
-# "Revision authority") — this caller does not re-derive or override that.
+# Lane availability is NOT uniform (see docs/quality-ci.md "Reusable
+# workflow boundary"): supply-chain-security and workflow-security are
+# required-by-default — they have no disabling input and always run, by
+# deliberate security-lane policy (Issues #129/#130) — while static-quality
+# and test-effectiveness are configuration-optional: an unset/empty
+# lane-specific enabling input (e.g. static-quality-config-file) makes that
+# lane's own provider workflow report `skipped`, which does not fail the
+# aggregate. Lane workflows already select PR head vs. push/schedule
+# revision semantics internally (see docs/quality-ci.md "Revision
+# authority") — this caller does not re-derive or override that.
 on:
   workflow_call:
     inputs:
@@ -34,20 +39,20 @@ on:
         type: string
         default: ""
 
-      supply-chain-working-directory:
+      supply-chain-security-working-directory:
         type: string
         default: "."
-      supply-chain-severity:
+      supply-chain-security-severity:
         type: string
         default: high
-      supply-chain-license-policy-file:
+      supply-chain-security-license-policy-file:
         type: string
         default: ""
-      supply-chain-codeql-config-file:
+      supply-chain-security-codeql-config-file:
         type: string
         default: ""
 
-      workflow-security-paths:
+      workflow-security-workflow-paths:
         type: string
         default: .github/workflows/**
       workflow-security-config-file:
@@ -93,6 +98,10 @@ on:
       test-effectiveness-property-randomized:
         type: boolean
         default: false
+      test-effectiveness-property-seed:
+        description: Optional compatibility alias for test-effectiveness-replay-seed.
+        type: string
+        default: ""
       test-effectiveness-replay-seed:
         type: string
         default: ""
@@ -146,11 +155,11 @@ jobs:
       actions: read
       security-events: write
     with:
-      working-directory: ${{ inputs.supply-chain-working-directory }}
+      working-directory: ${{ inputs.supply-chain-security-working-directory }}
       execution-mode: ${{ inputs.execution-mode }}
-      severity: ${{ inputs.supply-chain-severity }}
-      license-policy-file: ${{ inputs.supply-chain-license-policy-file }}
-      codeql-config-file: ${{ inputs.supply-chain-codeql-config-file }}
+      severity: ${{ inputs.supply-chain-security-severity }}
+      license-policy-file: ${{ inputs.supply-chain-security-license-policy-file }}
+      codeql-config-file: ${{ inputs.supply-chain-security-codeql-config-file }}
 
   workflow-security:
     name: Workflow security
@@ -158,7 +167,7 @@ jobs:
     permissions:
       contents: read
     with:
-      workflow-paths: ${{ inputs.workflow-security-paths }}
+      workflow-paths: ${{ inputs.workflow-security-workflow-paths }}
       config-file: ${{ inputs.workflow-security-config-file }}
       execution-mode: ${{ inputs.execution-mode }}
 
@@ -182,6 +191,7 @@ jobs:
       property-enabled: ${{ inputs.test-effectiveness-property-enabled }}
       property-command: ${{ inputs.test-effectiveness-property-command }}
       property-randomized: ${{ inputs.test-effectiveness-property-randomized }}
+      property-seed: ${{ inputs.test-effectiveness-property-seed }}
       replay-seed: ${{ inputs.test-effectiveness-replay-seed }}
       property-replay-command: ${{ inputs.test-effectiveness-property-replay-command }}
       property-report-path: ${{ inputs.test-effectiveness-property-report-path }}

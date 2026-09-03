@@ -1,0 +1,30 @@
+name: Invalid aggregate forwarding
+on:
+  workflow_call:
+    inputs:
+      execution-mode:
+        type: string
+        default: pr
+      test-effectiveness-working-directory:
+        type: string
+        default: "."
+    outputs:
+      status:
+        value: ${{ jobs.quality.outputs.status }}
+permissions: {}
+jobs:
+  test-effectiveness:
+    uses: ./.github/workflows/test-effectiveness.yml
+    permissions:
+      contents: read
+    with:
+      working-directory: ${{ inputs.test-effectiveness-working-directory }}
+      execution-mode: ${{ inputs.execution-mode }}
+      # property-seed and every other test-effectiveness input are
+      # intentionally omitted below to exercise the forwarding check.
+  quality:
+    if: always()
+    needs: [test-effectiveness]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo invalid
