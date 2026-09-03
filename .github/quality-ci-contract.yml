@@ -1,0 +1,146 @@
+# Machine-readable contract for the organization quality lanes.  The
+# provider workflows and the aggregate caller are versioned independently;
+# this file describes the stable boundary they share.
+schema-version: 1
+kind: organization-quality-ci-contract
+
+aggregate:
+  workflow: organization-quality.yml
+  job-id: quality
+  status: quality
+  condition: always
+  result-policy:
+    pass: [success, skipped]
+    fail: [failure, cancelled, timed_out, action_required]
+
+defaults:
+  runner: ubuntu-latest
+  permissions:
+    contents: read
+  forbidden-keys:
+    - strategy.matrix
+    - github.repository
+    - github.repository_owner
+
+lanes:
+  static-quality:
+    workflow: static-quality.yml
+    output: status
+    capabilities: [dead-code, dependency-analysis, maintainability]
+    permissions:
+      contents: read
+    inputs:
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      execution-mode:
+        type: string
+        required: false
+        default: pr
+        allowed: [pr, main, nightly]
+      config-file:
+        type: string
+        required: false
+        default: ""
+      baseline-file:
+        type: string
+        required: false
+        default: ""
+      check-command:
+        type: string
+        required: false
+        default: ""
+
+  supply-chain-security:
+    workflow: supply-chain-security.yml
+    output: status
+    capabilities: [dependency-review, codeql]
+    permissions:
+      contents: read
+      pull-requests: read
+      job-scoped:
+        codeql:
+          actions: read
+          security-events: write
+    inputs:
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      execution-mode:
+        type: string
+        required: false
+        default: pr
+        allowed: [pr, main, nightly]
+      severity:
+        type: string
+        required: false
+        default: high
+        allowed: [low, moderate, high, critical]
+      license-policy-file:
+        type: string
+        required: false
+        default: ""
+      codeql-config-file:
+        type: string
+        required: false
+        default: ""
+
+  workflow-security:
+    workflow: workflow-security.yml
+    output: status
+    capabilities: [workflow-syntax, workflow-policy]
+    permissions:
+      contents: read
+    inputs:
+      workflow-paths:
+        type: string
+        required: false
+        default: .github/workflows/**
+      config-file:
+        type: string
+        required: false
+        default: ""
+      execution-mode:
+        type: string
+        required: false
+        default: pr
+        allowed: [pr, main, nightly]
+
+  test-effectiveness:
+    workflow: test-effectiveness.yml
+    output: status
+    capabilities: [coverage, property, mutation]
+    permissions:
+      contents: read
+    inputs:
+      working-directory:
+        type: string
+        required: false
+        default: "."
+      execution-mode:
+        type: string
+        required: false
+        default: pr
+        allowed: [pr, main, nightly]
+      coverage-command:
+        type: string
+        required: false
+        default: ""
+      property-command:
+        type: string
+        required: false
+        default: ""
+      mutation-command:
+        type: string
+        required: false
+        default: ""
+      mutation-timeout-seconds:
+        type: number
+        required: false
+        default: 600
+      replay-seed:
+        type: string
+        required: false
+        default: ""

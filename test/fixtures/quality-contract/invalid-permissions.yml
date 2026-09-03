@@ -1,0 +1,63 @@
+schema-version: 1
+kind: organization-quality-ci-contract
+aggregate:
+  workflow: organization-quality.yml
+  job-id: quality
+  status: quality
+  condition: always
+  result-policy:
+    pass: [success, skipped]
+    fail: [failure, cancelled, timed_out, action_required]
+defaults:
+  runner: ubuntu-latest
+  permissions: { contents: read }
+  forbidden-keys: [strategy.matrix, github.repository, github.repository_owner]
+lanes:
+  static-quality:
+    workflow: static-quality.yml
+    output: status
+    permissions: { contents: write }
+    inputs:
+      { working-directory: { type: string, required: false, default: "." } }
+  supply-chain-security:
+    workflow: supply-chain-security.yml
+    output: status
+    permissions: { contents: read, pull-requests: read }
+    inputs:
+      {
+        execution-mode:
+          {
+            type: string,
+            required: false,
+            default: pr,
+            allowed: [pr, main, nightly]
+          }
+      }
+  workflow-security:
+    workflow: workflow-security.yml
+    output: status
+    permissions: { contents: read }
+    inputs:
+      {
+        execution-mode:
+          {
+            type: string,
+            required: false,
+            default: pr,
+            allowed: [pr, main, nightly]
+          }
+      }
+  test-effectiveness:
+    workflow: test-effectiveness.yml
+    output: status
+    permissions: { contents: read }
+    inputs:
+      {
+        execution-mode:
+          {
+            type: string,
+            required: false,
+            default: pr,
+            allowed: [pr, main, nightly]
+          }
+      }

@@ -1,0 +1,13 @@
+name: Invalid quality wiring
+on: workflow_call
+permissions:
+  contents: read
+jobs:
+  quality:
+    if: ${{ github.repository == 'yohn-jp/mottainai' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - run: echo invalid
