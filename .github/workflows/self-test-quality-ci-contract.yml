@@ -32,3 +32,5 @@ jobs:
         run: pnpm run validate:quality-contract
       - name: Run contract tests
         run: node --test test/quality-ci-contract.test.mjs
+      - name: Run test-effectiveness contract tests
+        run: node --test test/test-effectiveness-contract.test.mjs
