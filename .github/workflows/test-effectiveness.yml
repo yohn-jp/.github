@@ -1,0 +1,576 @@
+name: Test Effectiveness
+
+# Reusable organization contract for repository-owned coverage, property, and
+# mutation checks. The provider owns orchestration, validation, time bounds,
+# and reporting; consumers own every test semantic and tool configuration.
+# Mutation cost is selected explicitly by the caller: bounded PR, full main,
+# or deep nightly. No repository identity or OS matrix participates in it.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Consumer package root containing tests and reports.
+        type: string
+        default: "."
+      node-version:
+        description: Node.js version used to execute consumer commands.
+        type: string
+        default: "24"
+      install-command:
+        description: Optional consumer-owned dependency setup command.
+        type: string
+        default: ""
+      execution-mode:
+        description: >-
+          Caller execution mode: pr, main, or nightly. This must match the
+          caller event and selects the mutation budget.
+        type: string
+        default: pr
+      mutation-timeout-seconds:
+        description: Positive timeout for the consumer mutation command.
+        type: number
+        default: 600
+
+      coverage-enabled:
+        description: Enable coverage instrumentation and regression gating.
+        type: boolean
+        default: false
+      coverage-command:
+        description: Consumer command that creates the coverage report.
+        type: string
+        default: ""
+      coverage-regression-command:
+        description: Consumer command that compares coverage with its baseline.
+        type: string
+        default: ""
+      coverage-baseline-path:
+        description: Consumer-owned baseline path relative to working-directory.
+        type: string
+        default: ""
+      coverage-report-path:
+        description: Coverage report path relative to working-directory.
+        type: string
+        default: ""
+      coverage-config-path:
+        description: Optional coverage configuration path relative to working-directory.
+        type: string
+        default: ""
+
+      property-enabled:
+        description: Enable the consumer property-based test command.
+        type: boolean
+        default: false
+      property-command:
+        description: Consumer property-test command.
+        type: string
+        default: ""
+      property-randomized:
+        description: Whether the property generator uses randomized cases.
+        type: boolean
+        default: false
+      property-seed:
+        description: Optional compatibility alias for replay-seed.
+        type: string
+        default: ""
+      replay-seed:
+        description: Fixed seed or equivalent replay identifier for randomized properties.
+        type: string
+        default: ""
+      property-replay-command:
+        description: Consumer command that replays a failing property seed.
+        type: string
+        default: ""
+      property-report-path:
+        description: Property-test report path relative to working-directory.
+        type: string
+        default: ""
+      property-config-path:
+        description: Optional property-test configuration path relative to working-directory.
+        type: string
+        default: ""
+
+      mutation-enabled:
+        description: Enable mutation testing with the event-selected budget.
+        type: boolean
+        default: false
+      mutation-command:
+        description: Consumer mutation command; receives MUTATION_MODE.
+        type: string
+        default: ""
+      mutation-report-path:
+        description: Mutation report path relative to working-directory.
+        type: string
+        default: ""
+      mutation-config-path:
+        description: Optional mutation configuration path relative to working-directory.
+        type: string
+        default: ""
+    outputs:
+      status:
+        description: "Stable aggregate result: success, skipped, or failure."
+        value: ${{ jobs.verify.outputs.status }}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Validate contract and select mode
+    runs-on: ubuntu-latest
+    outputs:
+      mutation_mode: ${{ steps.mode.outputs.mutation_mode }}
+    steps:
+      # A called workflow's own files are not in the consumer checkout. Use
+      # the exact provider revision that defined this workflow, then isolate it
+      # outside the consumer workspace before running provider tooling.
+      - name: Checkout provider contract tooling
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .test-effectiveness-tools
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+
+      - name: Validate consumer inputs
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          EXECUTION_MODE: ${{ inputs.execution-mode }}
+          COVERAGE_ENABLED: ${{ inputs.coverage-enabled }}
+          COVERAGE_COMMAND: ${{ inputs.coverage-command }}
+          COVERAGE_REGRESSION_COMMAND: ${{ inputs.coverage-regression-command }}
+          COVERAGE_BASELINE_PATH: ${{ inputs.coverage-baseline-path }}
+          COVERAGE_REPORT_PATH: ${{ inputs.coverage-report-path }}
+          COVERAGE_CONFIG_PATH: ${{ inputs.coverage-config-path }}
+          PROPERTY_ENABLED: ${{ inputs.property-enabled }}
+          PROPERTY_COMMAND: ${{ inputs.property-command }}
+          PROPERTY_RANDOMIZED: ${{ inputs.property-randomized }}
+          PROPERTY_SEED: ${{ inputs.property-seed || inputs.replay-seed }}
+          REPLAY_SEED: ${{ inputs.replay-seed }}
+          PROPERTY_REPLAY_COMMAND: ${{ inputs.property-replay-command }}
+          PROPERTY_REPORT_PATH: ${{ inputs.property-report-path }}
+          PROPERTY_CONFIG_PATH: ${{ inputs.property-config-path }}
+          MUTATION_ENABLED: ${{ inputs.mutation-enabled }}
+          MUTATION_COMMAND: ${{ inputs.mutation-command }}
+          MUTATION_TIMEOUT_SECONDS: ${{ inputs.mutation-timeout-seconds }}
+          MUTATION_REPORT_PATH: ${{ inputs.mutation-report-path }}
+          MUTATION_CONFIG_PATH: ${{ inputs.mutation-config-path }}
+        run: node .test-effectiveness-tools/scripts/test-effectiveness-contract.mjs
+
+      - name: Select mutation mode
+        id: mode
+        shell: bash
+        env:
+          EXECUTION_MODE: ${{ inputs.execution-mode }}
+        run: |
+          set -euo pipefail
+          case "$EXECUTION_MODE" in
+            pr) mode="pr-bounded" ;;
+            main) mode="main-full" ;;
+            nightly) mode="nightly-deep" ;;
+            *)
+              echo "::error title=Invalid execution mode::execution-mode is not supported: $EXECUTION_MODE" >&2
+              exit 1
+              ;;
+          esac
+          echo "mutation_mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Selected mutation mode: $mode"
+
+      - name: Isolate provider tooling
+        if: always()
+        shell: bash
+        run: |
+          if [ -d .test-effectiveness-tools ]; then
+            mv .test-effectiveness-tools "$RUNNER_TEMP/test-effectiveness-tools"
+          fi
+
+  coverage:
+    name: Coverage regression
+    needs: plan
+    if: inputs.coverage-enabled
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Validate referenced consumer files
+        shell: bash
+        env:
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          COVERAGE_BASELINE_PATH: ${{ inputs.coverage-baseline-path }}
+          COVERAGE_CONFIG_PATH: ${{ inputs.coverage-config-path }}
+        run: |
+          set -euo pipefail
+          test -d "$WORKING_DIRECTORY" || {
+            echo "::error title=Coverage configuration::working-directory does not exist: $WORKING_DIRECTORY" >&2
+            exit 1
+          }
+          test -f "$WORKING_DIRECTORY/$COVERAGE_BASELINE_PATH" || {
+            echo "::error title=Coverage configuration::coverage-baseline-path does not exist: $COVERAGE_BASELINE_PATH" >&2
+            exit 1
+          }
+          if [ -n "$COVERAGE_CONFIG_PATH" ]; then
+            test -f "$WORKING_DIRECTORY/$COVERAGE_CONFIG_PATH" || {
+              echo "::error title=Coverage configuration::coverage-config-path does not exist: $COVERAGE_CONFIG_PATH" >&2
+              exit 1
+            }
+          fi
+
+      - name: Install consumer dependencies
+        if: inputs.install-command != ''
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
+        shell: bash
+        run: bash -euo pipefail -c "$INSTALL_COMMAND"
+
+      - name: Run coverage and regression gate
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          COVERAGE_COMMAND: ${{ inputs.coverage-command }}
+          COVERAGE_REGRESSION_COMMAND: ${{ inputs.coverage-regression-command }}
+          COVERAGE_BASELINE_PATH: ${{ inputs.coverage-baseline-path }}
+          COVERAGE_REPORT_PATH: ${{ inputs.coverage-report-path }}
+          COVERAGE_CONFIG_PATH: ${{ inputs.coverage-config-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -euo pipefail -c "$COVERAGE_COMMAND"
+          bash -euo pipefail -c "$COVERAGE_REGRESSION_COMMAND"
+
+      - name: Verify coverage report
+        if: success()
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          COVERAGE_REPORT_PATH: ${{ inputs.coverage-report-path }}
+        shell: bash
+        run: |
+          test -e "$COVERAGE_REPORT_PATH" || {
+            echo "::error title=Coverage configuration::coverage report was not produced: $COVERAGE_REPORT_PATH" >&2
+            exit 1
+          }
+
+      - name: Write reproducibility manifest
+        if: always()
+        env:
+          CAPABILITY: coverage
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+          RUN_ID_VALUE: ${{ github.run_id }}
+          RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
+          JOB_STATUS: ${{ job.status }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          COVERAGE_COMMAND: ${{ inputs.coverage-command }}
+          COVERAGE_REGRESSION_COMMAND: ${{ inputs.coverage-regression-command }}
+          COVERAGE_BASELINE_PATH: ${{ inputs.coverage-baseline-path }}
+          COVERAGE_REPORT_PATH: ${{ inputs.coverage-report-path }}
+          COVERAGE_CONFIG_PATH: ${{ inputs.coverage-config-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest_dir="$RUNNER_TEMP/test-effectiveness/coverage"
+          mkdir -p "$manifest_dir"
+          jq -n \
+            --arg capability "$CAPABILITY" --arg event "$EVENT_NAME" \
+            --arg ref "$GITHUB_REF_VALUE" --arg sha "$GITHUB_SHA_VALUE" \
+            --arg run_id "$RUN_ID_VALUE" --arg run_attempt "$RUN_ATTEMPT_VALUE" \
+            --arg status "$JOB_STATUS" --arg working_directory "$WORKING_DIRECTORY" \
+            --arg command "$COVERAGE_COMMAND" \
+            --arg regression_command "$COVERAGE_REGRESSION_COMMAND" \
+            --arg baseline_path "$COVERAGE_BASELINE_PATH" \
+            --arg report_path "$COVERAGE_REPORT_PATH" \
+            --arg config_path "$COVERAGE_CONFIG_PATH" \
+            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, command: $command, regressionCommand: $regression_command, baselinePath: $baseline_path, reportPath: $report_path, configPath: $config_path}' \
+            > "$manifest_dir/run.json"
+
+      - name: Upload coverage report and manifest
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-effectiveness-coverage
+          path: |
+            ${{ inputs.working-directory }}/${{ inputs.coverage-report-path }}
+            ${{ runner.temp }}/test-effectiveness/coverage
+          if-no-files-found: error
+          retention-days: 14
+
+  property:
+    name: Property tests
+    needs: plan
+    if: inputs.property-enabled
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Validate referenced consumer files
+        shell: bash
+        env:
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          PROPERTY_CONFIG_PATH: ${{ inputs.property-config-path }}
+        run: |
+          set -euo pipefail
+          test -d "$WORKING_DIRECTORY" || {
+            echo "::error title=Property configuration::working-directory does not exist: $WORKING_DIRECTORY" >&2
+            exit 1
+          }
+          if [ -n "$PROPERTY_CONFIG_PATH" ]; then
+            test -f "$WORKING_DIRECTORY/$PROPERTY_CONFIG_PATH" || {
+              echo "::error title=Property configuration::property-config-path does not exist: $PROPERTY_CONFIG_PATH" >&2
+              exit 1
+            }
+          fi
+
+      - name: Install consumer dependencies
+        if: inputs.install-command != ''
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
+        shell: bash
+        run: bash -euo pipefail -c "$INSTALL_COMMAND"
+
+      - name: Run property tests
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          PROPERTY_COMMAND: ${{ inputs.property-command }}
+          PROPERTY_RANDOMIZED: ${{ inputs.property-randomized }}
+          PROPERTY_SEED: ${{ inputs.property-seed || inputs.replay-seed }}
+          REPLAY_SEED: ${{ inputs.replay-seed }}
+          PROPERTY_REPLAY_COMMAND: ${{ inputs.property-replay-command }}
+          PROPERTY_CONFIG_PATH: ${{ inputs.property-config-path }}
+          PROPERTY_REPORT_PATH: ${{ inputs.property-report-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -euo pipefail -c "$PROPERTY_COMMAND"
+
+      - name: Verify property report
+        if: success()
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          PROPERTY_REPORT_PATH: ${{ inputs.property-report-path }}
+        shell: bash
+        run: |
+          test -e "$PROPERTY_REPORT_PATH" || {
+            echo "::error title=Property configuration::property report was not produced: $PROPERTY_REPORT_PATH" >&2
+            exit 1
+          }
+
+      - name: Write reproducibility manifest
+        if: always()
+        env:
+          CAPABILITY: property
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+          RUN_ID_VALUE: ${{ github.run_id }}
+          RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
+          JOB_STATUS: ${{ job.status }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          PROPERTY_COMMAND: ${{ inputs.property-command }}
+          PROPERTY_RANDOMIZED: ${{ inputs.property-randomized }}
+          PROPERTY_SEED: ${{ inputs.property-seed || inputs.replay-seed }}
+          REPLAY_SEED: ${{ inputs.replay-seed }}
+          PROPERTY_REPLAY_COMMAND: ${{ inputs.property-replay-command }}
+          PROPERTY_REPORT_PATH: ${{ inputs.property-report-path }}
+          PROPERTY_CONFIG_PATH: ${{ inputs.property-config-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest_dir="$RUNNER_TEMP/test-effectiveness/property"
+          mkdir -p "$manifest_dir"
+          jq -n \
+            --arg capability "$CAPABILITY" --arg event "$EVENT_NAME" \
+            --arg ref "$GITHUB_REF_VALUE" --arg sha "$GITHUB_SHA_VALUE" \
+            --arg run_id "$RUN_ID_VALUE" --arg run_attempt "$RUN_ATTEMPT_VALUE" \
+            --arg status "$JOB_STATUS" --arg working_directory "$WORKING_DIRECTORY" \
+            --arg command "$PROPERTY_COMMAND" --arg randomized "$PROPERTY_RANDOMIZED" \
+            --arg property_seed "$PROPERTY_SEED" --arg replay_seed "$REPLAY_SEED" \
+            --arg replay_command "$PROPERTY_REPLAY_COMMAND" \
+            --arg report_path "$PROPERTY_REPORT_PATH" \
+            --arg config_path "$PROPERTY_CONFIG_PATH" \
+            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, command: $command, randomized: ($randomized == "true"), propertySeed: $property_seed, replaySeed: $replay_seed, replayCommand: $replay_command, reportPath: $report_path, configPath: $config_path}' \
+            > "$manifest_dir/run.json"
+          printf '%s\n' \
+            "PROPERTY_SEED=$PROPERTY_SEED" \
+            "REPLAY_SEED=$REPLAY_SEED" \
+            "PROPERTY_REPLAY_COMMAND=$PROPERTY_REPLAY_COMMAND" \
+            > "$manifest_dir/replay.txt"
+
+      - name: Upload property report and manifest
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-effectiveness-property
+          path: |
+            ${{ inputs.working-directory }}/${{ inputs.property-report-path }}
+            ${{ runner.temp }}/test-effectiveness/property
+          if-no-files-found: error
+          retention-days: 14
+
+  mutation:
+    name: Mutation (${{ needs.plan.outputs.mutation_mode }})
+    needs: plan
+    if: inputs.mutation-enabled
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Validate referenced consumer files
+        shell: bash
+        env:
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          MUTATION_CONFIG_PATH: ${{ inputs.mutation-config-path }}
+        run: |
+          set -euo pipefail
+          test -d "$WORKING_DIRECTORY" || {
+            echo "::error title=Mutation configuration::working-directory does not exist: $WORKING_DIRECTORY" >&2
+            exit 1
+          }
+          if [ -n "$MUTATION_CONFIG_PATH" ]; then
+            test -f "$WORKING_DIRECTORY/$MUTATION_CONFIG_PATH" || {
+              echo "::error title=Mutation configuration::mutation-config-path does not exist: $MUTATION_CONFIG_PATH" >&2
+              exit 1
+            }
+          fi
+
+      - name: Install consumer dependencies
+        if: inputs.install-command != ''
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
+        shell: bash
+        run: bash -euo pipefail -c "$INSTALL_COMMAND"
+
+      - name: Run event-selected mutation command
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          MUTATION_MODE: ${{ needs.plan.outputs.mutation_mode }}
+          MUTATION_COMMAND: ${{ inputs.mutation-command }}
+          MUTATION_TIMEOUT_SECONDS: ${{ inputs.mutation-timeout-seconds }}
+          MUTATION_CONFIG_PATH: ${{ inputs.mutation-config-path }}
+          MUTATION_REPORT_PATH: ${{ inputs.mutation-report-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=30s "${MUTATION_TIMEOUT_SECONDS}s" \
+            bash -euo pipefail -c "$MUTATION_COMMAND"
+
+      - name: Verify mutation report
+        if: success()
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          MUTATION_REPORT_PATH: ${{ inputs.mutation-report-path }}
+        shell: bash
+        run: |
+          test -e "$MUTATION_REPORT_PATH" || {
+            echo "::error title=Mutation configuration::mutation report was not produced: $MUTATION_REPORT_PATH" >&2
+            exit 1
+          }
+
+      - name: Write reproducibility manifest
+        if: always()
+        env:
+          CAPABILITY: mutation
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          GITHUB_SHA_VALUE: ${{ github.sha }}
+          RUN_ID_VALUE: ${{ github.run_id }}
+          RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
+          JOB_STATUS: ${{ job.status }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          MUTATION_MODE: ${{ needs.plan.outputs.mutation_mode }}
+          MUTATION_COMMAND: ${{ inputs.mutation-command }}
+          MUTATION_TIMEOUT_SECONDS: ${{ inputs.mutation-timeout-seconds }}
+          MUTATION_REPORT_PATH: ${{ inputs.mutation-report-path }}
+          MUTATION_CONFIG_PATH: ${{ inputs.mutation-config-path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest_dir="$RUNNER_TEMP/test-effectiveness/mutation"
+          mkdir -p "$manifest_dir"
+          jq -n \
+            --arg capability "$CAPABILITY" --arg event "$EVENT_NAME" \
+            --arg ref "$GITHUB_REF_VALUE" --arg sha "$GITHUB_SHA_VALUE" \
+            --arg run_id "$RUN_ID_VALUE" --arg run_attempt "$RUN_ATTEMPT_VALUE" \
+            --arg status "$JOB_STATUS" --arg working_directory "$WORKING_DIRECTORY" \
+            --arg mode "$MUTATION_MODE" --arg command "$MUTATION_COMMAND" \
+            --arg timeout_seconds "$MUTATION_TIMEOUT_SECONDS" \
+            --arg report_path "$MUTATION_REPORT_PATH" \
+            --arg config_path "$MUTATION_CONFIG_PATH" \
+            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, mode: $mode, command: $command, timeoutSeconds: ($timeout_seconds | tonumber), reportPath: $report_path, configPath: $config_path}' \
+            > "$manifest_dir/run.json"
+
+      - name: Upload mutation report and manifest
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-effectiveness-mutation
+          path: |
+            ${{ inputs.working-directory }}/${{ inputs.mutation-report-path }}
+            ${{ runner.temp }}/test-effectiveness/mutation
+          if-no-files-found: error
+          retention-days: 14
+
+  verify:
+    name: verify
+    if: always()
+    needs:
+      - plan
+      - coverage
+      - property
+      - mutation
+    outputs:
+      status: ${{ steps.status.outputs.status }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check capability results
+        id: status
+        if: always()
+        shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          set -euo pipefail
+          echo "Job results: $RESULTS"
+          IFS=',' read -ra results <<< "$RESULTS"
+          status=success
+          for result in "${results[@]}"; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              status=failure
+              echo "status=$status" >> "$GITHUB_OUTPUT"
+              echo "::error title=Test-effectiveness lane failed::job result was '$result'; inspect the capability log and uploaded manifest." >&2
+              exit 1
+            fi
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "All enabled capabilities succeeded; disabled capabilities were skipped."

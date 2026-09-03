@@ -124,15 +124,11 @@ lanes:
         required: false
         default: pr
         allowed: [pr, main, nightly]
-      coverage-command:
+      node-version:
         type: string
         required: false
-        default: ""
-      property-command:
-        type: string
-        required: false
-        default: ""
-      mutation-command:
+        default: "24"
+      install-command:
         type: string
         required: false
         default: ""
@@ -140,7 +136,75 @@ lanes:
         type: number
         required: false
         default: 600
+      coverage-enabled:
+        type: boolean
+        required: false
+        default: false
+      coverage-command:
+        type: string
+        required: false
+        default: ""
+      coverage-regression-command:
+        type: string
+        required: false
+        default: ""
+      coverage-baseline-path:
+        type: string
+        required: false
+        default: ""
+      coverage-report-path:
+        type: string
+        required: false
+        default: ""
+      coverage-config-path:
+        type: string
+        required: false
+        default: ""
+      property-enabled:
+        type: boolean
+        required: false
+        default: false
+      property-command:
+        type: string
+        required: false
+        default: ""
+      property-randomized:
+        type: boolean
+        required: false
+        default: false
+      property-seed:
+        type: string
+        required: false
+        default: ""
       replay-seed:
+        type: string
+        required: false
+        default: ""
+      property-replay-command:
+        type: string
+        required: false
+        default: ""
+      property-report-path:
+        type: string
+        required: false
+        default: ""
+      property-config-path:
+        type: string
+        required: false
+        default: ""
+      mutation-enabled:
+        type: boolean
+        required: false
+        default: false
+      mutation-command:
+        type: string
+        required: false
+        default: ""
+      mutation-report-path:
+        type: string
+        required: false
+        default: ""
+      mutation-config-path:
         type: string
         required: false
         default: ""
