@@ -71,6 +71,13 @@ command and report path. Optional configuration paths must refer to existing
 files in the consumer workspace. Missing or malformed enabled inputs fail in
 the `plan` job before any consumer test command runs.
 
+The provider resolves the consumer revision once in `plan`: a
+`pull_request` caller uses `github.event.pull_request.head.sha`, while every
+other supported caller uses `github.sha`. Coverage, property, and mutation
+jobs pass that exact SHA to `actions/checkout`; they do not rely on the
+checkout action's default merge ref. Each job records `git rev-parse HEAD` as
+`consumerSha` in its manifest.
+
 ## Execution modes
 
 `execution-mode` is explicit and must match the caller event. The mutation
@@ -108,7 +115,8 @@ Each enabled capability uploads a stable artifact:
 
 Artifacts contain the consumer report and a JSON `run.json` manifest with the
 schema version, capability, event, commit, run attempt, command/configuration
-paths, result, and (for mutation/property) selected mode or replay data. This
+paths, result, the actual checked-out `consumerSha`, and (for
+mutation/property) selected mode or replay data. This
 makes a failed run diagnosable and identifies the exact command and revision
 needed for reproduction. Report and configuration paths must be relative to
 `working-directory`; absolute and parent-traversing paths are rejected. Do

@@ -5,6 +5,7 @@ import yaml from "js-yaml";
 import {
   aggregateTestEffectivenessStatus,
   selectMutationMode,
+  selectConsumerSha,
   validateExecutionContext,
   validateTestEffectivenessConfig,
   workflowInputsToConfig
@@ -46,6 +47,16 @@ test("workflow exposes independent capabilities and stable status", () => {
   assert.equal(inputs["coverage-regression-command"].type, "string");
   assert.equal(inputs["replay-seed"].type, "string");
   assert.equal(call.outputs.status.value, "${{ jobs.verify.outputs.status }}");
+  assert.equal(
+    workflow.jobs.plan.outputs.consumer_sha,
+    "${{ steps.consumer-ref.outputs.consumer_sha }}"
+  );
+  assert.match(
+    workflow.jobs.plan.steps.find((step) =>
+      step.name.includes("Select consumer checkout")
+    ).run,
+    /--select-consumer-sha/
+  );
   assert.deepEqual(Object.keys(workflow.jobs).sort(), [
     "coverage",
     "mutation",
@@ -55,6 +66,19 @@ test("workflow exposes independent capabilities and stable status", () => {
   ]);
   for (const job of ["coverage", "property", "mutation"]) {
     assert.equal("strategy" in workflow.jobs[job], false);
+    const checkout = workflow.jobs[job].steps.find(
+      (step) => step.name === "Checkout consumer repository"
+    );
+    assert.equal(checkout.with.ref, "${{ needs.plan.outputs.consumer_sha }}");
+    assert.ok(
+      workflow.jobs[job].steps.some(
+        (step) => step.name === "Record consumer revision"
+      )
+    );
+    const manifest = workflow.jobs[job].steps.find((step) =>
+      step.name.includes("reproducibility manifest")
+    );
+    assert.match(manifest.run, /consumerSha/);
   }
   assert.match(
     workflow.jobs.coverage.steps.find((step) =>
@@ -86,6 +110,30 @@ test("mutation mode follows explicit execution mode", () => {
     "nightly-deep"
   );
   assert.equal(selectMutationMode({ executionMode: "invalid" }), "main-full");
+});
+
+test("consumer checkout selects PR head and caller SHA explicitly", () => {
+  assert.equal(
+    selectConsumerSha({
+      eventName: "pull_request",
+      pullRequestHeadSha: "head-sha-131",
+      callerSha: "merge-sha-131"
+    }),
+    "head-sha-131"
+  );
+  assert.equal(
+    selectConsumerSha({ eventName: "push", callerSha: "push-sha-131" }),
+    "push-sha-131"
+  );
+  assert.throws(
+    () =>
+      selectConsumerSha({
+        eventName: "pull_request",
+        pullRequestHeadSha: "",
+        callerSha: "merge-sha-131"
+      }),
+    /pull_request head SHA is unavailable/
+  );
 });
 
 test("execution mode must match its caller event", () => {

@@ -35,6 +35,32 @@ export function selectMutationMode({ executionMode = "pr" } = {}) {
 }
 
 /**
+ * Select the exact consumer commit for a caller event. Pull-request merge
+ * refs are deliberately excluded: the lane evaluates the PR head itself.
+ *
+ * @param {{eventName?: unknown, pullRequestHeadSha?: unknown, callerSha?: unknown}} context
+ * @returns {string}
+ */
+export function selectConsumerSha({
+  eventName,
+  pullRequestHeadSha,
+  callerSha
+} = {}) {
+  if (eventName === "pull_request") {
+    const headSha = text(pullRequestHeadSha);
+    if (!headSha) {
+      throw new Error("pull_request head SHA is unavailable");
+    }
+    return headSha;
+  }
+  const sha = text(callerSha);
+  if (!sha) {
+    throw new Error("caller SHA is unavailable");
+  }
+  return sha;
+}
+
+/**
  * Return deterministic diagnostics for an execution mode/event pairing.
  * Reusable workflows inherit the caller's event, so this prevents a caller
  * from labelling a full run as a PR run (or vice versa).
@@ -276,6 +302,23 @@ function parseNumber(value) {
 }
 
 function main() {
+  if (process.argv[2] === "--select-consumer-sha") {
+    try {
+      const consumerSha = selectConsumerSha({
+        eventName: process.env.EVENT_NAME,
+        pullRequestHeadSha: process.env.PR_HEAD_SHA,
+        callerSha: process.env.CALLER_SHA
+      });
+      console.log(`consumer_sha=${consumerSha}`);
+    } catch (cause) {
+      console.error(
+        `::error title=Consumer checkout revision::${cause.message}`
+      );
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   const inputs = {
     "working-directory": process.env.WORKING_DIRECTORY,
     "execution-mode": process.env.EXECUTION_MODE,

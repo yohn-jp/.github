@@ -119,6 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mutation_mode: ${{ steps.mode.outputs.mutation_mode }}
+      consumer_sha: ${{ steps.consumer-ref.outputs.consumer_sha }}
     steps:
       # A called workflow's own files are not in the consumer checkout. Use
       # the exact provider revision that defined this workflow, then isolate it
@@ -135,6 +136,19 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
+
+      - name: Select consumer checkout revision
+        id: consumer-ref
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node .test-effectiveness-tools/scripts/test-effectiveness-contract.mjs \
+            --select-consumer-sha >> "$GITHUB_OUTPUT"
+          echo "Consumer checkout revision selected for event: $EVENT_NAME"
 
       - name: Validate consumer inputs
         shell: bash
@@ -199,7 +213,17 @@ jobs:
       - name: Checkout consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.plan.outputs.consumer_sha }}
           persist-credentials: false
+
+      - name: Record consumer revision
+        id: consumer-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer_sha="$(git rev-parse HEAD)"
+          echo "consumer_sha=$consumer_sha" >> "$GITHUB_OUTPUT"
+          echo "Checked out consumer revision: $consumer_sha"
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -273,6 +297,7 @@ jobs:
           RUN_ID_VALUE: ${{ github.run_id }}
           RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
           JOB_STATUS: ${{ job.status }}
+          CONSUMER_SHA: ${{ steps.consumer-revision.outputs.consumer_sha }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
           COVERAGE_COMMAND: ${{ inputs.coverage-command }}
           COVERAGE_REGRESSION_COMMAND: ${{ inputs.coverage-regression-command }}
@@ -288,13 +313,14 @@ jobs:
             --arg capability "$CAPABILITY" --arg event "$EVENT_NAME" \
             --arg ref "$GITHUB_REF_VALUE" --arg sha "$GITHUB_SHA_VALUE" \
             --arg run_id "$RUN_ID_VALUE" --arg run_attempt "$RUN_ATTEMPT_VALUE" \
-            --arg status "$JOB_STATUS" --arg working_directory "$WORKING_DIRECTORY" \
+            --arg consumer_sha "$CONSUMER_SHA" --arg status "$JOB_STATUS" \
+            --arg working_directory "$WORKING_DIRECTORY" \
             --arg command "$COVERAGE_COMMAND" \
             --arg regression_command "$COVERAGE_REGRESSION_COMMAND" \
             --arg baseline_path "$COVERAGE_BASELINE_PATH" \
             --arg report_path "$COVERAGE_REPORT_PATH" \
             --arg config_path "$COVERAGE_CONFIG_PATH" \
-            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, command: $command, regressionCommand: $regression_command, baselinePath: $baseline_path, reportPath: $report_path, configPath: $config_path}' \
+            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, consumerSha: $consumer_sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, command: $command, regressionCommand: $regression_command, baselinePath: $baseline_path, reportPath: $report_path, configPath: $config_path}' \
             > "$manifest_dir/run.json"
 
       - name: Upload coverage report and manifest
@@ -317,7 +343,17 @@ jobs:
       - name: Checkout consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.plan.outputs.consumer_sha }}
           persist-credentials: false
+
+      - name: Record consumer revision
+        id: consumer-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer_sha="$(git rev-parse HEAD)"
+          echo "consumer_sha=$consumer_sha" >> "$GITHUB_OUTPUT"
+          echo "Checked out consumer revision: $consumer_sha"
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -387,6 +423,7 @@ jobs:
           RUN_ID_VALUE: ${{ github.run_id }}
           RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
           JOB_STATUS: ${{ job.status }}
+          CONSUMER_SHA: ${{ steps.consumer-revision.outputs.consumer_sha }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
           PROPERTY_COMMAND: ${{ inputs.property-command }}
           PROPERTY_RANDOMIZED: ${{ inputs.property-randomized }}
@@ -404,13 +441,14 @@ jobs:
             --arg capability "$CAPABILITY" --arg event "$EVENT_NAME" \
             --arg ref "$GITHUB_REF_VALUE" --arg sha "$GITHUB_SHA_VALUE" \
             --arg run_id "$RUN_ID_VALUE" --arg run_attempt "$RUN_ATTEMPT_VALUE" \
-            --arg status "$JOB_STATUS" --arg working_directory "$WORKING_DIRECTORY" \
+            --arg consumer_sha "$CONSUMER_SHA" --arg status "$JOB_STATUS" \
+            --arg working_directory "$WORKING_DIRECTORY" \
             --arg command "$PROPERTY_COMMAND" --arg randomized "$PROPERTY_RANDOMIZED" \
             --arg property_seed "$PROPERTY_SEED" --arg replay_seed "$REPLAY_SEED" \
             --arg replay_command "$PROPERTY_REPLAY_COMMAND" \
             --arg report_path "$PROPERTY_REPORT_PATH" \
             --arg config_path "$PROPERTY_CONFIG_PATH" \
-            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, command: $command, randomized: ($randomized == "true"), propertySeed: $property_seed, replaySeed: $replay_seed, replayCommand: $replay_command, reportPath: $report_path, configPath: $config_path}' \
+            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, consumerSha: $consumer_sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, command: $command, randomized: ($randomized == "true"), propertySeed: $property_seed, replaySeed: $replay_seed, replayCommand: $replay_command, reportPath: $report_path, configPath: $config_path}' \
             > "$manifest_dir/run.json"
           printf '%s\n' \
             "PROPERTY_SEED=$PROPERTY_SEED" \
@@ -438,7 +476,17 @@ jobs:
       - name: Checkout consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.plan.outputs.consumer_sha }}
           persist-credentials: false
+
+      - name: Record consumer revision
+        id: consumer-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer_sha="$(git rev-parse HEAD)"
+          echo "consumer_sha=$consumer_sha" >> "$GITHUB_OUTPUT"
+          echo "Checked out consumer revision: $consumer_sha"
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -507,6 +555,7 @@ jobs:
           RUN_ID_VALUE: ${{ github.run_id }}
           RUN_ATTEMPT_VALUE: ${{ github.run_attempt }}
           JOB_STATUS: ${{ job.status }}
+          CONSUMER_SHA: ${{ steps.consumer-revision.outputs.consumer_sha }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
           MUTATION_MODE: ${{ needs.plan.outputs.mutation_mode }}
           MUTATION_COMMAND: ${{ inputs.mutation-command }}
@@ -522,12 +571,13 @@ jobs:
             --arg capability "$CAPABILITY" --arg event "$EVENT_NAME" \
             --arg ref "$GITHUB_REF_VALUE" --arg sha "$GITHUB_SHA_VALUE" \
             --arg run_id "$RUN_ID_VALUE" --arg run_attempt "$RUN_ATTEMPT_VALUE" \
-            --arg status "$JOB_STATUS" --arg working_directory "$WORKING_DIRECTORY" \
+            --arg consumer_sha "$CONSUMER_SHA" --arg status "$JOB_STATUS" \
+            --arg working_directory "$WORKING_DIRECTORY" \
             --arg mode "$MUTATION_MODE" --arg command "$MUTATION_COMMAND" \
             --arg timeout_seconds "$MUTATION_TIMEOUT_SECONDS" \
             --arg report_path "$MUTATION_REPORT_PATH" \
             --arg config_path "$MUTATION_CONFIG_PATH" \
-            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, mode: $mode, command: $command, timeoutSeconds: ($timeout_seconds | tonumber), reportPath: $report_path, configPath: $config_path}' \
+            '{schemaVersion: 1, capability: $capability, event: $event, ref: $ref, sha: $sha, consumerSha: $consumer_sha, runId: $run_id, runAttempt: $run_attempt, status: $status, workingDirectory: $working_directory, mode: $mode, command: $command, timeoutSeconds: ($timeout_seconds | tonumber), reportPath: $report_path, configPath: $config_path}' \
             > "$manifest_dir/run.json"
 
       - name: Upload mutation report and manifest
