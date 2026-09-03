@@ -49,11 +49,15 @@ produce `failure` and a failed job.
 When `config-file` is supplied, it must be inside the consumer workspace and
 must retain `rules.unpinned-uses.disable: true`; that rule belongs to the
 organization's existing pin validator and is intentionally not delegated to
-consumer configuration. The workflow proves this on every run by adding a
-run-id-specific probe containing an intentionally unpinned action to the same
-zizmor invocation. A malformed or re-enabled pin rule therefore fails before
-the gate can report success, while the consumer config can still tune
-zizmor's distinct security audits explicitly.
+consumer configuration. The workflow enforces this structurally: it parses
+the supplied YAML and fails closed unless `rules.unpinned-uses.disable` is
+exactly `true`, so a config that re-enables the rule (directly, or
+indirectly through `rules.unpinned-uses.config.policies`) is rejected before
+zizmor ever runs. A run-id-specific probe containing an intentionally
+unpinned action is still added to the same zizmor invocation as a
+defense-in-depth check, but the structural check is the primary guarantee.
+The consumer config can still tune zizmor's distinct security audits
+explicitly.
 
 ## Consumer invocation
 
