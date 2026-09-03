@@ -1,0 +1,7 @@
+schema-version: 2
+entry-points: []
+include: src/**
+exceptions: []
+maintainability:
+  rules:
+    complexity: 0

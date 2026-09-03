@@ -1,0 +1,7 @@
+{
+  "name": "static-quality-pass",
+  "private": true,
+  "dependencies": {
+    "used-package": "1.0.0"
+  }
+}

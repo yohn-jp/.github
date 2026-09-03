@@ -1,0 +1,283 @@
+name: Static quality
+
+# Reusable organization-owned static-quality lane for JavaScript and
+# TypeScript repositories.  A consumer opts in by supplying a config file.
+# The built-in analyzer covers dead files/exports/dependencies and
+# maintainability; an existing Knip/ESLint setup may be supplied through
+# check-command and must emit static-quality/v1 JSON.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Consumer package root containing the configured source tree.
+        type: string
+        default: "."
+      execution-mode:
+        description: >-
+          Invocation context: pr, main, or nightly. The event must match the
+          selected mode.
+        type: string
+        default: pr
+      config-file:
+        description: >-
+          Required consumer-owned static-quality YAML path, relative to the
+          consumer repository root. Empty disables this lane intentionally.
+        type: string
+        default: ""
+      baseline-file:
+        description: >-
+          Optional consumer-owned baseline path, relative to the repository
+          root. Existing findings are suppressed; newly introduced findings
+          still fail.
+        type: string
+        default: ""
+      check-command:
+        description: >-
+          Optional consumer command run in working-directory. Its stdout must
+          be static-quality/v1 JSON, ESLint JSON, or Knip JSON. Empty uses the
+          provider's deterministic analyzer.
+        type: string
+        default: ""
+    outputs:
+      status:
+        description: "Aggregated lane status: success, skipped, or failure."
+        value: ${{ jobs.status.outputs.status }}
+
+permissions: {}
+
+jobs:
+  plan:
+    name: Select consumer revision
+    if: inputs.config-file != ''
+    runs-on: ubuntu-latest
+    outputs:
+      consumer_sha: ${{ steps.consumer-ref.outputs.consumer_sha }}
+    steps:
+      # pull_request runs must evaluate the PR head, never the ephemeral
+      # merge ref actions/checkout defaults to; other events evaluate the
+      # caller's own commit. Either SHA being unavailable is a hard failure.
+      - name: Select consumer checkout revision
+        id: consumer-ref
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if [[ -z "$PR_HEAD_SHA" ]]; then
+              echo "::error title=Static-quality revision selection::pull_request head SHA is unavailable" >&2
+              exit 1
+            fi
+            echo "consumer_sha=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          else
+            if [[ -z "$CALLER_SHA" ]]; then
+              echo "::error title=Static-quality revision selection::caller SHA is unavailable" >&2
+              exit 1
+            fi
+            echo "consumer_sha=$CALLER_SHA" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Consumer checkout revision selected for event: $EVENT_NAME"
+
+  check:
+    name: Static quality checks
+    if: inputs.config-file != ''
+    needs: [plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.plan.outputs.consumer_sha }}
+          persist-credentials: false
+
+      - name: Record consumer revision
+        id: consumer-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer_sha="$(git rev-parse HEAD)"
+          echo "consumer_sha=$consumer_sha" >> "$GITHUB_OUTPUT"
+          echo "Checked out consumer revision: $consumer_sha"
+
+      - name: Validate gate inputs
+        shell: bash
+        env:
+          CONFIG_FILE: ${{ inputs.config-file }}
+          BASELINE_FILE: ${{ inputs.baseline-file }}
+          EXECUTION_MODE: ${{ inputs.execution-mode }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+
+          case "$EXECUTION_MODE:$EVENT_NAME" in
+            pr:pull_request|main:push|nightly:schedule) ;;
+            *)
+              echo "::error title=Invalid static-quality execution mode::execution-mode '$EXECUTION_MODE' must match the caller event (pr=pull_request, main=push, nightly=schedule); received event '$EVENT_NAME'." >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ -z "$WORKING_DIRECTORY" || "$WORKING_DIRECTORY" == /* || "$WORKING_DIRECTORY" == *".."* ]]; then
+            echo "::error title=Invalid static-quality working directory::working-directory must be a non-absolute repository-relative path without '..'; received '$WORKING_DIRECTORY'." >&2
+            exit 1
+          fi
+
+          for policy_path in "$CONFIG_FILE" "$BASELINE_FILE"; do
+            if [[ -n "$policy_path" && ( "$policy_path" == /* || "$policy_path" == *".."* ) ]]; then
+              echo "::error title=Invalid static-quality configuration path::config and baseline paths must be repository-relative and must not contain '..'; received '$policy_path'." >&2
+              exit 1
+            fi
+          done
+
+          if [[ ! -f "$CONFIG_FILE" ]]; then
+            echo "::error title=Static-quality configuration::config-file was not found: $CONFIG_FILE" >&2
+            exit 1
+          fi
+          if [[ -n "$BASELINE_FILE" && ! -f "$BASELINE_FILE" ]]; then
+            echo "::error title=Static-quality baseline::baseline-file was not found: $BASELINE_FILE" >&2
+            exit 1
+          fi
+
+      # A reusable workflow's own scripts are not in the consumer checkout.
+      # Resolve this provider tooling at the exact revision that defines the
+      # workflow, then isolate it before running consumer commands.
+      - name: Checkout static-quality tooling (yohn-jp/.github)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .static-quality-tools
+
+      - name: Isolate static-quality tooling
+        shell: bash
+        run: mv .static-quality-tools "$RUNNER_TEMP/static-quality-tools"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+
+      - name: Install static-quality parser
+        working-directory: ${{ runner.temp }}/static-quality-tools
+        run: npm install --no-save --no-package-lock --ignore-scripts js-yaml@4.3.1
+
+      - name: Run static-quality gate
+        id: gate
+        continue-on-error: true
+        shell: bash
+        env:
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          CONFIG_FILE: ${{ inputs.config-file }}
+          BASELINE_FILE: ${{ inputs.baseline-file }}
+          CHECK_COMMAND: ${{ inputs.check-command }}
+          REPORT_FILE: ${{ runner.temp }}/static-quality-report.json
+        run: |
+          set -o pipefail
+          node "$RUNNER_TEMP/static-quality-tools/scripts/static-quality-gate.mjs" \
+            --root "$WORKING_DIRECTORY" \
+            --config "$CONFIG_FILE" \
+            --baseline "$BASELINE_FILE" \
+            --check-command "$CHECK_COMMAND" \
+            --output "$REPORT_FILE" \
+            | tee "$RUNNER_TEMP/static-quality-output.log"
+
+      - name: Ensure static-quality report exists
+        if: always()
+        shell: bash
+        env:
+          REPORT_FILE: ${{ runner.temp }}/static-quality-report.json
+        run: |
+          if [[ ! -f "$REPORT_FILE" ]]; then
+            printf '%s\n' '{"schema-version":1,"findings":[],"new-findings":[],"error":"gate did not produce a report"}' > "$REPORT_FILE"
+          fi
+
+      - name: Record consumer revision in report
+        if: always()
+        shell: bash
+        env:
+          REPORT_FILE: ${{ runner.temp }}/static-quality-report.json
+          CONSUMER_SHA: ${{ steps.consumer-revision.outputs.consumer_sha }}
+        run: |
+          set -euo pipefail
+          tmp_file="$(mktemp)"
+          jq --arg consumer_sha "$CONSUMER_SHA" '. + {"consumer-sha": $consumer_sha}' \
+            "$REPORT_FILE" > "$tmp_file"
+          mv "$tmp_file" "$REPORT_FILE"
+
+      - name: Upload static-quality report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: static-quality-report
+          path: ${{ runner.temp }}/static-quality-report.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Report static-quality status
+        id: report
+        if: always()
+        shell: bash
+        env:
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          OUTPUT_LOG: ${{ runner.temp }}/static-quality-output.log
+        run: |
+          set -euo pipefail
+          if [[ "$GATE_OUTCOME" == "success" ]]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "status=failure" >> "$GITHUB_OUTPUT"
+          echo "::error title=Static-quality gate failed::Inspect the deterministic report artifact and the file:line:column diagnostics above; fix newly introduced findings or update the consumer-owned baseline with an intentional migration." >&2
+          if [[ -f "$OUTPUT_LOG" ]]; then
+            tail -n 80 "$OUTPUT_LOG" >&2
+          fi
+          exit 1
+
+    outputs:
+      status: ${{ steps.report.outputs.status }}
+
+  status:
+    name: Static quality status
+    if: always()
+    needs: [check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.aggregate.outputs.status }}
+    steps:
+      - name: Aggregate lane result
+        id: aggregate
+        shell: bash
+        env:
+          CONFIGURED: ${{ inputs.config-file != '' }}
+          CHECK_RESULT: ${{ needs.check.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$CONFIGURED" != "true" ]]; then
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
+            echo "Static-quality lane is intentionally disabled: no config-file supplied."
+            exit 0
+          fi
+          case "$CHECK_RESULT" in
+            success)
+              echo "status=success" >> "$GITHUB_OUTPUT"
+              echo "Static-quality lane passed."
+              ;;
+            failure|cancelled|timed_out|action_required)
+              echo "status=failure" >> "$GITHUB_OUTPUT"
+              echo "::error title=Static-quality lane failed::The selected static-quality check was not successful; the lane fails closed." >&2
+              exit 1
+              ;;
+            *)
+              echo "status=failure" >> "$GITHUB_OUTPUT"
+              echo "::error title=Static-quality lane unavailable::Unexpected check result '$CHECK_RESULT'; the lane fails closed." >&2
+              exit 1
+              ;;
+          esac

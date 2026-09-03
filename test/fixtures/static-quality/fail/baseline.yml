@@ -1,0 +1,40 @@
+schema-version: 1
+findings:
+  - kind: unused-file
+    rule: dead-code/file
+    file: src/orphan.js
+    line: 1
+  - kind: unused-export
+    rule: dead-code/export
+    file: src/helper.js
+    line: 5
+    symbol: unused
+  - kind: unused-dependency
+    rule: dead-code/dependency
+    file: package.json
+    line: 6
+    dependency: unused-package
+  - kind: maintainability
+    rule: maintainability/max-lines-per-function
+    file: src/helper.js
+    line: 1
+  - kind: maintainability
+    rule: maintainability/max-lines-per-function
+    file: src/helper.js
+    line: 5
+  - kind: maintainability
+    rule: maintainability/complexity
+    file: src/index.js
+    line: 4
+  - kind: maintainability
+    rule: maintainability/max-lines-per-function
+    file: src/index.js
+    line: 4
+  - kind: maintainability
+    rule: maintainability/max-depth
+    file: src/index.js
+    line: 4
+  - kind: maintainability
+    rule: maintainability/max-params
+    file: src/index.js
+    line: 4

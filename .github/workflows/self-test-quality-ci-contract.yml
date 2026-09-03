@@ -34,3 +34,13 @@ jobs:
         run: node --test test/quality-ci-contract.test.mjs
       - name: Run test-effectiveness contract tests
         run: node --test test/test-effectiveness-contract.test.mjs
+      - name: Run static-quality provider tests
+        run: node --test test/static-quality.test.mjs
+
+  static-quality:
+    name: Execute static-quality fixture
+    uses: ./.github/workflows/static-quality.yml
+    with:
+      working-directory: test/fixtures/static-quality/pass
+      execution-mode: ${{ github.event_name == 'push' && 'main' || 'pr' }}
+      config-file: test/fixtures/static-quality/pass/static-quality.yml

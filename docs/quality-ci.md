@@ -21,6 +21,75 @@ consumer tests, mutants, properties, coverage paths, or runtime fixtures into
 this repository. A consumer-specific exception is configuration supplied to a
 workflow input, not a repository-name branch in provider YAML.
 
+## Static-quality lane
+
+The static-quality lane is opt-in. A consumer adds a thin caller and supplies
+its package root and a consumer-owned configuration; no repository name is
+inspected by the provider.
+
+```yaml
+jobs:
+  static-quality:
+    uses: yohn-jp/.github/.github/workflows/static-quality.yml@main
+    with:
+      working-directory: .
+      execution-mode: pr
+      config-file: .github/static-quality.yml
+      baseline-file: .github/static-quality-baseline.yml
+```
+
+The configuration is YAML with `schema-version: 1` and must declare explicit
+`entry-points`, `include` globs, `exclude` globs, `exceptions` lists
+(`files`, `exports`, and `dependencies`), and the maintainability limits
+`complexity`, `function-size`, `nesting-depth`, and `parameters`. The optional
+`file-size` limit is available when appropriate:
+
+```yaml
+schema-version: 1
+entry-points: [src/index.ts]
+include: ["src/**/*.{js,jsx,mjs,cjs,ts,tsx}"]
+exclude: [dist/**, coverage/**, generated/**, vendor/**]
+exceptions:
+  files: []
+  exports: []
+  dependencies: []
+maintainability:
+  rules:
+    complexity: 10
+    function-size: 80
+    nesting-depth: 4
+    parameters: 4
+    file-size: 500
+```
+
+The provider's deterministic analyzer reports unreachable files, unreferenced
+exports, unused package dependencies, and the configured maintainability
+rules. Consumers with an established Knip/ESLint or architecture setup may
+set `check-command`; it runs in `working-directory` and emits one JSON
+document in `static-quality/v1` format (ESLint JSON and Knip JSON are accepted
+directly). The provider normalizes findings into
+`file:line:column rule — message`, sorts them, and publishes
+`static-quality-report` as an artifact.
+
+For another tool, the adapter can emit
+`{"schema-version":1,"findings":[{"kind":"...","rule":"...","file":"src/file.ts","line":1,"column":1,"message":"..."}]}`.
+The command's exit status may be non-zero when it found violations; the
+provider evaluates the normalized findings and the baseline before deciding
+the lane result.
+
+`baseline-file` contains `schema-version: 1` and a `findings` array from a
+previous report. Baseline findings are existing debt and are suppressed;
+anything not present in the baseline remains blocking. Baselines are
+consumer-owned migration records and must be reviewed when exceptions or
+thresholds change. Exclude generated, vendor, build, or coverage output with
+explicit config globs; do not add provider conditionals keyed to a repository
+name.
+
+The provider owns the report contract, deterministic ordering, runner and
+failure semantics. Consumers own entry points, paths, thresholds, tool
+commands, baselines, and justified exceptions. An exception belongs in the
+consumer config so it is reviewable with the code that requires it.
+
 ## Reusable workflow boundary
 
 Each lane is an independently callable provider workflow. The canonical
@@ -127,3 +196,8 @@ repository-name/matrix coupling. Lane-specific provider workflows add their
 own pass/fail and execution tests. This layered approach catches invalid
 wiring before a consumer rollout without importing consumer test semantics
 into the provider.
+
+The same self-test workflow executes the static-quality lane against the clean
+provider fixture. Its unit fixtures cover pass, blocking findings, baseline
+suppression with regression detection, explicit exceptions, and malformed
+consumer configuration.
