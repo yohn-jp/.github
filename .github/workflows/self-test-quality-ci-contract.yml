@@ -36,6 +36,12 @@ jobs:
         run: node --test test/test-effectiveness-contract.test.mjs
       - name: Run static-quality provider tests
         run: node --test test/static-quality.test.mjs
+      - name: Run organization-quality aggregate status tests
+        run: node --test test/aggregate-quality-status.test.mjs
+      - name: Run organization-quality wiring tests
+        run: node --test test/organization-quality-wiring.test.mjs
+      - name: Run consumer revision selection tests
+        run: node --test test/select-consumer-revision.test.mjs
 
   static-quality:
     name: Execute static-quality fixture

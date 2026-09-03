@@ -244,6 +244,101 @@ export function validateQualityWorkflowFiles(value, root = ".") {
       ...validateQualityWorkflowSource(readFileSync(path, "utf8"), path)
     );
   }
+
+  const aggregateName = aggregate?.workflow;
+  if (typeof aggregateName === "string" && aggregateName.trim() !== "") {
+    const aggregatePath = join(root, ".github", "workflows", aggregateName);
+    if (existsSync(aggregatePath)) {
+      errors.push(
+        ...validateAggregateInputForwarding(
+          yaml.load(readFileSync(aggregatePath, "utf8")),
+          aggregatePath,
+          lanes ?? {},
+          root
+        )
+      );
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * The aggregate caller must forward every lane's own workflow_call input
+ * (minus the aggregate-shared execution-mode) through to that lane's job, so
+ * a lane feature (e.g. test-effectiveness's replay-seed) is never reachable
+ * from the contract/lane workflow but silently unreachable through the
+ * aggregate. Job ids are expected to match the contract's lane names, and a
+ * forwarded input is expected under `<lane>-<input-name>` (execution-mode is
+ * shared verbatim across every lane and is exempt).
+ *
+ * @param {unknown} aggregateDoc parsed aggregate workflow YAML
+ * @param {string} sourceLabel path used in diagnostics
+ * @param {Record<string, unknown>} lanes contract lanes
+ * @param {string} root repository root, to resolve lane workflow files
+ * @returns {string[]}
+ */
+export function validateAggregateInputForwarding(
+  aggregateDoc,
+  sourceLabel,
+  lanes,
+  root = "."
+) {
+  const errors = [];
+  const aggregateInputs = asRecord(
+    aggregateDoc?.on?.workflow_call?.inputs,
+    "on.workflow_call.inputs"
+  );
+  const jobs = asRecord(aggregateDoc?.jobs, "jobs");
+  if (aggregateInputs === null || jobs === null) return errors;
+
+  for (const [laneName, lane] of Object.entries(lanes)) {
+    const laneWorkflowName = lane?.workflow;
+    if (typeof laneWorkflowName !== "string" || laneWorkflowName.trim() === "")
+      continue;
+    const lanePath = join(root, ".github", "workflows", laneWorkflowName);
+    if (!existsSync(lanePath)) continue;
+
+    const laneDoc = yaml.load(readFileSync(lanePath, "utf8"));
+    const laneInputs = asRecord(
+      laneDoc?.on?.workflow_call?.inputs,
+      `${laneWorkflowName}: on.workflow_call.inputs`
+    );
+    if (laneInputs === null) continue;
+
+    const job = asRecord(jobs[laneName], `jobs.${laneName}`);
+    if (job === null) {
+      errors.push(
+        `${sourceLabel}: jobs.${laneName} must exist and call ${laneWorkflowName} so its inputs can be forwarded`
+      );
+      continue;
+    }
+    const forwarded = asRecord(job.with, `jobs.${laneName}.with`) ?? {};
+
+    for (const inputName of Object.keys(laneInputs)) {
+      if (inputName === "execution-mode") {
+        if (!("execution-mode" in forwarded)) {
+          errors.push(
+            `${sourceLabel}: jobs.${laneName}.with.execution-mode must forward the aggregate's execution-mode input`
+          );
+        }
+        continue;
+      }
+      if (!(inputName in forwarded)) {
+        errors.push(
+          `${sourceLabel}: jobs.${laneName}.with.${inputName} is missing; ${laneWorkflowName} declares this workflow_call input but the aggregate never forwards it, making it unreachable through the aggregate`
+        );
+        continue;
+      }
+      const prefixedName = `${laneName}-${inputName}`;
+      if (!(prefixedName in aggregateInputs)) {
+        errors.push(
+          `${sourceLabel}: on.workflow_call.inputs.${prefixedName} is missing; jobs.${laneName}.with.${inputName} has no corresponding aggregate input to forward from`
+        );
+      }
+    }
+  }
+
   return errors;
 }
 

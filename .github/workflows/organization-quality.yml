@@ -1,0 +1,238 @@
+name: Organization quality
+
+# Canonical aggregate caller for the organization quality CI contract
+# (.github/quality-ci-contract.yml). Composes the independently callable
+# quality lanes and exposes one stable, fail-closed status (`quality`) for
+# Rulesets to require. See docs/quality-ci.md for the full contract.
+#
+# Lane availability is NOT uniform (see docs/quality-ci.md "Reusable
+# workflow boundary"): supply-chain-security and workflow-security are
+# required-by-default — they have no disabling input and always run, by
+# deliberate security-lane policy (Issues #129/#130) — while static-quality
+# and test-effectiveness are configuration-optional: an unset/empty
+# lane-specific enabling input (e.g. static-quality-config-file) makes that
+# lane's own provider workflow report `skipped`, which does not fail the
+# aggregate. Lane workflows already select PR head vs. push/schedule
+# revision semantics internally (see docs/quality-ci.md "Revision
+# authority") — this caller does not re-derive or override that.
+on:
+  workflow_call:
+    inputs:
+      execution-mode:
+        description: >-
+          Invocation context shared by every enabled lane: pr, main, or
+          nightly. The caller's triggering event must match.
+        type: string
+        default: pr
+
+      static-quality-working-directory:
+        type: string
+        default: "."
+      static-quality-config-file:
+        description: Consumer static-quality config path. Empty disables the lane.
+        type: string
+        default: ""
+      static-quality-baseline-file:
+        type: string
+        default: ""
+      static-quality-check-command:
+        type: string
+        default: ""
+
+      supply-chain-security-working-directory:
+        type: string
+        default: "."
+      supply-chain-security-severity:
+        type: string
+        default: high
+      supply-chain-security-license-policy-file:
+        type: string
+        default: ""
+      supply-chain-security-codeql-config-file:
+        type: string
+        default: ""
+
+      workflow-security-workflow-paths:
+        type: string
+        default: .github/workflows/**
+      workflow-security-config-file:
+        type: string
+        default: ""
+
+      test-effectiveness-working-directory:
+        type: string
+        default: "."
+      test-effectiveness-node-version:
+        type: string
+        default: "24"
+      test-effectiveness-install-command:
+        type: string
+        default: ""
+      test-effectiveness-mutation-timeout-seconds:
+        type: number
+        default: 600
+      test-effectiveness-coverage-enabled:
+        type: boolean
+        default: false
+      test-effectiveness-coverage-command:
+        type: string
+        default: ""
+      test-effectiveness-coverage-regression-command:
+        type: string
+        default: ""
+      test-effectiveness-coverage-baseline-path:
+        type: string
+        default: ""
+      test-effectiveness-coverage-report-path:
+        type: string
+        default: ""
+      test-effectiveness-coverage-config-path:
+        type: string
+        default: ""
+      test-effectiveness-property-enabled:
+        type: boolean
+        default: false
+      test-effectiveness-property-command:
+        type: string
+        default: ""
+      test-effectiveness-property-randomized:
+        type: boolean
+        default: false
+      test-effectiveness-property-seed:
+        description: Optional compatibility alias for test-effectiveness-replay-seed.
+        type: string
+        default: ""
+      test-effectiveness-replay-seed:
+        type: string
+        default: ""
+      test-effectiveness-property-replay-command:
+        type: string
+        default: ""
+      test-effectiveness-property-report-path:
+        type: string
+        default: ""
+      test-effectiveness-property-config-path:
+        type: string
+        default: ""
+      test-effectiveness-mutation-enabled:
+        type: boolean
+        default: false
+      test-effectiveness-mutation-command:
+        type: string
+        default: ""
+      test-effectiveness-mutation-report-path:
+        type: string
+        default: ""
+      test-effectiveness-mutation-config-path:
+        type: string
+        default: ""
+    outputs:
+      status:
+        description: "Stable aggregate result: success or failure. Rulesets require the quality job, not this output."
+        value: ${{ jobs.quality.outputs.status }}
+
+permissions: {}
+
+jobs:
+  static-quality:
+    name: Static quality
+    uses: ./.github/workflows/static-quality.yml
+    permissions:
+      contents: read
+    with:
+      working-directory: ${{ inputs.static-quality-working-directory }}
+      execution-mode: ${{ inputs.execution-mode }}
+      config-file: ${{ inputs.static-quality-config-file }}
+      baseline-file: ${{ inputs.static-quality-baseline-file }}
+      check-command: ${{ inputs.static-quality-check-command }}
+
+  supply-chain-security:
+    name: Supply-chain security
+    uses: ./.github/workflows/supply-chain-security.yml
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      security-events: write
+    with:
+      working-directory: ${{ inputs.supply-chain-security-working-directory }}
+      execution-mode: ${{ inputs.execution-mode }}
+      severity: ${{ inputs.supply-chain-security-severity }}
+      license-policy-file: ${{ inputs.supply-chain-security-license-policy-file }}
+      codeql-config-file: ${{ inputs.supply-chain-security-codeql-config-file }}
+
+  workflow-security:
+    name: Workflow security
+    uses: ./.github/workflows/workflow-security.yml
+    permissions:
+      contents: read
+    with:
+      workflow-paths: ${{ inputs.workflow-security-workflow-paths }}
+      config-file: ${{ inputs.workflow-security-config-file }}
+      execution-mode: ${{ inputs.execution-mode }}
+
+  test-effectiveness:
+    name: Test effectiveness
+    uses: ./.github/workflows/test-effectiveness.yml
+    permissions:
+      contents: read
+    with:
+      working-directory: ${{ inputs.test-effectiveness-working-directory }}
+      node-version: ${{ inputs.test-effectiveness-node-version }}
+      install-command: ${{ inputs.test-effectiveness-install-command }}
+      execution-mode: ${{ inputs.execution-mode }}
+      mutation-timeout-seconds: ${{ inputs.test-effectiveness-mutation-timeout-seconds }}
+      coverage-enabled: ${{ inputs.test-effectiveness-coverage-enabled }}
+      coverage-command: ${{ inputs.test-effectiveness-coverage-command }}
+      coverage-regression-command: ${{ inputs.test-effectiveness-coverage-regression-command }}
+      coverage-baseline-path: ${{ inputs.test-effectiveness-coverage-baseline-path }}
+      coverage-report-path: ${{ inputs.test-effectiveness-coverage-report-path }}
+      coverage-config-path: ${{ inputs.test-effectiveness-coverage-config-path }}
+      property-enabled: ${{ inputs.test-effectiveness-property-enabled }}
+      property-command: ${{ inputs.test-effectiveness-property-command }}
+      property-randomized: ${{ inputs.test-effectiveness-property-randomized }}
+      property-seed: ${{ inputs.test-effectiveness-property-seed }}
+      replay-seed: ${{ inputs.test-effectiveness-replay-seed }}
+      property-replay-command: ${{ inputs.test-effectiveness-property-replay-command }}
+      property-report-path: ${{ inputs.test-effectiveness-property-report-path }}
+      property-config-path: ${{ inputs.test-effectiveness-property-config-path }}
+      mutation-enabled: ${{ inputs.test-effectiveness-mutation-enabled }}
+      mutation-command: ${{ inputs.test-effectiveness-mutation-command }}
+      mutation-report-path: ${{ inputs.test-effectiveness-mutation-report-path }}
+      mutation-config-path: ${{ inputs.test-effectiveness-mutation-config-path }}
+
+  quality:
+    name: quality
+    if: always()
+    needs:
+      - static-quality
+      - supply-chain-security
+      - workflow-security
+      - test-effectiveness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.aggregate.outputs.status }}
+    steps:
+      # Checked out at the caller's own commit (not a consumer revision):
+      # this step only runs provider-owned aggregation logic, never
+      # consumer content.
+      - name: Checkout provider aggregation script
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          sparse-checkout: scripts/aggregate-quality-status.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Aggregate lane results
+        id: aggregate
+        shell: bash
+        env:
+          STATIC_QUALITY_RESULT: ${{ needs.static-quality.result }}
+          SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain-security.result }}
+          WORKFLOW_SECURITY_RESULT: ${{ needs.workflow-security.result }}
+          TEST_EFFECTIVENESS_RESULT: ${{ needs.test-effectiveness.result }}
+        run: node scripts/aggregate-quality-status.mjs

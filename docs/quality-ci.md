@@ -92,15 +92,36 @@ consumer config so it is reviewable with the code that requires it.
 
 ## Reusable workflow boundary
 
-Each lane is an independently callable provider workflow. The canonical
-workflow files and capability boundaries are:
+Each lane is an independently callable provider workflow, but lanes are not
+uniformly optional from the aggregate's point of view — each lane's own
+provider workflow decides whether it can be disabled at all:
 
-| Lane                  | Provider workflow           | Purpose                                                              |
-| --------------------- | --------------------------- | -------------------------------------------------------------------- |
-| Static quality        | `static-quality.yml`        | Dead/unused code and dependency analysis plus maintainability policy |
-| Supply-chain security | `supply-chain-security.yml` | Dependency review and CodeQL integration                             |
-| Workflow security     | `workflow-security.yml`     | Action/workflow syntax and security policy                           |
-| Test effectiveness    | `test-effectiveness.yml`    | Independently enabled coverage, property, and mutation checks        |
+- **Required-by-default (security lanes)**: `supply-chain-security` and
+  `workflow-security` have no enabling/disabling input in their own
+  `workflow_call` contract (Issues #129/#130) and are unconditionally called
+  by `organization-quality.yml`. A consumer using the aggregate always runs
+  both; there is currently no supported way to opt a consumer out of either
+  through the aggregate. This is deliberate: quality integration must not
+  become a way to silently weaken supply-chain or workflow security.
+- **Configuration-optional**: `static-quality` and `test-effectiveness` are
+  each disabled by construction when the consumer leaves their lane-specific
+  enabling input(s) empty/false (`static-quality-config-file`; each of
+  `test-effectiveness-coverage-enabled` / `-property-enabled` /
+  `-mutation-enabled` independently) — the lane's own provider workflow
+  reports `skipped` in that case, per its own contract, and `quality` treats
+  that as passing.
+
+"Required" at the Ruleset level still applies only to the single `quality`
+status once a consumer has adopted the aggregate; it is a separate question
+from which lanes make up that status. The canonical workflow files and
+capability boundaries are:
+
+| Lane                  | Provider workflow           | Aggregate default       | Purpose                                                              |
+| --------------------- | --------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| Static quality        | `static-quality.yml`        | Optional (config-gated) | Dead/unused code and dependency analysis plus maintainability policy |
+| Supply-chain security | `supply-chain-security.yml` | Required-by-default     | Dependency review and CodeQL integration                             |
+| Workflow security     | `workflow-security.yml`     | Required-by-default     | Action/workflow syntax and security policy                           |
+| Test effectiveness    | `test-effectiveness.yml`    | Optional (config-gated) | Independently enabled coverage, property, and mutation checks        |
 
 Every provider declares `on.workflow_call.inputs` and
 `on.workflow_call.outputs.status` explicitly. Common inputs are:
@@ -134,13 +155,23 @@ jobs:
     # needs: all selected quality lanes
 ```
 
-`quality` is the Rulesets-facing status. Rulesets require this status, never a
-lane's internal job name. The aggregate checks every selected lane result and
-fails closed for `failure`, `cancelled`, `timed_out`, or `action_required`.
+`quality` is the Rulesets-facing status, implemented by
+[`organization-quality.yml`](../.github/workflows/organization-quality.yml).
+Rulesets require this status, never a lane's internal job name. The `quality`
+job composes the four lanes (`static-quality`, `supply-chain-security`,
+`workflow-security`, `test-effectiveness`) via `needs` and runs
+`if: always()`, then delegates the pass/fail decision to
+[`scripts/aggregate-quality-status.mjs`](../scripts/aggregate-quality-status.mjs):
+`success` or `skipped` on every lane passes; `failure`, `cancelled`,
+`timed_out`, `action_required`, or any unrecognized/empty result value fails
+closed. That script is unit-tested independently of running the full
+aggregate (`test/aggregate-quality-status.test.mjs`), so pass/fail/skip
+semantics are verified without paying for four lane executions per test case.
 Internal lane jobs may be added, removed, or renamed without changing this
-status. A lane that is not selected is explicitly `skipped`, and does not
-block the aggregate. The aggregate workflow is integrated and rolled out by
-the consumer-integration issue; this issue defines only the seam.
+status. A lane is skipped, and does not block the aggregate, only when the
+consumer intentionally left its enabling input (e.g. `static-quality-config-file`)
+empty — an unset required input inside an enabled lane still fails closed
+inside that lane, per its own provider contract.
 
 The quality aggregate is complementary to
 [`typescript-cli-ci.yml`](../.github/workflows/typescript-cli-ci.yml), whose
@@ -186,16 +217,95 @@ deterministic replay information whenever randomized property generation is
 enabled. Mutation commands and catalogs remain consumer-owned; full mutation
 is not required on every pull request.
 
+## Revision authority
+
+Every lane that inspects consumer source (not merely a PR's dependency diff)
+selects its own checkout revision explicitly, rather than trusting whichever
+ref `actions/checkout` defaults to:
+
+- `pull_request`: `github.event.pull_request.head.sha` — the PR head commit,
+  never the ephemeral merge ref actions/checkout defaults to. A merge ref
+  would make findings depend on the current state of the base branch instead
+  of the commit under review.
+- `push` / `schedule` / `workflow_dispatch`: `github.sha` — the caller's own
+  triggering commit.
+- Either SHA being unavailable is a hard, fail-closed error, never a silent
+  fallback.
+
+`static-quality.yml` and `test-effectiveness.yml` each implement this inline
+per lane job. `workflow-security.yml` and `organization-quality.yml`'s own
+`quality` job call the shared, unit-tested
+[`scripts/select-consumer-revision.mjs`](../scripts/select-consumer-revision.mjs)
+so the selection logic has one source of truth
+(`test/select-consumer-revision.test.mjs`). Every lane that checks out this
+revision also records the exact resolved `consumer_sha` in its job log (and,
+where the lane produces an artifact, in that artifact's reproducibility
+manifest) so a report is always traceable to the consumer commit it actually
+evaluated — never only to `github.sha`, which is the merge ref on
+`pull_request` runs.
+
+`supply-chain-security.yml`'s dependency-review job is the one lane job that
+intentionally does not follow this: `actions/dependency-review-action`
+compares the PR base against head itself, so the job's own optional policy
+checkout reads `github.event.pull_request.base.sha` (a PR cannot weaken the
+license/severity policy that gates it by editing that file in the same PR).
+Its CodeQL sub-job reuses [`codeql.yml`](../.github/workflows/codeql.yml)
+unmodified: CodeQL's default `pull_request` trigger analyzes a merge-commit
+result by design (it must see the code as it will exist after merging), which
+is the correct semantic for that lane and is retained as-is rather than
+mechanically switched to head-SHA checkout.
+
+## Rollout
+
+1. A consumer adds a thin wrapper calling
+   `yohn-jp/.github/.github/workflows/organization-quality.yml@main`,
+   forwarding only the inputs for the lanes it enables (an omitted/empty
+   lane-enabling input, e.g. `static-quality-config-file`, keeps that lane
+   `skipped`).
+2. The wrapper sets `execution-mode` per trigger: `pr` on `pull_request`,
+   `main` on `push` to the default branch, `nightly` on `schedule`.
+3. The consumer's branch Ruleset adds `quality` (the aggregate job name, not
+   any lane's internal job name) as a required status check once the wrapper
+   is green on a real PR.
+4. Existing repository-specific integration/runtime/e2e/property/mutation
+   tests, and any OS matrix, stay in the consumer repository and outside this
+   contract — the aggregate only adds the four organization-owned lanes.
+5. Provider-owned files (the lane workflows, `quality-ci-contract.yml`, the
+   scripts under `scripts/`) are never copied into a consumer; only the thin
+   wrapper and the consumer's own lane configuration (e.g.
+   `static-quality.yml`, baseline files) live in the consumer repository. See
+   [`docs/github-metadata-inheritance.md`](github-metadata-inheritance.md) for
+   how `.github/sync.yml` distributes the separate, unrelated set of files it
+   owns (Issue templates, Inari contracts, workflow wrapper templates) — it is
+   not the mechanism for quality-lane rollout, and adding a consumer here does
+   not by itself sync anything to that consumer.
+
 ## Provider self-test
 
 `self-test-quality-ci-contract.yml` runs the provider validator and malformed
 configuration fixtures on every provider pull request. The validator checks
 the lane set, explicit input declarations/defaults, `status` outputs,
 least-privilege permissions, stable aggregate result policy, and forbidden
-repository-name/matrix coupling. Lane-specific provider workflows add their
-own pass/fail and execution tests. This layered approach catches invalid
-wiring before a consumer rollout without importing consumer test semantics
-into the provider.
+repository-name/matrix coupling — including on `organization-quality.yml`
+itself, since it is the contract's `aggregate.workflow` — and that the
+aggregate forwards every lane's own `workflow_call` inputs
+(`validateAggregateInputForwarding`; a lane gaining an input the aggregate
+never forwards, like `test-effectiveness`'s `property-seed` originally was,
+fails this check rather than shipping silently unreachable). Lane-specific
+provider workflows add their own pass/fail and execution tests, and:
+
+- `test/aggregate-quality-status.test.mjs` /
+  `test/select-consumer-revision.test.mjs` cover the aggregate's
+  pass/fail/skip decision and revision-selection fail-closed behavior as
+  pure functions;
+- `test/organization-quality-wiring.test.mjs` covers the actual aggregate
+  wiring: every lane job is called unconditionally (gating is each lane
+  workflow's own concern, never `if:` on the aggregate's job), and the
+  required-by-default vs. configuration-optional split above is asserted
+  against the real lane workflow files, not only documented.
+
+This layered approach catches invalid wiring before a consumer rollout
+without importing consumer test semantics into the provider.
 
 The same self-test workflow executes the static-quality lane against the clean
 provider fixture. Its unit fixtures cover pass, blocking findings, baseline

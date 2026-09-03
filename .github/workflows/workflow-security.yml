@@ -37,8 +37,45 @@ on:
 permissions: {}
 
 jobs:
+  plan:
+    name: Select consumer revision
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      consumer_sha: ${{ steps.consumer-ref.outputs.consumer_sha }}
+    steps:
+      # Checked out at the caller-pinned provider commit (not a consumer
+      # revision): this step only runs provider-owned selection logic.
+      - name: Checkout provider revision-selection script
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          sparse-checkout: scripts/select-consumer-revision.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      # pull_request runs must audit the PR head, never the ephemeral merge
+      # ref actions/checkout defaults to; other events audit the caller's
+      # own commit. Either SHA being unavailable is a hard failure.
+      - name: Select consumer checkout revision
+        id: consumer-ref
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CALLER_SHA: ${{ github.sha }}
+        run: node scripts/select-consumer-revision.mjs
+
   audit:
     name: Audit workflow security
+    needs: [plan]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -47,7 +84,17 @@ jobs:
       - name: Checkout consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.plan.outputs.consumer_sha }}
           persist-credentials: false
+
+      - name: Record consumer revision
+        id: consumer-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer_sha="$(git rev-parse HEAD)"
+          echo "consumer_sha=$consumer_sha" >> "$GITHUB_OUTPUT"
+          echo "Checked out consumer revision: $consumer_sha"
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -200,8 +247,10 @@ jobs:
           VALIDATE_CONFIG_OUTCOME: ${{ steps.validate-config.outcome }}
           INPUT_OUTCOME: ${{ steps.validate-inputs.outcome }}
           SCAN_OUTCOME: ${{ steps.scan.outcome }}
+          CONSUMER_SHA: ${{ steps.consumer-revision.outputs.consumer_sha }}
         run: |
           set -euo pipefail
+          echo "Audited consumer revision: $CONSUMER_SHA"
           if [ "$INPUT_OUTCOME" = "success" ] && \
              { [ "$CONFIG_OUTCOME" = "success" ] || [ "$CONFIG_OUTCOME" = "skipped" ]; } && \
              { [ "$VALIDATE_CONFIG_OUTCOME" = "success" ] || [ "$VALIDATE_CONFIG_OUTCOME" = "skipped" ]; } && \
