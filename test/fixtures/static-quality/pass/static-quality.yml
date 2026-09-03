@@ -1,0 +1,19 @@
+schema-version: 1
+entry-points:
+  - src/index.js
+include:
+  - "src/**/*.{js,ts}"
+exclude:
+  - dist/**
+  - generated/**
+  - vendor/**
+exceptions:
+  files: []
+  exports: []
+  dependencies: []
+maintainability:
+  rules:
+    complexity: 5
+    function-size: 20
+    nesting-depth: 3
+    parameters: 3

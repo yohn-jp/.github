@@ -1,0 +1,8 @@
+{
+  "name": "static-quality-fail",
+  "private": true,
+  "dependencies": {
+    "used-package": "1.0.0",
+    "unused-package": "1.0.0"
+  }
+}
