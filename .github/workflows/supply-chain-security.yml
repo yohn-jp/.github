@@ -1,0 +1,191 @@
+name: Supply-chain security
+
+# Organization-owned supply-chain lane. The caller owns push, pull_request,
+# and schedule triggers and selects the matching execution-mode. Dependency
+# review is intentionally limited to PRs because it compares a PR base/head;
+# CodeQL reuses the existing organization workflow for every mode.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Consumer package root used to resolve policy paths.
+        type: string
+        default: "."
+      execution-mode:
+        description: >-
+          Invocation context: pr, main, or nightly. The event must match the
+          selected mode.
+        type: string
+        default: pr
+      severity:
+        description: >-
+          Minimum vulnerability severity that fails PR dependency review.
+          Must be low, moderate, high, or critical.
+        type: string
+        default: high
+      license-policy-file:
+        description: >-
+          Optional consumer-owned dependency-review config path containing
+          the explicit license policy (allow-licenses or deny-licenses).
+        type: string
+        default: ""
+      codeql-config-file:
+        description: >-
+          Optional consumer-owned CodeQL config path. Empty uses CodeQL's
+          default configuration.
+        type: string
+        default: ""
+    outputs:
+      status:
+        description: "Aggregated lane status: success, skipped, or failure."
+        value: ${{ jobs.status.outputs.status }}
+
+permissions:
+  contents: read
+
+jobs:
+  validate-policy:
+    name: Validate supply-chain policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate mode, severity, and policy paths
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EXECUTION_MODE: ${{ inputs.execution-mode }}
+          SEVERITY: ${{ inputs.severity }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          LICENSE_POLICY_FILE: ${{ inputs.license-policy-file }}
+          CODEQL_CONFIG_FILE: ${{ inputs.codeql-config-file }}
+        run: |
+          set -euo pipefail
+
+          case "$EXECUTION_MODE:$EVENT_NAME" in
+            pr:pull_request|main:push|nightly:schedule) ;;
+            *)
+              echo "::error title=Invalid supply-chain execution mode::execution-mode '$EXECUTION_MODE' must match the caller event (pr=pull_request, main=push, nightly=schedule); received event '$EVENT_NAME'." >&2
+              exit 1
+              ;;
+          esac
+
+          case "$SEVERITY" in
+            low|moderate|high|critical) ;;
+            *)
+              echo "::error title=Invalid dependency severity policy::severity must be low, moderate, high, or critical; received '$SEVERITY'." >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ -z "$WORKING_DIRECTORY" || "$WORKING_DIRECTORY" == /* || "$WORKING_DIRECTORY" == *".."* ]]; then
+            echo "::error title=Invalid consumer working directory::working-directory must be a non-absolute repository-relative path without '..'; received '$WORKING_DIRECTORY'." >&2
+            exit 1
+          fi
+
+          for policy_path in "$LICENSE_POLICY_FILE" "$CODEQL_CONFIG_FILE"; do
+            if [[ "$policy_path" == /* || "$policy_path" == *".."* ]]; then
+              echo "::error title=Invalid consumer policy path::policy paths must be repository-relative and must not contain '..'; received '$policy_path'." >&2
+              exit 1
+            fi
+          done
+
+          echo "Supply-chain policy: mode=$EXECUTION_MODE severity=$SEVERITY working-directory=$WORKING_DIRECTORY."
+          if [[ -n "$LICENSE_POLICY_FILE" ]]; then
+            echo "License policy: consumer config '$WORKING_DIRECTORY/$LICENSE_POLICY_FILE'."
+          else
+            echo "License policy: no license config supplied; consumer must provide one when license gating is required."
+          fi
+
+  dependency-review:
+    name: Dependency review
+    needs: validate-policy
+    if: >-
+      needs.validate-policy.result == 'success' &&
+      inputs.execution-mode == 'pr' &&
+      github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # A local policy is read from the PR base revision. A PR cannot weaken
+      # its own gate by changing the policy file under review.
+      - name: Checkout consumer policy (base revision)
+        if: inputs.license-policy-file != ''
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: ${{ inputs.severity }}
+          fail-on-scopes: runtime,development,unknown
+          config-file: ${{ inputs.license-policy-file != '' && format('{0}/{1}', inputs.working-directory, inputs.license-policy-file) || '' }}
+          license-check: true
+          vulnerability-check: true
+          warn-only: false
+          comment-summary-in-pr: never
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 120
+          show-patched-versions: true
+
+      - name: Report dependency review failure
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error title=Dependency review failed::Review the dependency-review check log for a vulnerable dependency, disallowed license, or invalid consumer policy. Findings are blocking and were not downgraded to warnings." >&2
+          exit 1
+
+  codeql:
+    name: CodeQL
+    needs: validate-policy
+    if: >-
+      needs.validate-policy.result == 'success' &&
+      (inputs.execution-mode == 'pr' || inputs.execution-mode == 'main' || inputs.execution-mode == 'nightly')
+    uses: ./.github/workflows/codeql.yml
+    with:
+      config-file: ${{ inputs.codeql-config-file != '' && format('{0}/{1}', inputs.working-directory, inputs.codeql-config-file) || '' }}
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+  status:
+    name: Supply-chain security status
+    if: always()
+    needs: [validate-policy, dependency-review, codeql]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.aggregate.outputs.status }}
+    steps:
+      - name: Aggregate lane result
+        id: aggregate
+        shell: bash
+        env:
+          VALIDATION_RESULT: ${{ needs.validate-policy.result }}
+          DEPENDENCY_RESULT: ${{ needs.dependency-review.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+        run: |
+          set -euo pipefail
+
+          status=success
+          for result in "$VALIDATION_RESULT" "$DEPENDENCY_RESULT" "$CODEQL_RESULT"; do
+            case "$result" in
+              failure|cancelled|timed_out|action_required)
+                status=failure
+                ;;
+            esac
+          done
+
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "Supply-chain security result: validation=$VALIDATION_RESULT dependency-review=$DEPENDENCY_RESULT codeql=$CODEQL_RESULT status=$status."
+          if [[ "$status" == failure ]]; then
+            echo "::error title=Supply-chain security lane failed::Inspect the failed dependency-review, CodeQL, or policy-validation job; the aggregate fails closed." >&2
+            exit 1
+          fi
