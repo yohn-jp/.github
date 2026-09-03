@@ -46,9 +46,44 @@ on:
 permissions: {}
 
 jobs:
+  plan:
+    name: Select consumer revision
+    if: inputs.config-file != ''
+    runs-on: ubuntu-latest
+    outputs:
+      consumer_sha: ${{ steps.consumer-ref.outputs.consumer_sha }}
+    steps:
+      # pull_request runs must evaluate the PR head, never the ephemeral
+      # merge ref actions/checkout defaults to; other events evaluate the
+      # caller's own commit. Either SHA being unavailable is a hard failure.
+      - name: Select consumer checkout revision
+        id: consumer-ref
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CALLER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if [[ -z "$PR_HEAD_SHA" ]]; then
+              echo "::error title=Static-quality revision selection::pull_request head SHA is unavailable" >&2
+              exit 1
+            fi
+            echo "consumer_sha=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          else
+            if [[ -z "$CALLER_SHA" ]]; then
+              echo "::error title=Static-quality revision selection::caller SHA is unavailable" >&2
+              exit 1
+            fi
+            echo "consumer_sha=$CALLER_SHA" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Consumer checkout revision selected for event: $EVENT_NAME"
+
   check:
     name: Static quality checks
     if: inputs.config-file != ''
+    needs: [plan]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -57,7 +92,17 @@ jobs:
       - name: Checkout consumer repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.plan.outputs.consumer_sha }}
           persist-credentials: false
+
+      - name: Record consumer revision
+        id: consumer-revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer_sha="$(git rev-parse HEAD)"
+          echo "consumer_sha=$consumer_sha" >> "$GITHUB_OUTPUT"
+          echo "Checked out consumer revision: $consumer_sha"
 
       - name: Validate gate inputs
         shell: bash
@@ -151,6 +196,19 @@ jobs:
           if [[ ! -f "$REPORT_FILE" ]]; then
             printf '%s\n' '{"schema-version":1,"findings":[],"new-findings":[],"error":"gate did not produce a report"}' > "$REPORT_FILE"
           fi
+
+      - name: Record consumer revision in report
+        if: always()
+        shell: bash
+        env:
+          REPORT_FILE: ${{ runner.temp }}/static-quality-report.json
+          CONSUMER_SHA: ${{ steps.consumer-revision.outputs.consumer_sha }}
+        run: |
+          set -euo pipefail
+          tmp_file="$(mktemp)"
+          jq --arg consumer_sha "$CONSUMER_SHA" '. + {"consumer-sha": $consumer_sha}' \
+            "$REPORT_FILE" > "$tmp_file"
+          mv "$tmp_file" "$REPORT_FILE"
 
       - name: Upload static-quality report
         if: always()

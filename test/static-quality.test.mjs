@@ -146,6 +146,46 @@ test("static-quality workflow exposes the contract without matrices or repositor
   assert.deepEqual(validateProviderToolingResolutionFile(workflowPath), []);
 });
 
+test("consumer checkout selects the PR head or caller SHA explicitly, not the merge ref", () => {
+  const workflowPath = ".github/workflows/static-quality.yml";
+  const workflow = yaml.load(readFileSync(workflowPath, "utf8"));
+
+  assert.equal(workflow.jobs.plan.if, "inputs.config-file != ''");
+  assert.equal(
+    workflow.jobs.plan.outputs.consumer_sha,
+    "${{ steps.consumer-ref.outputs.consumer_sha }}"
+  );
+  const selectStep = workflow.jobs.plan.steps.find(
+    (step) => step.name === "Select consumer checkout revision"
+  );
+  assert.equal(
+    selectStep.env.PR_HEAD_SHA,
+    "${{ github.event.pull_request.head.sha }}"
+  );
+  assert.equal(selectStep.env.CALLER_SHA, "${{ github.sha }}");
+  assert.match(selectStep.run, /pull_request head SHA is unavailable/);
+  assert.match(selectStep.run, /caller SHA is unavailable/);
+
+  assert.deepEqual(workflow.jobs.check.needs, ["plan"]);
+  const checkout = workflow.jobs.check.steps.find(
+    (step) => step.name === "Checkout consumer repository"
+  );
+  assert.equal(checkout.with.ref, "${{ needs.plan.outputs.consumer_sha }}");
+  assert.ok(
+    workflow.jobs.check.steps.some(
+      (step) => step.name === "Record consumer revision"
+    )
+  );
+  const reportRecord = workflow.jobs.check.steps.find(
+    (step) => step.name === "Record consumer revision in report"
+  );
+  assert.equal(
+    reportRecord.env.CONSUMER_SHA,
+    "${{ steps.consumer-revision.outputs.consumer_sha }}"
+  );
+  assert.match(reportRecord.run, /consumer-sha/);
+});
+
 test("consumer reports can use the stable static-quality format", () => {
   const findings = normalizeToolReport(
     JSON.stringify({
