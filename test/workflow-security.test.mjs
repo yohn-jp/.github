@@ -45,6 +45,26 @@ test("provider actions in the security gate are immutably pinned", () => {
   assert.deepEqual(validateActionPinsFile(workflowPath), []);
 });
 
+test("consumer config-file is structurally validated, not just probed", () => {
+  const step = workflow.jobs.audit.steps.find(
+    (s) => s.name === "Validate consumer config structure"
+  );
+  assert.ok(step, "expected a config structure validation step");
+  assert.equal(step.if, "inputs.config-file != ''");
+  assert.match(step.run, /npm install --no-save --ignore-scripts js-yaml@4\.1\.0/);
+  assert.match(step.run, /disabled !== true/);
+  assert.doesNotMatch(step.run, /--global/);
+
+  const reportStep = workflow.jobs.audit.steps.find(
+    (s) => s.name === "Report audit status"
+  );
+  assert.equal(
+    reportStep.env.VALIDATE_CONFIG_OUTCOME,
+    "${{ steps.validate-config.outcome }}"
+  );
+  assert.match(reportStep.run, /VALIDATE_CONFIG_OUTCOME/);
+});
+
 test("zizmor is fixed, offline, actionable, and limited to distinct audits", () => {
   const step = zizmorStep();
   assert.equal(

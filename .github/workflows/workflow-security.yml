@@ -49,6 +49,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
       - name: Validate gate inputs
         id: validate-inputs
         shell: bash
@@ -97,11 +102,51 @@ jobs:
               disable: true
           EOF
 
-      # Probe the policy with an intentionally unpinned action.  The filename
-      # includes the run id so a consumer config cannot pre-emptively ignore
-      # this provider-owned assertion.  The configured unpinned-uses rule must
-      # suppress this one finding; a malformed or re-enabled policy fails the
-      # same scanner invocation below.
+      # A consumer config-file is structurally required to retain the
+      # provider-owned unpinned-uses disablement.  zizmor's rules.*.config
+      # surface (e.g. per-action pin policies) can otherwise re-enable
+      # equivalent findings without ever re-enabling the rule itself, which
+      # the run-id probe below cannot observe.  Parse the YAML and fail
+      # closed unless the field is exactly `true`.
+      - name: Validate consumer config structure
+        id: validate-config
+        if: inputs.config-file != ''
+        shell: bash
+        env:
+          CONFIG_FILE: ${{ inputs.config-file }}
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts js-yaml@4.1.0
+          node - <<'EOF'
+          const { readFileSync } = require("node:fs");
+          const yaml = require("js-yaml");
+
+          const path = process.env.CONFIG_FILE;
+          let doc;
+          try {
+            doc = yaml.load(readFileSync(path, "utf8"));
+          } catch (cause) {
+            console.log(
+              `::error title=Workflow security configuration::config-file is not valid YAML: ${cause.message}`
+            );
+            process.exit(1);
+          }
+
+          const disabled = doc?.rules?.["unpinned-uses"]?.disable;
+          if (disabled !== true) {
+            console.log(
+              "::error title=Workflow security configuration::config-file must set rules.unpinned-uses.disable to true (found: " +
+                JSON.stringify(disabled) +
+                "); this rule is owned by the organization pin validator and must not be re-enabled or reconfigured"
+            );
+            process.exit(1);
+          }
+          EOF
+
+      # Probe the policy with an intentionally unpinned action as a
+      # defense-in-depth check alongside the structural validation above.
+      # The filename includes the run id so a consumer config cannot
+      # pre-emptively ignore this provider-owned assertion.
       - name: Prepare pin-policy probe
         id: probe
         shell: bash
@@ -152,12 +197,14 @@ jobs:
         shell: bash
         env:
           CONFIG_OUTCOME: ${{ steps.configure.outcome }}
+          VALIDATE_CONFIG_OUTCOME: ${{ steps.validate-config.outcome }}
           INPUT_OUTCOME: ${{ steps.validate-inputs.outcome }}
           SCAN_OUTCOME: ${{ steps.scan.outcome }}
         run: |
           set -euo pipefail
           if [ "$INPUT_OUTCOME" = "success" ] && \
              { [ "$CONFIG_OUTCOME" = "success" ] || [ "$CONFIG_OUTCOME" = "skipped" ]; } && \
+             { [ "$VALIDATE_CONFIG_OUTCOME" = "success" ] || [ "$VALIDATE_CONFIG_OUTCOME" = "skipped" ]; } && \
              [ "$SCAN_OUTCOME" = "success" ]; then
             echo "status=success" >> "$GITHUB_OUTPUT"
             echo "Workflow security audit completed without findings."
