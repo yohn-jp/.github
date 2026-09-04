@@ -1,0 +1,4 @@
+name: Self-test CodeQL config fixture
+
+queries:
+  - uses: security-extended
