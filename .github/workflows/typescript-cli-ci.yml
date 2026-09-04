@@ -51,6 +51,13 @@ on:
           the consumer already runs it separately.
         type: boolean
         default: true
+      test-setup-command:
+        description: >-
+          Optional repository-owned shell command run immediately before the
+          test command. Empty (default) performs no setup. Use this only for
+          explicit test-environment prerequisites; keep shared CI repository-neutral.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -220,6 +227,13 @@ jobs:
       - name: Isolate provider tooling
         shell: bash
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
+      - name: Consumer test setup
+        if: inputs.test-setup-command != ''
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          TEST_SETUP_COMMAND: ${{ inputs.test-setup-command }}
+        run: bash -euo pipefail -c "$TEST_SETUP_COMMAND"
       - working-directory: ${{ inputs.working-directory }}
         run: pnpm test
       - name: Restore provider tooling for action cleanup
@@ -352,7 +366,7 @@ jobs:
           echo "Packed: $tarball"
           contents="$(tar -tzf "$tarball")"
           echo "$contents"
-          for forbidden in 'node_modules/' '\.env$' '^package/\.git' '^package/src/'; do
+          for forbidden in 'node_modules/' '\.env$' '^package/\.git(/|$)' '^package/src/'; do
             if echo "$contents" | grep -Eq "$forbidden"; then
               echo "::error::packed tarball unexpectedly contains files matching '$forbidden'" >&2
               exit 1
