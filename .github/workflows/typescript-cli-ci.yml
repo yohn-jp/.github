@@ -367,12 +367,12 @@ jobs:
           contents="$(tar -tzf "$tarball")"
           echo "$contents"
           for forbidden in 'node_modules/' '\.env$' '^package/\.git(/|$)' '^package/src/'; do
-            if echo "$contents" | grep -Eq "$forbidden"; then
+            if grep -Eq "$forbidden" <<< "$contents"; then
               echo "::error::packed tarball unexpectedly contains files matching '$forbidden'" >&2
               exit 1
             fi
           done
-          if ! echo "$contents" | grep -q '^package/dist/'; then
+          if ! grep -Eq '^package/dist/' <<< "$contents"; then
             echo "::error::packed tarball does not contain dist/" >&2
             exit 1
           fi
