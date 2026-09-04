@@ -70,6 +70,14 @@ The generated `governanceHealth.collection` projection reports `healthy`,
 bounded diagnostic messages. The Governance page renders these causes and the
 repository-level state. It does not recreate Inari validation semantics.
 
+Inari's Issue dependency projection (blocked/blocking state; see
+[portal-work-links.md](portal-work-links.md#blocker-projection)) rides the
+same governance evidence and therefore the same preflight: it is available
+only when governance for that Issue is `valid`, so every cause above that
+leaves governance `unknown` also leaves the Issue's blocker projection
+`unavailable`. This is deliberate — Portal does not maintain a second
+collection-health model for dependencies.
+
 ## Runtime boundary
 
 The generated collection token is passed only to the build step as:
@@ -89,10 +97,13 @@ The Pages build still publishes the public portal, but it must be visibly
 degraded:
 
 - public repository and open-Issue REST data may load within anonymous API limits;
-- native dependency REST data may load where public access permits;
+- GitHub-native dependency REST data may still load where public access
+  permits, but it is shown only as observed metadata and never drives
+  blocked/blocking classification;
 - Issue→PR GraphQL linkage reports `unavailable` because authentication is absent;
 - governance preflight reports `authentication-unavailable`, all governance
-  projections remain `unknown`/`valid: null`, and the Governance page shows the
+  projections remain `unknown`/`valid: null`, the Inari blocker projection is
+  `unavailable` for the same reason, and the Governance page shows the
   unavailable cause;
 - the generated dashboard status is `partial`; missing governance evidence is
   never silently presented as a complete snapshot.

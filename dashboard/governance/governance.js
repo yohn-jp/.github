@@ -14,6 +14,7 @@ const elements = {
   generatedAt: document.querySelector("#generated-at"),
   status: document.querySelector("#dataset-status"),
   metrics: document.querySelector("#governance-metrics"),
+  dependencyMetrics: document.querySelector("#dependency-metrics"),
   diagnostics: document.querySelector("#collection-diagnostics"),
   repositories: document.querySelector("#repository-health"),
   violations: document.querySelector("#violation-summary"),
@@ -133,6 +134,40 @@ function renderMetrics(overall) {
     [overall.unknown, "governance.metrics.unknown", "unknown"]
   ];
   elements.metrics.replaceChildren(
+    ...cards.map(([value, key, status]) => {
+      const card = node("div", `governance-metric ${status}`);
+      card.append(
+        node("span", "governance-metric-value", text(value)),
+        node("span", "governance-metric-label", t(key))
+      );
+      return card;
+    })
+  );
+}
+
+/**
+ * Blocked/blocking/unavailable Issue counts and the unresolved blocker edge
+ * count, projected from Inari's dependency semantics (see
+ * governance-health.mjs `dependencies`). Dependency-unavailable Issues are
+ * the same fail-closed evidence gap as governance-unavailable Issues, so
+ * this reuses the metric-card layout rather than a second status model.
+ */
+function renderDependencyMetrics(dependencies) {
+  const cards = [
+    [dependencies.blockedIssues, "governance.dependencies.blocked", "invalid"],
+    [dependencies.blockingIssues, "governance.dependencies.blocking", "valid"],
+    [
+      dependencies.unavailableIssues,
+      "governance.dependencies.unavailable",
+      "unknown"
+    ],
+    [
+      dependencies.unresolvedEdgeCount,
+      "governance.dependencies.unresolvedEdges",
+      "unknown"
+    ]
+  ];
+  elements.dependencyMetrics.replaceChildren(
     ...cards.map(([value, key, status]) => {
       const card = node("div", `governance-metric ${status}`);
       card.append(
@@ -330,6 +365,14 @@ function renderDashboard(dashboard) {
   }
   showStatus(dashboard, health);
   renderMetrics(health.overall);
+  renderDependencyMetrics(
+    health.dependencies ?? {
+      blockedIssues: 0,
+      blockingIssues: 0,
+      unavailableIssues: 0,
+      unresolvedEdgeCount: 0
+    }
+  );
   renderDiagnostics(health.collection);
   renderRepositories(health.repositories);
   renderViolations(health.violations);

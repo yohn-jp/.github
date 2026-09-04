@@ -217,6 +217,7 @@ export function unavailableGovernance(reason, options = {}) {
     classification: "unknown",
     template: null,
     violations: [],
+    dependencies: null,
     revision: null,
     reason,
     diagnostics: resolvedDiagnostics
@@ -233,11 +234,40 @@ function projectGovernance(read) {
     classification: projection.classification,
     template: read.contract?.templateIdentity ?? null,
     violations,
+    // Dependencies are only ever projected for a valid canonical artifact
+    // (see gh-inari `projectExistingArtifact`); an invalid artifact never
+    // exposes parsed dependency declarations, so this stays null there.
+    dependencies: projection.dependencies ?? null,
     revision:
       read.contract?.provenance?.treeSha ?? read.governanceRevision ?? null,
     reason: null,
     diagnostics: []
   };
+}
+
+/**
+ * Bounded `gh api --jq <path>` shim. Inari's repository identity resolution
+ * (0.9.0+) reads a single scalar field (currently only `.id`) from a REST
+ * response; this deliberately supports nothing beyond dotted field access.
+ */
+function applyJqExpression(body, expression) {
+  if (typeof expression !== "string" || expression.trim() === "") return body;
+  let value;
+  try {
+    value = JSON.parse(body);
+  } catch {
+    return body;
+  }
+  for (const key of expression.trim().replace(/^\./, "").split(".")) {
+    if (key === "") continue;
+    if (value === null || typeof value !== "object") {
+      value = undefined;
+      break;
+    }
+    value = value[key];
+  }
+  if (value === undefined || value === null) return "";
+  return typeof value === "string" ? value : JSON.stringify(value);
 }
 
 class FetchGithubTransport {
@@ -272,10 +302,12 @@ class FetchGithubTransport {
     const hostnameIndex = args.indexOf("--hostname");
     const hostname =
       hostnameIndex === -1 ? "github.com" : args[hostnameIndex + 1];
+    const jqIndex = args.indexOf("--jq");
+    const jqExpression = jqIndex === -1 ? null : args[jqIndex + 1];
     const baseUrl =
       hostname === "github.com" ? API_ROOT : `https://${hostname}/api/v3`;
     const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-    const cacheKey = `${method}:${url}`;
+    const cacheKey = `${method}:${url}:${jqExpression ?? ""}`;
     if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
 
     const issueMatch = endpoint.match(/^repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/);
@@ -303,7 +335,11 @@ class FetchGithubTransport {
     const response = await this.fetchImpl(url, { headers });
     const body = await response.text();
     const result = response.ok
-      ? { exitCode: 0, stdout: body, stderr: "" }
+      ? {
+          exitCode: 0,
+          stdout: applyJqExpression(body, jqExpression),
+          stderr: ""
+        }
       : {
           exitCode: 1,
           stdout: "",

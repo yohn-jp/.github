@@ -3,7 +3,7 @@ import {
   GOVERNANCE_COLLECTION_STATES
 } from "./inari-governance.mjs";
 
-export const GOVERNANCE_HEALTH_SCHEMA_VERSION = 2;
+export const GOVERNANCE_HEALTH_SCHEMA_VERSION = 3;
 export const GOVERNANCE_STATES = Object.freeze(["valid", "invalid", "unknown"]);
 
 function text(value, fallback = "") {
@@ -312,6 +312,54 @@ function unavailableCauses(issues, repositoryTotals) {
   );
 }
 
+function issueSelfKey(issue) {
+  const id = issue?.repository?.id;
+  const idText =
+    typeof id === "number" || typeof id === "string" ? String(id) : "unknown";
+  return `github.com:${idText}#${issue?.number ?? "unknown"}`;
+}
+
+/**
+ * Blocked/blocking/unavailable Issue projection built from the same
+ * `relationships.blockers` Inari governance already produced per Issue
+ * (see inari-governance.mjs / dashboard-data.mjs). Dependencies are only
+ * ever exposed for valid Inari governance, so their unavailable causes are
+ * the governance causes computed above; this never models a second,
+ * competing failure taxonomy.
+ */
+function dependencyHealth(issues) {
+  let blockedIssues = 0;
+  let blockingIssues = 0;
+  let unavailableIssues = 0;
+  const edges = new Set();
+  for (const issue of issues) {
+    const blockers = issue?.relationships?.blockers;
+    if (!blockers || blockers.status !== "available") {
+      unavailableIssues += 1;
+      continue;
+    }
+    if (blockers.blocked) blockedIssues += 1;
+    if (blockers.blockingActive) blockingIssues += 1;
+    const selfKey = issueSelfKey(issue);
+    for (const reference of blockers.blockedBy ?? []) {
+      if (reference?.resolved) continue;
+      edges.add(`${reference.key}->${selfKey}`);
+    }
+    if (issue?.state === "open") {
+      for (const reference of blockers.blocking ?? []) {
+        if (reference?.resolved) continue;
+        edges.add(`${selfKey}->${reference.key}`);
+      }
+    }
+  }
+  return {
+    blockedIssues,
+    blockingIssues,
+    unavailableIssues,
+    unresolvedEdgeCount: edges.size
+  };
+}
+
 function collectionStatus(repositoryTotals, unknownIssues) {
   const counts = {
     healthy: repositoryTotals.filter(
@@ -430,6 +478,10 @@ export function aggregateGovernanceHealth({
     issues: {
       invalid: invalidIssues,
       unknown: unknownIssues
+    },
+    dependencies: {
+      ...dependencyHealth(issues),
+      causes
     }
   };
 }

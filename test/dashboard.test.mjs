@@ -149,7 +149,7 @@ test("projects Inari governance as valid, invalid, or unavailable per open Issue
     now: () => new Date("2026-08-23T02:00:00Z")
   });
 
-  assert.equal(data.schemaVersion, 5);
+  assert.equal(data.schemaVersion, 6);
   assert.equal(data.status, "partial");
   assert.equal(data.metrics.governanceDataUnavailable, 1);
   assert.equal(data.metrics.governanceValid, 1);
@@ -423,7 +423,7 @@ test("build publishes portal root, CNAME, and dashboard under work", async () =>
     assert.match(governanceApp, /collection\?\.causes/);
     assert.equal(data.metrics.issueCount, 1);
     assert.equal(governanceEvaluations, 1);
-    assert.equal(data.schemaVersion, 5);
+    assert.equal(data.schemaVersion, 6);
     assert.deepEqual(data.governanceHealth.overall, {
       valid: 0,
       invalid: 0,

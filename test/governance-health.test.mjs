@@ -114,6 +114,87 @@ test("aggregates projected governance into three-state organization health", () 
   assert.equal(health.issues.unknown[0].url, issues[2].url);
 });
 
+test("aggregates blocked/blocking/unavailable Issue counts and unresolved edges", () => {
+  const blocked = issue("alpha", 1, { status: "valid", valid: true });
+  blocked.state = "open";
+  blocked.relationships = {
+    blockers: {
+      status: "available",
+      blocked: true,
+      blockingActive: false,
+      blockedBy: [
+        {
+          key: "github.com:beta-id#9",
+          repository: { fullName: "yohn-jp/beta" },
+          number: 9,
+          resolved: false
+        }
+      ],
+      blocking: []
+    }
+  };
+
+  const blocking = issue("alpha", 2, { status: "valid", valid: true });
+  blocking.state = "open";
+  blocking.relationships = {
+    blockers: {
+      status: "available",
+      blocked: false,
+      blockingActive: true,
+      blockedBy: [],
+      blocking: [
+        {
+          key: "github.com:alpha-id#1",
+          repository: { fullName: "yohn-jp/alpha" },
+          number: 1,
+          resolved: false
+        }
+      ]
+    }
+  };
+
+  const unavailable = issue("alpha", 3, {
+    status: "unavailable",
+    valid: null,
+    reason: "authentication-unavailable",
+    diagnostics: [
+      {
+        code: "AUTHENTICATION_UNAVAILABLE",
+        reason: "authentication-unavailable",
+        stage: "preflight",
+        message: "unavailable"
+      }
+    ]
+  });
+  unavailable.relationships = {
+    blockers: { status: "unavailable", blockedBy: [], blocking: [] }
+  };
+
+  const health = aggregateGovernanceHealth({
+    issues: [blocked, blocking, unavailable],
+    repositories: [
+      {
+        id: "alpha-id",
+        name: "alpha",
+        fullName: "yohn-jp/alpha",
+        url: "https://github.com/yohn-jp/alpha",
+        fetchStatus: "ok",
+        openIssueCount: 3
+      }
+    ],
+    snapshotStatus: "complete"
+  });
+
+  assert.equal(health.dependencies.blockedIssues, 1);
+  assert.equal(health.dependencies.blockingIssues, 1);
+  assert.equal(health.dependencies.unavailableIssues, 1);
+  // Two distinct declared edges (beta#9 -> alpha#1, alpha#2 -> alpha#1);
+  // reciprocal-declaration dedup is covered at the collection layer in
+  // inari-dependencies.test.mjs.
+  assert.equal(health.dependencies.unresolvedEdgeCount, 2);
+  assert.ok(Array.isArray(health.dependencies.causes));
+});
+
 test("does not calculate compliance for empty or unknown-only evidence", () => {
   const health = aggregateGovernanceHealth({
     issues: [
