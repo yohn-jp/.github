@@ -1,10 +1,14 @@
 name: Setup Node.js and pnpm
+
 description: >-
-  Sets up pnpm (version read from packageManager in package.json) and
-  Node.js with pnpm dependency caching, then installs dependencies with a
-  frozen lockfile. Bundles the steps every job in the reusable TypeScript
-  CLI CI workflow needs, so cache configuration and version resolution stay
-  in one place instead of being repeated per job.
+  Sets up Node.js and provisions the exact pnpm executable declared by the
+  consumer's packageManager field, then installs dependencies with a frozen
+  lockfile. The pnpm executable and the pnpm content-addressable store are
+  cached independently: the executable cache is keyed by OS/arch/version and
+  is verified before use, and the store cache is keyed by lockfile content.
+  Neither cache is a correctness dependency — a cache miss, eviction, or
+  corrupted/mismatched executable falls back to acquiring pnpm from upstream
+  with bounded retry. Cache keys are repository-neutral.
 
 inputs:
   working-directory:
@@ -19,19 +23,143 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup pnpm
-      uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
-      with:
-        package_json_file: ${{ inputs.working-directory }}/package.json
-
     - name: Setup Node.js
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: ${{ inputs.node-version }}
-        cache: pnpm
-        cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
+    - name: Resolve pnpm version from packageManager
+      id: pnpm-version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        package_manager="$(node -p "require('./package.json').packageManager || ''")"
+        if [ -z "$package_manager" ]; then
+          echo "::error::package.json is missing a 'packageManager' field; it must declare an exact pnpm version (e.g. \"pnpm@9.15.4\")" >&2
+          exit 1
+        fi
+        case "$package_manager" in
+          pnpm@*) ;;
+          *)
+            echo "::error::packageManager '$package_manager' does not declare pnpm" >&2
+            exit 1
+            ;;
+        esac
+        version="${package_manager#pnpm@}"
+        version="${version%%+*}"
+        if [ -z "$version" ]; then
+          echo "::error::could not parse an exact pnpm version out of packageManager '$package_manager'" >&2
+          exit 1
+        fi
+        if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::packageManager declares pnpm version '$version', which is not an exact semantic version; ranges and tags (e.g. 'latest', '^9.15.4', '~9.15.4') are not deterministic, declare an exact version such as \"pnpm@9.15.4\"" >&2
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Compute pnpm executable cache path
+      id: pnpm-exe-paths
+      shell: bash
+      run: |
+        set -euo pipefail
+        root="${RUNNER_TEMP}/pnpm-exe-cache"
+        echo "root=${root}" >> "$GITHUB_OUTPUT"
+        echo "bin-dir=${root}/node_modules/@pnpm/exe" >> "$GITHUB_OUTPUT"
+
+    - name: Restore pnpm executable cache
+      id: restore-exe
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ${{ steps.pnpm-exe-paths.outputs.root }}
+        key: pnpm-exe-${{ runner.os }}-${{ runner.arch }}-${{ steps.pnpm-version.outputs.version }}
+
+    - name: Verify cached pnpm executable
+      id: verify-cached-exe
+      if: steps.restore-exe.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        EXPECTED_VERSION: ${{ steps.pnpm-version.outputs.version }}
+        PNPM_BIN: ${{ steps.pnpm-exe-paths.outputs.bin-dir }}/pnpm
+      run: |
+        set +e
+        actual_version="$("$PNPM_BIN" --version 2>/dev/null)"
+        status=$?
+        set -e
+        if [ "$status" -eq 0 ] && [ "$actual_version" = "$EXPECTED_VERSION" ]; then
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::cached pnpm executable is unusable or reports version '${actual_version}' (expected ${EXPECTED_VERSION}); reacquiring from upstream" >&2
+          echo "valid=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Acquire pnpm executable from upstream
+      id: acquire-exe
+      if: steps.restore-exe.outputs.cache-hit != 'true' || steps.verify-cached-exe.outputs.valid != 'true'
+      shell: bash
+      env:
+        PNPM_VERSION: ${{ steps.pnpm-version.outputs.version }}
+        EXE_ROOT: ${{ steps.pnpm-exe-paths.outputs.root }}
+      run: |
+        set -euo pipefail
+        rm -rf "$EXE_ROOT"
+        mkdir -p "$EXE_ROOT"
+        max_attempts=4
+        attempt=1
+        delay=1
+        until npm install --no-save --prefix "$EXE_ROOT" "@pnpm/exe@${PNPM_VERSION}"; do
+          if [ "$attempt" -ge "$max_attempts" ]; then
+            echo "::error::failed to acquire @pnpm/exe@${PNPM_VERSION} from upstream after ${max_attempts} attempts" >&2
+            exit 1
+          fi
+          echo "acquisition attempt ${attempt} failed; retrying in ${delay}s" >&2
+          sleep "$delay"
+          attempt=$((attempt + 1))
+          delay=$((delay * 2))
+        done
+        actual_version="$("$EXE_ROOT/node_modules/@pnpm/exe/pnpm" --version)"
+        if [ "$actual_version" != "$PNPM_VERSION" ]; then
+          echo "::error::acquired pnpm executable reports version '${actual_version}', expected '${PNPM_VERSION}'" >&2
+          exit 1
+        fi
+
+    - name: Save pnpm executable cache
+      if: steps.acquire-exe.outcome == 'success'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ${{ steps.pnpm-exe-paths.outputs.root }}
+        key: pnpm-exe-${{ runner.os }}-${{ runner.arch }}-${{ steps.pnpm-version.outputs.version }}
+
+    - name: Add pnpm to PATH
+      shell: bash
+      env:
+        PNPM_BIN_DIR: ${{ steps.pnpm-exe-paths.outputs.bin-dir }}
+      run: echo "$PNPM_BIN_DIR" >> "$GITHUB_PATH"
+
+    - name: Compute pnpm store cache path
+      id: pnpm-store-paths
+      shell: bash
+      run: echo "dir=${RUNNER_TEMP}/pnpm-store" >> "$GITHUB_OUTPUT"
+
+    - name: Restore pnpm store cache
+      id: restore-store
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ${{ steps.pnpm-store-paths.outputs.dir }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+        restore-keys: |
+          pnpm-store-${{ runner.os }}-
 
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: pnpm install --frozen-lockfile
+      env:
+        PNPM_STORE_DIR: ${{ steps.pnpm-store-paths.outputs.dir }}
+      run: pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"
+
+    - name: Save pnpm store cache
+      if: steps.restore-store.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ${{ steps.pnpm-store-paths.outputs.dir }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
