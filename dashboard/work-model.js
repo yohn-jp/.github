@@ -123,13 +123,17 @@ export function classifyIssue(issue) {
   }
   if (issue?.stateReason === "reopened") reasons.push("reopened-issue");
 
-  const blockers = blockerState(issue);
-  if (blockers === "unavailable") {
+  // Read the two blocker flags independently: an Issue can simultaneously
+  // be blocked by one Issue and block another, and both reasons must
+  // survive together rather than collapsing into blockerState()'s single
+  // summary enum.
+  const blockers = issue?.relationships?.blockers;
+  if (blockers !== undefined && blockers.status !== "available") {
     reasons.push("dependency-projection-unavailable");
-  } else if (blockers === "blocked") {
-    reasons.push("blocked-by-dependency");
+  } else if (blockers !== undefined) {
+    if (blockers.blocked) reasons.push("blocked-by-dependency");
+    if (blockers.blockingActive) reasons.push("blocking-dependent-work");
   }
-  if (blockers === "blocking") reasons.push("blocking-dependent-work");
 
   return {
     needsAttention: reasons.length > 0,

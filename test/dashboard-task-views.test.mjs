@@ -284,6 +284,31 @@ test("projects Inari-governed blocker relationships onto the work classification
     ),
     false
   );
+
+  const blockedAndBlocking = issue(9, {
+    blockers: {
+      status: "available",
+      blockedBy: [
+        {
+          repository: { fullName: "yohn-jp/example" },
+          number: 10,
+          resolved: false
+        }
+      ],
+      blocking: [
+        {
+          repository: { fullName: "yohn-jp/example" },
+          number: 11,
+          resolved: false
+        }
+      ],
+      blocked: true,
+      blockingActive: true
+    }
+  });
+  const bothReasons = classifyIssue(blockedAndBlocking).reasons;
+  assert.equal(bothReasons.includes("blocked-by-dependency"), true);
+  assert.equal(bothReasons.includes("blocking-dependent-work"), true);
 });
 
 test("keeps governance as an explicit fail-closed three-state filter", () => {
