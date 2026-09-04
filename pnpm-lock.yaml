@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       gh-inari:
-        specifier: 0.8.0
-        version: 0.8.0
+        specifier: 0.9.0
+        version: 0.9.0
       js-yaml:
         specifier: ^4.1.0
         version: 4.3.1
@@ -24,8 +24,8 @@ packages:
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
-  gh-inari@0.8.0:
-    resolution: {integrity: sha512-QCBFiByGb6r3TcNKh4CZpcStvnywf3Qh3QIPDIDJJ7dGEPPwEtMed/d0XeFhXm0a/SVgqOp0N1AOTG3G3oYKGA==}
+  gh-inari@0.9.0:
+    resolution: {integrity: sha512-r6aENe5iS2K0NqrgD6XHG6idP2OwDZtQNe1fX3656iiBlbST+AHmw0y7YFsF/0z3QhYARkaCP3z1s1We33x7HA==}
     engines: {node: '>=22.13'}
     hasBin: true
 
@@ -47,7 +47,7 @@ snapshots:
 
   argparse@2.0.1: {}
 
-  gh-inari@0.8.0:
+  gh-inari@0.9.0:
     dependencies:
       yaml: 2.9.0
 

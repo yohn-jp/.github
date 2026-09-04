@@ -13,7 +13,7 @@ import { aggregateGovernanceHealth } from "./governance-health.mjs";
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 
-export const DASHBOARD_SCHEMA_VERSION = 5;
+export const DASHBOARD_SCHEMA_VERSION = 6;
 
 function getHeader(headers, name) {
   if (!headers) return null;
@@ -603,6 +603,157 @@ async function hydrateDependencies({
   }
 }
 
+function blockerReferenceIdentity(reference) {
+  const host =
+    typeof reference?.repositoryHost === "string" &&
+    reference.repositoryHost.trim() !== ""
+      ? reference.repositoryHost.trim().toLowerCase()
+      : "unknown";
+  const id =
+    typeof reference?.repositoryId === "string" &&
+    reference.repositoryId.trim() !== ""
+      ? reference.repositoryId.trim()
+      : "unknown";
+  const number = Number.isInteger(reference?.number) ? reference.number : null;
+  return { key: `${host}:${id}#${number ?? "unknown"}`, number };
+}
+
+/**
+ * Hydrates one Inari-projected blocker identity (repositoryHost/repositoryId
+ * only) with the observed title/state/URL GitHub reports for it today. The
+ * edge identity itself always comes from Inari; this fetch never invents or
+ * infers a relationship, only the display/resolution facts of one Inari
+ * already claims exists. Cache is shared across the whole snapshot so the
+ * same cross-issue blocker is fetched once.
+ */
+async function hydrateBlockerReference(
+  reference,
+  { fetchImpl, token, cache, errors }
+) {
+  const identity = blockerReferenceIdentity(reference);
+  const fullName =
+    typeof reference?.repository === "string" &&
+    reference.repository.includes("/")
+      ? reference.repository
+      : null;
+  const base = {
+    key: identity.key,
+    repository: {
+      fullName: fullName ?? "unknown/unknown",
+      url: fullName ? repositoryUrl(fullName) : null
+    },
+    number: identity.number
+  };
+  if (!fullName || identity.number === null) {
+    return {
+      ...base,
+      title: null,
+      state: "unknown",
+      stateReason: null,
+      url: null,
+      // Fail closed: an identity Portal cannot resolve is never assumed resolved.
+      resolved: false,
+      available: false
+    };
+  }
+  const cacheKey = `${fullName}#${identity.number}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+  const promise = (async () => {
+    try {
+      const result = await fetchJson(
+        `${API_ROOT}/repos/${fullName}/issues/${identity.number}`,
+        { fetchImpl, token }
+      );
+      const body = result.body ?? {};
+      return {
+        ...base,
+        title:
+          typeof body.title === "string"
+            ? body.title
+            : `Issue #${identity.number}`,
+        state: typeof body.state === "string" ? body.state : "unknown",
+        stateReason: body.state_reason ?? null,
+        url:
+          body.html_url ??
+          `${repositoryUrl(fullName)}/issues/${identity.number}`,
+        resolved: body.state === "closed",
+        available: true
+      };
+    } catch (error) {
+      errors.push(errorRecord({ fullName }, "blockers:reference", error));
+      return {
+        ...base,
+        title: null,
+        state: "unknown",
+        stateReason: null,
+        url: `${repositoryUrl(fullName)}/issues/${identity.number}`,
+        resolved: false,
+        available: false
+      };
+    }
+  })();
+  cache.set(cacheKey, promise);
+  return promise;
+}
+
+/**
+ * Projects one Issue's blocker relationships from the same Inari governance
+ * evidence already collected for it: dependencies are only ever exposed by
+ * Inari for a valid canonical artifact, so unavailable/invalid governance
+ * fails the blocker projection closed too rather than modeling a second,
+ * competing collection-health state.
+ */
+async function projectIssueBlockers({
+  issue,
+  governance,
+  fetchImpl,
+  token,
+  cache,
+  errors
+}) {
+  const dependencies =
+    governance?.status === "valid" ? governance.dependencies : null;
+  if (
+    !dependencies ||
+    !Array.isArray(dependencies.blockedBy) ||
+    !Array.isArray(dependencies.blocks)
+  ) {
+    return {
+      status: "unavailable",
+      blockedBy: [],
+      blocking: [],
+      blocked: false,
+      blockingActive: false
+    };
+  }
+  const [blockedBy, blocking] = await Promise.all([
+    Promise.all(
+      dependencies.blockedBy.map((reference) =>
+        hydrateBlockerReference(reference, { fetchImpl, token, cache, errors })
+      )
+    ),
+    Promise.all(
+      dependencies.blocks.map((reference) =>
+        hydrateBlockerReference(reference, { fetchImpl, token, cache, errors })
+      )
+    )
+  ]);
+  const blockedByUnresolved = blockedBy.filter(
+    (reference) => !reference.resolved
+  );
+  const blockingUnresolved =
+    issue.state === "open"
+      ? blocking.filter((reference) => !reference.resolved)
+      : [];
+  return {
+    status: "available",
+    blockedBy,
+    blocking,
+    blocked: blockedByUnresolved.length > 0,
+    blockingActive: blockingUnresolved.length > 0
+  };
+}
+
 export async function collectDashboardData({
   config,
   fetchImpl = globalThis.fetch,
@@ -619,6 +770,7 @@ export async function collectDashboardData({
   const issues = [];
   const errors = [];
   const governanceErrors = [];
+  const blockerReferenceCache = new Map();
 
   for (const configured of configuredRepositories) {
     let repository;
@@ -733,6 +885,15 @@ export async function collectDashboardData({
           repository,
           normalizedIssues[index]
         );
+        normalizedIssues[index].relationships.blockers =
+          await projectIssueBlockers({
+            issue: normalizedIssues[index],
+            governance: normalizedIssues[index].governance,
+            fetchImpl,
+            token,
+            cache: blockerReferenceCache,
+            errors
+          });
         if (preflight.status !== "unavailable") {
           const diagnostics = projectionDiagnostics(
             normalizedIssues[index].governance
@@ -858,7 +1019,13 @@ export async function collectDashboardData({
         governanceHealth.collection.degradedRepositories,
       governanceRepositoriesUnavailable:
         governanceHealth.collection.unavailableRepositories,
-      governanceUnavailableCauses: governanceHealth.collection.causes.length
+      governanceUnavailableCauses: governanceHealth.collection.causes.length,
+      blockedIssueCount: governanceHealth.dependencies.blockedIssues,
+      blockingIssueCount: governanceHealth.dependencies.blockingIssues,
+      dependencyProjectionUnavailable:
+        governanceHealth.dependencies.unavailableIssues,
+      unresolvedBlockerEdgeCount:
+        governanceHealth.dependencies.unresolvedEdgeCount
     },
     repositories,
     issues,

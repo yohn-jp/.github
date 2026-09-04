@@ -55,6 +55,24 @@ function pullRequestLinkage(issue) {
 }
 
 /**
+ * Maps the Inari-projected blocker relationship (see dashboard-data.mjs
+ * `relationships.blockers`) to the public three-state UI contract. Inari is
+ * the dependency semantic authority; this reads only its normalized
+ * projection and never infers blockers from GitHub-native dependency
+ * metadata or Issue prose. Missing entirely (a fixture that predates this
+ * projection) is distinct from a present-but-unavailable projection: only
+ * the latter is fail-closed "unavailable".
+ */
+export function blockerState(issue) {
+  const blockers = issue?.relationships?.blockers;
+  if (blockers === undefined) return "not-evaluated";
+  if (blockers.status !== "available") return "unavailable";
+  if (blockers.blocked) return "blocked";
+  if (blockers.blockingActive) return "blocking";
+  return "clear";
+}
+
+/**
  * Maps projected governance data to the public three-state UI contract.
  * Only an explicit valid projection is compliant; missing or unavailable
  * evidence is deliberately treated as unknown.
@@ -105,13 +123,13 @@ export function classifyIssue(issue) {
   }
   if (issue?.stateReason === "reopened") reasons.push("reopened-issue");
 
-  const dependencies = issue?.relationships?.dependencies;
-  if (
-    Array.isArray(dependencies?.blockedBy) &&
-    dependencies.blockedBy.length > 0
-  ) {
+  const blockers = blockerState(issue);
+  if (blockers === "unavailable") {
+    reasons.push("dependency-projection-unavailable");
+  } else if (blockers === "blocked") {
     reasons.push("blocked-by-dependency");
   }
+  if (blockers === "blocking") reasons.push("blocking-dependent-work");
 
   return {
     needsAttention: reasons.length > 0,

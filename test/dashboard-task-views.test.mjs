@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  blockerState,
   buildWorkQuery,
   classifyIssue,
   governanceStatus,
@@ -20,6 +21,13 @@ function issue(
     repository = "yohn-jp/example",
     linkage = { status: "complete", items: [] },
     dependencies = { status: "complete", blockedBy: [], blocking: [] },
+    blockers = {
+      status: "available",
+      blockedBy: [],
+      blocking: [],
+      blocked: false,
+      blockingActive: false
+    },
     stateReason = null
   } = {}
 ) {
@@ -30,7 +38,7 @@ function issue(
     updatedAt,
     createdAt,
     stateReason,
-    relationships: { pullRequests: linkage, dependencies }
+    relationships: { pullRequests: linkage, dependencies, blockers }
   };
 }
 
@@ -49,10 +57,18 @@ test("classifies only complete authoritative linkage as in-progress or ready", (
     }
   });
   const readyWithAttention = issue(5, {
-    dependencies: {
-      status: "complete",
-      blockedBy: [{ repository: { fullName: "yohn-jp/other" }, number: 8 }],
-      blocking: []
+    blockers: {
+      status: "available",
+      blockedBy: [
+        {
+          repository: { fullName: "yohn-jp/other" },
+          number: 8,
+          resolved: false
+        }
+      ],
+      blocking: [],
+      blocked: true,
+      blockingActive: false
     }
   });
 
@@ -65,6 +81,10 @@ test("classifies only complete authoritative linkage as in-progress or ready", (
   assert.equal(classifyIssue(activeWithHistory).needsAttention, true);
   assert.equal(classifyIssue(readyWithAttention).ready, true);
   assert.equal(classifyIssue(readyWithAttention).needsAttention, true);
+  assert.equal(
+    classifyIssue(readyWithAttention).reasons.includes("blocked-by-dependency"),
+    true
+  );
   assert.equal(issueMatchesView(inProgress, "in-progress"), true);
   assert.equal(issueMatchesView(activeWithHistory, "in-progress"), true);
   assert.equal(issueMatchesView(activeWithHistory, "attention"), true);
@@ -77,10 +97,18 @@ test("marks clearly evidenced attention states without priority scoring", () => 
     linkage: { status: "complete", items: [{ state: "closed" }] }
   });
   const blocked = issue(2, {
-    dependencies: {
-      status: "complete",
-      blockedBy: [{ repository: { fullName: "yohn-jp/other" }, number: 8 }],
-      blocking: []
+    blockers: {
+      status: "available",
+      blockedBy: [
+        {
+          repository: { fullName: "yohn-jp/other" },
+          number: 8,
+          resolved: false
+        }
+      ],
+      blocking: [],
+      blocked: true,
+      blockingActive: false
     }
   });
   const reopened = issue(3, { stateReason: "reopened" });
@@ -89,6 +117,10 @@ test("marks clearly evidenced attention states without priority scoring", () => 
     assert.equal(classifyIssue(candidate).needsAttention, true);
     assert.equal(issueMatchesView(candidate, "attention"), true);
   }
+  assert.equal(
+    classifyIssue(blocked).reasons.includes("blocked-by-dependency"),
+    true
+  );
 });
 
 test("sorts every supported order deterministically regardless of source order", () => {
@@ -148,6 +180,110 @@ test("keeps view, repository, search, and sort in a shareable URL", () => {
   assert.equal(resolveView("?view=unknown"), "recent");
   assert.equal(resolveSort("?sort=unknown", [issue(1)]), "updated");
   assert.equal(resolveSort("?sort=created", []), "updated");
+});
+
+test("projects Inari-governed blocker relationships onto the work classification", () => {
+  const sameRepoBlocked = issue(1, {
+    blockers: {
+      status: "available",
+      blockedBy: [
+        {
+          repository: { fullName: "yohn-jp/example" },
+          number: 2,
+          resolved: false
+        }
+      ],
+      blocking: [],
+      blocked: true,
+      blockingActive: false
+    }
+  });
+  const crossRepoBlocked = issue(2, {
+    blockers: {
+      status: "available",
+      blockedBy: [
+        {
+          repository: { fullName: "yohn-jp/nawabari" },
+          number: 9,
+          resolved: false
+        }
+      ],
+      blocking: [],
+      blocked: true,
+      blockingActive: false
+    }
+  });
+  const resolvedBlocker = issue(3, {
+    blockers: {
+      status: "available",
+      blockedBy: [
+        {
+          repository: { fullName: "yohn-jp/example" },
+          number: 4,
+          resolved: true
+        }
+      ],
+      blocking: [],
+      blocked: false,
+      blockingActive: false
+    }
+  });
+  const blockingOthers = issue(5, {
+    blockers: {
+      status: "available",
+      blockedBy: [],
+      blocking: [
+        {
+          repository: { fullName: "yohn-jp/example" },
+          number: 6,
+          resolved: false
+        }
+      ],
+      blocked: false,
+      blockingActive: true
+    }
+  });
+  const projectionUnavailable = issue(7, {
+    blockers: { status: "unavailable", blockedBy: [], blocking: [] }
+  });
+
+  assert.equal(blockerState(sameRepoBlocked), "blocked");
+  assert.equal(blockerState(crossRepoBlocked), "blocked");
+  assert.equal(blockerState(resolvedBlocker), "clear");
+  assert.equal(blockerState(blockingOthers), "blocking");
+  assert.equal(blockerState(projectionUnavailable), "unavailable");
+  assert.equal(blockerState(issue(8)), "clear");
+  assert.equal(blockerState({}), "not-evaluated");
+
+  assert.equal(
+    classifyIssue(sameRepoBlocked).reasons.includes("blocked-by-dependency"),
+    true
+  );
+  assert.equal(
+    classifyIssue(crossRepoBlocked).reasons.includes("blocked-by-dependency"),
+    true
+  );
+  assert.equal(
+    classifyIssue(resolvedBlocker).reasons.includes("blocked-by-dependency"),
+    false
+  );
+  assert.equal(
+    classifyIssue(blockingOthers).reasons.includes("blocking-dependent-work"),
+    true
+  );
+  assert.equal(classifyIssue(projectionUnavailable).needsAttention, true);
+  assert.equal(
+    classifyIssue(projectionUnavailable).reasons.includes(
+      "dependency-projection-unavailable"
+    ),
+    true
+  );
+  assert.equal(
+    classifyIssue(projectionUnavailable).reasons.includes(
+      "blocked-by-dependency"
+    ),
+    false
+  );
 });
 
 test("keeps governance as an explicit fail-closed three-state filter", () => {

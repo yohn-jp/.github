@@ -439,6 +439,47 @@ function renderPullRequests(issue) {
   return container;
 }
 
+/**
+ * Renders only the unresolved Inari-projected blockers for one Issue, or an
+ * explicit unavailable notice. A resolved (closed) blocker or a clear
+ * projection renders nothing here; needsAttention/reasons already carry the
+ * signal for filtering and the metrics page carries the aggregate counts.
+ */
+function renderBlockers(issue) {
+  const blockers = issue.relationships?.blockers;
+  if (blockers?.status === "unavailable") {
+    const container = node("div", "issue-blockers");
+    container.append(
+      node("span", "blocker-linkage unknown", t("work.blockers.unavailable"))
+    );
+    return container;
+  }
+  const unresolved = (blockers?.blockedBy ?? []).filter(
+    (reference) => !reference.resolved
+  );
+  if (unresolved.length === 0) return null;
+
+  const container = node("div", "issue-blockers");
+  for (const reference of unresolved) {
+    const item = node("div", "issue-blocker");
+    const title = link(
+      reference.url,
+      t("work.blockers.title", {
+        number: reference.number,
+        title: reference.title ?? `#${reference.number}`
+      }),
+      "blocker-title"
+    );
+    const repository =
+      reference.repository.fullName === issue.repository.fullName
+        ? t("work.pr.sameRepository")
+        : reference.repository.fullName;
+    item.append(title, node("span", "blocker-meta", repository));
+    container.append(item);
+  }
+  return container;
+}
+
 function renderIssue(issue) {
   const row = node("article", "issue-row");
   row.setAttribute("role", "listitem");
@@ -454,6 +495,8 @@ function renderIssue(issue) {
   );
   const issueMain = node("div", "issue-main");
   issueMain.append(title, renderPullRequests(issue));
+  const blockers = renderBlockers(issue);
+  if (blockers) issueMain.append(blockers);
 
   const classification = classifyIssue(issue);
   const primaryState = classification.inProgress
