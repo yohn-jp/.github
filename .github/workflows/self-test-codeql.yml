@@ -1,0 +1,30 @@
+name: Self-test CodeQL Reusable Workflow
+
+# Controlled consumer proof for the shared codeql.yml contract. This
+# repository's own dogfood push/pull_request/schedule triggers on
+# codeql.yml exercise the direct-trigger path with the default language
+# set and no config-file, so this workflow instead calls codeql.yml the
+# way a consumer does: through workflow_call with an explicit `languages`
+# selection and a supplied local `config-file`. Using a local `uses:
+# ./...` path (rather than `yohn-jp/.github/...@main`) means this proof
+# runs against the current branch's copy of codeql.yml, not the version
+# already on `main`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-proof:
+    name: Reusable workflow consumer proof
+    uses: ./.github/workflows/codeql.yml
+    with:
+      languages: "actions"
+      config-file: "test/fixtures/codeql/codeql-config.yml"
+    permissions:
+      contents: read
+      security-events: write
+      actions: read

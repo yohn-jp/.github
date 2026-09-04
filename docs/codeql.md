@@ -2,7 +2,9 @@
 
 `.github/workflows/codeql.yml` is the shared CodeQL contract for `yohn-jp`
 repositories: JavaScript/TypeScript and GitHub Actions workflow analysis,
-behind least-privilege permissions and immutable SHA-pinned Actions.
+behind least-privilege permissions, immutable SHA-pinned Actions, and a
+checkout with `persist-credentials: false` (no credential is left on disk
+for later steps to use).
 
 ## Consuming it from another repository
 
@@ -35,10 +37,10 @@ third-party `uses:` references they add.
 
 ## Inputs
 
-| Input | Default | Purpose |
-| --- | --- | --- |
-| `languages` | `javascript-typescript,actions` | Comma-separated CodeQL language identifiers. Each becomes its own isolated matrix job (`fail-fast: false`), so one language's analysis failure doesn't hide another's results. |
-| `config-file` | `""` (unset) | Optional path to a repository-local CodeQL config file (query filters, path exclusions, etc). When set, it's passed straight through to `github/codeql-action/init`; when empty, CodeQL's default configuration is used for each language. This is how repository-specific scanning differences are expressed — never by duplicating this workflow. |
+| Input         | Default                         | Purpose                                                                                                                                                                                                                                                                                                                                             |
+| ------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `languages`   | `javascript-typescript,actions` | Comma-separated CodeQL language identifiers. Each becomes its own isolated matrix job (`fail-fast: false`), so one language's analysis failure doesn't hide another's results.                                                                                                                                                                      |
+| `config-file` | `""` (unset)                    | Optional path to a repository-local CodeQL config file (query filters, path exclusions, etc). When set, it's passed straight through to `github/codeql-action/init`; when empty, CodeQL's default configuration is used for each language. This is how repository-specific scanning differences are expressed — never by duplicating this workflow. |
 
 ## Permissions
 
@@ -54,13 +56,25 @@ Kept least-privilege and split by job:
 ## Triggers
 
 The reusable workflow only reacts to `workflow_call` — it does not declare
-its own `push`/`pull_request`/`schedule` triggers for *consumers*; each
+its own `push`/`pull_request`/`schedule` triggers for _consumers_; each
 consumer repository's own caller workflow (shown above) decides when to
 run, including its own scheduled-scan cadence. This repository's copy of
 `codeql.yml` additionally declares `push`/`pull_request`/`schedule`
 directly on itself, so this repository's own `scripts/*.mjs` and
 workflow files are scanned too (dogfooding, not a requirement consumers
 need to replicate).
+
+## Provider self-test
+
+This repository's own push/pull_request/schedule triggers on `codeql.yml`
+exercise the direct-trigger path only (default languages, no
+`config-file`). `self-test-codeql.yml` proves the `workflow_call` contract
+itself by calling `./.github/workflows/codeql.yml` with an explicit
+`languages` selection and a supplied `config-file`
+(`test/fixtures/codeql/codeql-config.yml`), the same way a consumer
+repository does. Using a local `uses: ./...` path runs the proof against
+the current branch's copy of the workflow, not the version already merged
+to `main`.
 
 ## Why GitHub Actions workflows are analyzed too
 
