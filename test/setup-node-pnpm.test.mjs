@@ -214,6 +214,44 @@ test("fails clearly when packageManager declares a non-pnpm package manager", ()
   });
 });
 
+for (const nonExact of [
+  "latest",
+  "^9.15.4",
+  "~9.15.4",
+  "9.x",
+  ">=9.0.0",
+  "9",
+  "9.15"
+]) {
+  test(`rejects a non-exact pnpm version declaration: "${nonExact}"`, () => {
+    withFixtureDir((dir) => {
+      writeFileSync(
+        path.join(dir, "package.json"),
+        JSON.stringify({ packageManager: `pnpm@${nonExact}` })
+      );
+      const result = runStep(stepById("pnpm-version"), { cwd: dir });
+      assert.notEqual(
+        result.status,
+        0,
+        `expected "${nonExact}" to be rejected as non-deterministic`
+      );
+      assert.match(result.stderr, /is not an exact semantic version/);
+    });
+  });
+}
+
+test("accepts an exact pnpm version with a prerelease tag", () => {
+  withFixtureDir((dir) => {
+    writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ packageManager: "pnpm@9.15.4-rc.1" })
+    );
+    const result = runStep(stepById("pnpm-version"), { cwd: dir });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.outputs.version, "9.15.4-rc.1");
+  });
+});
+
 function fakeBin(dir, name, script) {
   const binPath = path.join(dir, name);
   writeFileSync(binPath, `#!/usr/bin/env bash\n${script}\n`);

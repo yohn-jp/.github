@@ -52,6 +52,10 @@ runs:
           echo "::error::could not parse an exact pnpm version out of packageManager '$package_manager'" >&2
           exit 1
         fi
+        if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::packageManager declares pnpm version '$version', which is not an exact semantic version; ranges and tags (e.g. 'latest', '^9.15.4', '~9.15.4') are not deterministic, declare an exact version such as \"pnpm@9.15.4\"" >&2
+          exit 1
+        fi
         echo "version=$version" >> "$GITHUB_OUTPUT"
 
     - name: Compute pnpm executable cache path
