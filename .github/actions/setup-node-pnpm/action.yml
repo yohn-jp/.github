@@ -132,7 +132,9 @@ runs:
 
     - name: Add pnpm to PATH
       shell: bash
-      run: echo "${{ steps.pnpm-exe-paths.outputs.bin-dir }}" >> "$GITHUB_PATH"
+      env:
+        PNPM_BIN_DIR: ${{ steps.pnpm-exe-paths.outputs.bin-dir }}
+      run: echo "$PNPM_BIN_DIR" >> "$GITHUB_PATH"
 
     - name: Compute pnpm store cache path
       id: pnpm-store-paths
@@ -151,7 +153,9 @@ runs:
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: pnpm install --frozen-lockfile --store-dir "${{ steps.pnpm-store-paths.outputs.dir }}"
+      env:
+        PNPM_STORE_DIR: ${{ steps.pnpm-store-paths.outputs.dir }}
+      run: pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"
 
     - name: Save pnpm store cache
       if: steps.restore-store.outputs.cache-hit != 'true'
