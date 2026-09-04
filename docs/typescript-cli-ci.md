@@ -21,7 +21,7 @@ jobs:
     uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
     with:
       working-directory: .          # optional, default "."
-      node-version: "22"            # optional, default "22"
+      node-version: "24"            # optional, default "24"
       committed-dist: false         # optional, default false
       release-docs-fast-path: false # optional, default false
       conformance-script: ""        # optional, default "" (disabled)

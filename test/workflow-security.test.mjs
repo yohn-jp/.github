@@ -51,7 +51,7 @@ test("consumer config-file is structurally validated, not just probed", () => {
   );
   assert.ok(step, "expected a config structure validation step");
   assert.equal(step.if, "inputs.config-file != ''");
-  assert.match(step.run, /npm install --no-save --ignore-scripts js-yaml@4\.1\.0/);
+  assert.match(step.run, /npm install --no-save --ignore-scripts js-yaml@4\.3\.2/);
   assert.match(step.run, /disabled !== true/);
   assert.doesNotMatch(step.run, /--global/);
 
@@ -72,7 +72,7 @@ test("zizmor is fixed, offline, actionable, and limited to distinct audits", () 
     "${{ inputs.workflow-paths }} ${{ steps.probe.outputs.path }}"
   );
   assert.equal(step.with.collect, "workflows");
-  assert.equal(step.with.version, "1.25.0");
+  assert.equal(step.with.version, "1.30.0");
   assert.equal(step.with.persona, "regular");
   assert.equal(step.with["online-audits"], false);
   assert.equal(step.with["advanced-security"], false);

@@ -24,7 +24,7 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version: ${{ inputs.node-version }}
 
@@ -36,7 +36,7 @@ runs:
         set -euo pipefail
         package_manager="$(node -p "require('./package.json').packageManager || ''")"
         if [ -z "$package_manager" ]; then
-          echo "::error::package.json is missing a 'packageManager' field; it must declare an exact pnpm version (e.g. \"pnpm@9.15.4\")" >&2
+          echo "::error::package.json is missing a 'packageManager' field; it must declare an exact pnpm version (e.g. \"pnpm@11.25.0\")" >&2
           exit 1
         fi
         case "$package_manager" in
@@ -53,7 +53,7 @@ runs:
           exit 1
         fi
         if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-          echo "::error::packageManager declares pnpm version '$version', which is not an exact semantic version; ranges and tags (e.g. 'latest', '^9.15.4', '~9.15.4') are not deterministic, declare an exact version such as \"pnpm@9.15.4\"" >&2
+          echo "::error::packageManager declares pnpm version '$version', which is not an exact semantic version; ranges and tags (e.g. 'latest', '^11.25.0', '~11.25.0') are not deterministic, declare an exact version such as \"pnpm@11.25.0\"" >&2
           exit 1
         fi
         echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -69,7 +69,7 @@ runs:
 
     - name: Restore pnpm executable cache
       id: restore-exe
-      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-exe-paths.outputs.root }}
         key: pnpm-exe-${{ runner.os }}-${{ runner.arch }}-${{ steps.pnpm-version.outputs.version }}
@@ -125,7 +125,7 @@ runs:
 
     - name: Save pnpm executable cache
       if: steps.acquire-exe.outcome == 'success'
-      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-exe-paths.outputs.root }}
         key: pnpm-exe-${{ runner.os }}-${{ runner.arch }}-${{ steps.pnpm-version.outputs.version }}
@@ -143,7 +143,7 @@ runs:
 
     - name: Restore pnpm store cache
       id: restore-store
-      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-store-paths.outputs.dir }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
@@ -159,7 +159,7 @@ runs:
 
     - name: Save pnpm store cache
       if: steps.restore-store.outputs.cache-hit != 'true'
-      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-store-paths.outputs.dir }}
         key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}

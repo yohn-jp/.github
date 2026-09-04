@@ -27,7 +27,7 @@ gh-inari pr validate <number> --repository <owner>/<repo> [--template <id>]
 gh-inari issue validate <number> --repository <owner>/<repo> [--template <id>]
 ```
 
-The workflows install the organization-owned `gh-inari@latest` compiler in
+The workflows install the organization-owned `gh-inari@0.9.0` compiler in
 an isolated temporary directory. Updating that implementation does not alter
 which governance revision a consumer enforces: the local snapshot and its
 manifest remain the input. This is distinct from the SHA-pinning policy for
