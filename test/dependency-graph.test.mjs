@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   collectDashboardData,
   normalizeIssueReference
@@ -119,4 +120,26 @@ test("graph layout keeps cycles explicit and disconnected nodes optional", () =>
   assert.equal(all.nodes.length, 3);
   const layout = layoutDependencyGraph(connected);
   assert.ok(layout.nodes.every((node) => node.cycle));
+});
+
+test("graph interactions keep motion finite and selection accessible", async () => {
+  const [graphScript, graphStyles, motionRuntime] = await Promise.all([
+    readFile("dashboard/graph/graph.js", "utf8"),
+    readFile("dashboard/graph/graph.css", "utf8"),
+    readFile("portal/motion.js", "utf8")
+  ]);
+
+  assert.match(graphScript, /aria-pressed/);
+  assert.match(graphScript, /selectNode/);
+  assert.match(graphScript, /portalMotion\?\.revealGraph/);
+  assert.match(graphStyles, /graph-motion-edges-revealed/);
+  assert.match(graphStyles, /graph-motion-nodes-revealed/);
+  assert.match(graphStyles, /prefers-reduced-motion/);
+  assert.doesNotMatch(
+    graphStyles,
+    /animation(?:-duration|-name|-iteration-count)?\s*:/
+  );
+  assert.match(motionRuntime, /revealGraph/);
+  assert.match(motionRuntime, /GRAPH_EDGE_DELAY_MS/);
+  assert.match(motionRuntime, /GRAPH_NODE_DELAY_MS/);
 });

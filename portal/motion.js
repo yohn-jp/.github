@@ -5,8 +5,16 @@
   const STAGGER_SELECTOR = "[data-motion-stagger]";
   const STAGGER_STEP_MS = 60;
   const SCROLLED_THRESHOLD = 8;
+  const GRAPH_EDGE_DELAY_MS = 220;
+  const GRAPH_NODE_DELAY_MS = 420;
   let root;
   let observer;
+
+  function prefersReducedMotion() {
+    return Boolean(
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    );
+  }
 
   function failOpen() {
     root?.classList.remove("motion-ready");
@@ -42,12 +50,13 @@
   }
 
   function setupReveal() {
-    const reducedMotion = window.matchMedia?.(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
     const targets = [...document.querySelectorAll(REVEAL_SELECTOR)];
 
-    if (reducedMotion || !("IntersectionObserver" in window) || !targets.length)
+    if (
+      prefersReducedMotion() ||
+      !("IntersectionObserver" in window) ||
+      !targets.length
+    )
       return;
 
     setupStagger();
@@ -70,6 +79,71 @@
     targets.forEach((target) => observer.observe(target));
   }
 
+  function clearGraphMotion(svg, detail, timers = []) {
+    timers.forEach((timer) => window.clearTimeout(timer));
+    [svg, detail].forEach((element) => {
+      element?.classList.remove(
+        "graph-motion-ready",
+        "graph-motion-edges-revealed",
+        "graph-motion-nodes-revealed",
+        "graph-detail-motion-ready",
+        "graph-motion-detail-revealed"
+      );
+    });
+  }
+
+  function revealGraph({ svg, detail } = {}) {
+    const edges = svg?.querySelectorAll(".graph-edge");
+    const nodes = svg?.querySelectorAll(".graph-node");
+    if (
+      !svg ||
+      !detail ||
+      !edges?.length ||
+      !nodes?.length ||
+      prefersReducedMotion()
+    ) {
+      return false;
+    }
+
+    const timers = [];
+    const failOpenGraph = () => clearGraphMotion(svg, detail, timers);
+    const frame = window.requestAnimationFrame ?? ((callback) => callback());
+
+    try {
+      svg.classList.add("graph-motion-ready");
+      detail.classList.add("graph-detail-motion-ready");
+      frame(() => {
+        try {
+          svg.classList.add("graph-motion-edges-revealed");
+          timers.push(
+            window.setTimeout(() => {
+              try {
+                svg.classList.add("graph-motion-nodes-revealed");
+                timers.push(
+                  window.setTimeout(() => {
+                    try {
+                      detail.classList.add("graph-motion-detail-revealed");
+                    } catch {
+                      failOpenGraph();
+                    }
+                  }, GRAPH_NODE_DELAY_MS)
+                );
+              } catch {
+                failOpenGraph();
+              }
+            }, GRAPH_EDGE_DELAY_MS)
+          );
+        } catch {
+          failOpenGraph();
+        }
+      });
+      return true;
+    } catch {
+      failOpenGraph();
+      return false;
+    }
+  }
+
   try {
     root = document.documentElement;
     setupScrolledHeader();
@@ -77,4 +151,6 @@
   } catch {
     failOpen();
   }
+
+  window.portalMotion = Object.freeze({ revealGraph });
 })();
