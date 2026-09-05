@@ -252,7 +252,7 @@ export function renderPortalHome(template, catalog, locale, options = {}) {
 function renderCoreSections(detail) {
   return detail.core
     .map(
-      (section, index) => `<article class="concept-card">
+      (section, index) => `<article class="concept-card" data-motion="reveal">
   <span class="concept-index">${String(index + 1).padStart(2, "0")}</span>
   <h3>${escapeHtml(section.title)}</h3>
   <p>${escapeHtml(section.body)}</p>
@@ -279,7 +279,7 @@ export function renderProductOverviewPage(
   const relationships = product.relationships
     .map((relation) => {
       const target = byId.get(relation.product);
-      return `<li><span>${escapeHtml(localizedRelationshipLabel(relation, resolvedLocale))}</span><a href="../${escapeHtml(target.id)}/">${escapeHtml(target.name)}</a></li>`;
+      return `<li class="product-relation" data-motion="reveal"><span>${escapeHtml(localizedRelationshipLabel(relation, resolvedLocale))}</span><a href="../${escapeHtml(target.id)}/">${escapeHtml(target.name)}</a></li>`;
     })
     .join("");
   const workHref = `../../work/?repository=${encodeURIComponent(repositoryFullName(product))}`;
@@ -322,7 +322,7 @@ export function renderProductOverviewPage(
       </nav>
     </header>
     <main>
-      <section class="shell product-hero">
+      <section class="shell product-hero" data-motion="reveal">
         <a class="back-link" href="../../#products">${escapeHtml(t("portal.product.backToProducts"))}</a>
         <p class="eyebrow">${escapeHtml(productContent.role)}</p>
         <h1>${escapeHtml(product.name)}</h1>
@@ -330,22 +330,22 @@ export function renderProductOverviewPage(
         <div class="product-meta"><span class="product-status" data-status-tone="${escapeHtml(product.statusTone)}">${escapeHtml(product.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.repository"))}</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">${escapeHtml(t("portal.product.documentation"))}</a></div>
       </section>
 
-      <section class="product-why-wrap"><div class="shell product-why"><p class="eyebrow">${escapeHtml(t("portal.product.why"))}</p><p class="why-copy">${escapeHtml(detailContent.why)}</p></div></section>
+      <section class="product-why-wrap"><div class="shell product-why" data-motion-stagger><p class="eyebrow" data-motion="reveal">${escapeHtml(t("portal.product.why"))}</p><p class="why-copy" data-motion="reveal">${escapeHtml(detailContent.why)}</p></div></section>
 
-      <section class="shell boundary-grid" aria-label="${escapeHtml(t("portal.product.boundaryLabel"))}">
-        <article class="boundary-panel"><p class="eyebrow">${escapeHtml(t("portal.product.owns"))}</p><h2>${escapeHtml(t("portal.product.authority"))}</h2>${list(productContent.owns)}</article>
-        <article class="boundary-panel muted-panel"><p class="eyebrow">${escapeHtml(t("portal.product.doesNotOwn"))}</p><h2>${escapeHtml(t("portal.product.boundary"))}</h2>${list(productContent.doesNotOwn)}</article>
+      <section class="shell boundary-grid" data-motion-stagger aria-label="${escapeHtml(t("portal.product.boundaryLabel"))}">
+        <article class="boundary-panel" data-motion="reveal"><p class="eyebrow">${escapeHtml(t("portal.product.owns"))}</p><h2>${escapeHtml(t("portal.product.authority"))}</h2>${list(productContent.owns)}</article>
+        <article class="boundary-panel muted-panel" data-motion="reveal"><p class="eyebrow">${escapeHtml(t("portal.product.doesNotOwn"))}</p><h2>${escapeHtml(t("portal.product.boundary"))}</h2>${list(productContent.doesNotOwn)}</article>
       </section>
 
       <section class="shell concept-section" aria-labelledby="concepts-${escapeHtml(product.id)}">
-        <div class="section-head compact-head"><div><p class="eyebrow">${escapeHtml(t("portal.product.coreModel"))}</p><h2 id="concepts-${escapeHtml(product.id)}">${escapeHtml(t("portal.product.howItWorks", { name: product.name }))}</h2></div><p>${escapeHtml(t("portal.product.operationalDetail"))}</p></div>
-        <div class="concept-grid">${renderCoreSections(detailContent)}</div>
+        <div class="section-head compact-head" data-motion="reveal"><div><p class="eyebrow">${escapeHtml(t("portal.product.coreModel"))}</p><h2 id="concepts-${escapeHtml(product.id)}">${escapeHtml(t("portal.product.howItWorks", { name: product.name }))}</h2></div><p>${escapeHtml(t("portal.product.operationalDetail"))}</p></div>
+        <div class="concept-grid" data-motion-stagger>${renderCoreSections(detailContent)}</div>
       </section>
 
-      <section class="maturity-wrap"><div class="shell maturity-block"><p class="eyebrow">${escapeHtml(t("portal.product.currentMaturity"))}</p><h2>${escapeHtml(product.status)}</h2><p>${escapeHtml(detailContent.maturity)}</p></div></section>
+      <section class="maturity-wrap"><div class="shell maturity-block" data-motion-stagger><p class="eyebrow" data-motion="reveal">${escapeHtml(t("portal.product.currentMaturity"))}</p><h2 data-motion="reveal">${escapeHtml(product.status)}</h2><p data-motion="reveal">${escapeHtml(detailContent.maturity)}</p></div></section>
 
-      <section class="shell product-relations"><p class="eyebrow">${escapeHtml(t("portal.product.relationships"))}</p><h2>${escapeHtml(t("portal.product.fitsSystem"))}</h2><ul>${relationships}</ul></section>
-      <section class="shell product-next"><div><p class="eyebrow">${escapeHtml(t("portal.product.publicWork"))}</p><h2>${escapeHtml(t("portal.product.followImplementation", { name: product.name }))}</h2><p>${escapeHtml(t("portal.product.prefilteredWork"))}</p></div><a class="button dark" href="${workHref}">${escapeHtml(t("portal.product.openWork", { name: product.name }))}</a></section>
+      <section class="shell product-relations"><div class="product-relations-head" data-motion="reveal"><p class="eyebrow">${escapeHtml(t("portal.product.relationships"))}</p><h2>${escapeHtml(t("portal.product.fitsSystem"))}</h2></div><ul class="product-relation-list" data-motion-stagger>${relationships}</ul></section>
+      <section class="shell product-next" data-motion="reveal"><div><p class="eyebrow">${escapeHtml(t("portal.product.publicWork"))}</p><h2>${escapeHtml(t("portal.product.followImplementation", { name: product.name }))}</h2><p>${escapeHtml(t("portal.product.prefilteredWork"))}</p></div><a class="button dark" href="${workHref}">${escapeHtml(t("portal.product.openWork", { name: product.name }))}</a></section>
     </main>
     <footer class="shell footer"><span>${escapeHtml(t("portal.footer.domain"))}</span><a href="../../">${escapeHtml(t("portal.footer.portalHome"))}</a></footer>
   </body>

@@ -64,11 +64,13 @@
 }
 
 .maturity-wrap {
+  border-block: 1px solid var(--accent-ink);
   background: var(--accent);
   color: var(--accent-ink);
 }
 
 .maturity-block {
+  overflow: hidden;
   padding-block: clamp(60px, 8vw, 95px);
 }
 
@@ -90,6 +92,84 @@
   color: var(--accent-text);
   font-size: 1rem;
   line-height: 1.75;
+}
+
+.product-relations-head {
+  margin-bottom: 40px;
+}
+
+.product-relation-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line-strong);
+}
+
+.product-relation {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: 30px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding: 17px 0 17px 22px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    border-color var(--motion-duration-base) var(--motion-easing-standard),
+    color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.product-relation::before {
+  position: absolute;
+  left: 0;
+  color: var(--ink);
+  content: "↳";
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-easing-standard),
+    transform var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.product-relation:hover,
+.product-relation:focus-within {
+  border-bottom-color: var(--ink);
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.product-relation:hover::before,
+.product-relation:focus-within::before {
+  opacity: 1;
+  transform: none;
+}
+
+.product-relation a {
+  position: relative;
+  color: var(--ink);
+  font-weight: var(--font-weight-display);
+  text-decoration: none;
+}
+
+.product-relation a::after {
+  position: absolute;
+  right: 0;
+  bottom: -4px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--motion-duration-base)
+    var(--motion-easing-standard);
+}
+
+.product-relation:hover a::after,
+.product-relation:focus-within a::after {
+  transform: scaleX(1);
 }
 
 @media (max-width: 700px) {
@@ -114,5 +194,10 @@
 
   .why-copy {
     font-size: 1.35rem;
+  }
+
+  .product-relation {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
