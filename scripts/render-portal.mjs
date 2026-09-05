@@ -137,9 +137,11 @@ function renderProductCard(product, t, locale) {
     <span class="status-dot" aria-hidden="true"></span>
     <span class="product-status">${escapeHtml(product.status)}</span>
   </div>
-  <p class="product-role">${escapeHtml(content.role)}</p>
-  <h3>${escapeHtml(product.name)}</h3>
-  <p class="product-summary">${escapeHtml(content.summary)}</p>
+  <div class="product-card-content">
+    <p class="product-role">${escapeHtml(content.role)}</p>
+    <h3>${escapeHtml(product.name)}</h3>
+    <p class="product-summary">${escapeHtml(content.summary)}</p>
+  </div>
   <div class="product-actions">
     <a class="text-link" href="${productPath(product.id)}">${escapeHtml(t("portal.product.explore", { name: product.name }))}</a>
     <a class="quiet-link" href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.github"))}</a>

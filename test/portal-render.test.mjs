@@ -41,6 +41,38 @@ test("home renderer projects catalog products and relationships", async () => {
   assert.match(html, /id="system"/);
 });
 
+test("variable-length product cards and Work CTAs stay in document flow", async () => {
+  const { template, catalog } = await portalInputs();
+  const html = renderPortalHome(template, catalog, "ja");
+  const cardStart = html.indexOf(
+    '<article class="product-card" data-product="majiwari">'
+  );
+  const cardEnd = html.indexOf("</article>", cardStart);
+  assert.ok(cardStart >= 0);
+  assert.ok(cardEnd > cardStart);
+  const majiwariCard = html.slice(cardStart, cardEnd);
+  assert.match(
+    majiwariCard,
+    /<div class="product-card-content">[\s\S]*<p class="product-summary">[\s\S]*<\/div>\s*<div class="product-actions">/
+  );
+
+  assert.match(
+    template,
+    /<div class="work-actions">[\s\S]*data-message="portal\.work\.openDashboard"[\s\S]*data-message="portal\.work\.openGovernance"[\s\S]*<\/div>/
+  );
+
+  const css = await readFile("portal/styles.css", "utf8");
+  const productCardRule = css.match(/\.product-card \{[^}]+\}/)?.[0];
+  const productActionsRule = css.match(/\.product-actions \{[^}]+\}/)?.[0];
+  assert.ok(productCardRule);
+  assert.ok(productActionsRule);
+  assert.match(productCardRule, /display:\s*flex/);
+  assert.doesNotMatch(productCardRule, /min-height|position:\s*absolute/);
+  assert.match(productActionsRule, /margin-top:\s*32px/);
+  assert.doesNotMatch(productActionsRule, /position:\s*absolute/);
+  assert.match(css, /\.work-actions \{[\s\S]*display:\s*flex/);
+});
+
 test("localized renderers emit route-specific language metadata and switching", async () => {
   const { template, catalog, details } = await portalInputs();
   const home = renderPortalHome(template, catalog, "ja");
