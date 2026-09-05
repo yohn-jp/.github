@@ -133,6 +133,32 @@ test("product renderer emits deep content and repository-filtered work link", as
   assert.match(html, /https:\/\/dev\.yohn\.jp\/products\/nawabari\//);
 });
 
+test("product detail interactions reuse shared motion hooks", async () => {
+  const { catalog, details } = await portalInputs();
+  const product = catalog.products.find((entry) => entry.id === "nawabari");
+  const detail = details.products.find((entry) => entry.id === "nawabari");
+  const html = renderProductOverviewPage(product, catalog, detail);
+  const productCss = await readFile("portal/product.css", "utf8");
+
+  assert.match(
+    html,
+    /<section class="shell product-hero" data-motion="reveal">/
+  );
+  assert.match(html, /class="[^"]*product-why[^"]*" data-motion-stagger/);
+  assert.match(html, /class="[^"]*boundary-grid[^"]*" data-motion-stagger/);
+  assert.match(html, /class="concept-grid" data-motion-stagger/);
+  assert.match(html, /class="[^"]*maturity-block[^"]*" data-motion-stagger/);
+  assert.match(
+    html,
+    /<ul class="product-relation-list" data-motion-stagger>[\s\S]*<li class="product-relation" data-motion="reveal">/
+  );
+  assert.match(
+    productCss,
+    /\.product-relation:hover,[\s\S]*\.product-relation:focus-within/
+  );
+  assert.match(productCss, /var\(--motion-duration-base\)/);
+});
+
 test("each product page carries product-specific grounded core concepts", async () => {
   const { catalog, details } = await portalInputs();
   const expectations = {
