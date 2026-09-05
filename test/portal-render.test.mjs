@@ -285,3 +285,43 @@ test("visual system includes focus responsive and reduced-motion contracts", asy
   assert.match(css, /prefers-reduced-motion/);
   assert.match(productCss, /@media \(max-width: 700px\)/);
 });
+
+test("all portal surfaces share a no-JavaScript responsive navigation", async () => {
+  const sourcePaths = [
+    "portal/index.html",
+    "dashboard/index.html",
+    "dashboard/graph/index.html",
+    "dashboard/governance/index.html"
+  ];
+  const sources = await Promise.all(
+    sourcePaths.map((path) => readFile(path, "utf8"))
+  );
+  for (const source of sources) {
+    assert.match(source, /<details class="mobile-nav">/);
+    assert.match(source, /<summary class="mobile-nav-toggle">/);
+    assert.match(source, /class="mobile-nav-panel"/);
+    assert.match(source, /class="mobile-nav-links"/);
+  }
+
+  const { catalog, details } = await portalInputs();
+  const product = catalog.products[0];
+  const productPage = renderProductOverviewPage(
+    product,
+    catalog,
+    details.products.find((detail) => detail.id === product.id),
+    "ja"
+  );
+  assert.match(productPage, /<details class="mobile-nav">/);
+  assert.match(productPage, /メニュー/);
+
+  const css = await readFile("portal/styles.css", "utf8");
+  assert.match(css, /@media \(max-width: 900px\)/);
+  assert.match(css, /\.nav-links \{\s*display: none;/);
+  assert.match(css, /\.mobile-nav \{\s*position: relative;/);
+  assert.match(
+    css,
+    /\.mobile-nav-panel \{[\s\S]*width: min\(260px, calc\(100vw - 30px\)\)/
+  );
+  assert.match(css, /\.system-section :focus-visible \{/);
+  assert.doesNotMatch(css, /\.product-page \.site-nav-wrap/);
+});
