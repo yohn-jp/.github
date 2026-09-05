@@ -286,6 +286,36 @@ test("visual system includes focus responsive and reduced-motion contracts", asy
   assert.match(productCss, /@media \(max-width: 700px\)/);
 });
 
+test("visual tokens keep typography motion and status semantics explicit", async () => {
+  const css = await readFile("portal/styles.css", "utf8");
+  const { catalog } = await portalInputs();
+  const html = renderPortalHome(
+    await readFile("portal/index.html", "utf8"),
+    catalog
+  );
+
+  assert.match(css, /--font-family-sans:[\s\S]*ui-sans-serif/);
+  assert.doesNotMatch(css, /\bInter\b/);
+  assert.match(css, /--font-weight-display:\s*800/);
+  assert.doesNotMatch(css, /font-weight:\s*(?:6[2-9]\d|7[5-9]\d|8[5-9]\d)/);
+  for (const token of [
+    "--motion-duration-fast",
+    "--motion-duration-base",
+    "--motion-duration-entrance",
+    "--motion-easing-standard",
+    "--motion-easing-entrance"
+  ]) {
+    assert.match(css, new RegExp(`${token}:`));
+  }
+  assert.match(css, /\.button \{[\s\S]*var\(--motion-duration-fast\)/);
+  assert.match(css, /\.system-node \{[\s\S]*var\(--motion-duration-fast\)/);
+  assert.doesNotMatch(css, /data-product="wabachi"/);
+  assert.match(
+    html,
+    /<span class="status-dot" data-status-tone="caution" aria-hidden="true"><\/span>/
+  );
+});
+
 test("all portal surfaces share a no-JavaScript responsive navigation", async () => {
   const sourcePaths = [
     "portal/index.html",

@@ -11,7 +11,7 @@
   max-width: 980px;
   margin: 0;
   font-size: clamp(1.35rem, 2.8vw, 2.4rem);
-  font-weight: 620;
+  font-weight: var(--font-weight-semibold);
   letter-spacing: -0.025em;
   line-height: 1.35;
 }
@@ -44,9 +44,9 @@
 .concept-index {
   display: block;
   margin-bottom: 55px;
-  color: #999fa9;
+  color: var(--text-subtle);
   font-size: 0.7rem;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
 }
 
 .concept-card h3 {
@@ -73,7 +73,7 @@
 }
 
 .maturity-block .eyebrow {
-  color: #66731d;
+  color: var(--accent-muted);
 }
 
 .maturity-block h2 {
@@ -87,7 +87,7 @@
 .maturity-block > p:last-child {
   max-width: 850px;
   margin: 28px 0 0;
-  color: #3f470f;
+  color: var(--accent-text);
   font-size: 1rem;
   line-height: 1.75;
 }

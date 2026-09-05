@@ -3,6 +3,12 @@ import { SUPPORTED_LOCALES } from "../messages.js";
 
 export const PRODUCT_CATALOG_SCHEMA_VERSION = 1;
 export const PRODUCT_CONTENT_LOCALES = SUPPORTED_LOCALES;
+export const PRODUCT_STATUS_TONES = Object.freeze([
+  "positive",
+  "caution",
+  "negative",
+  "neutral"
+]);
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const RELATION_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -12,6 +18,16 @@ function requiredString(value, path) {
     throw new Error(`${path} must be a non-empty string`);
   }
   return value.trim();
+}
+
+function statusTone(value, path) {
+  const normalized = requiredString(value, path);
+  if (!PRODUCT_STATUS_TONES.includes(normalized)) {
+    throw new Error(
+      `${path} must be one of ${PRODUCT_STATUS_TONES.join(", ")}`
+    );
+  }
+  return normalized;
 }
 
 function stringList(value, path) {
@@ -160,6 +176,7 @@ function normalizeProduct(product, index) {
     ),
     summary: locales.en.summary,
     status: requiredString(product.status, `${path}.status`),
+    statusTone: statusTone(product.statusTone, `${path}.statusTone`),
     owns: locales.en.owns,
     doesNotOwn: locales.en.doesNotOwn,
     locales,

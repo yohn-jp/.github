@@ -38,7 +38,7 @@
 .graph-toolbar label > span {
   color: var(--muted);
   font-size: 0.7rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -104,12 +104,12 @@
 .blocker-rank {
   color: #9ca2ab;
   font-size: 0.68rem;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
 }
 
 .blocker-link {
   overflow: hidden;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -185,13 +185,13 @@
 .graph-node-repo {
   fill: #767c86;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .graph-node-title {
   fill: #151820;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: var(--font-weight-bold);
 }
 
 .graph-node-state {
@@ -230,7 +230,7 @@
 }
 
 .node-detail a {
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 .node-prs {
@@ -245,7 +245,7 @@
   margin: 0 0 2px;
   color: #555c67;
   font-size: 0.67rem;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
