@@ -11,6 +11,7 @@
     "dashboard:build": "node scripts/build-dashboard.mjs",
     "test": "node --test test/*.test.mjs",
     "test:dashboard": "node --test test/dashboard.test.mjs",
+    "test:portal:browser": "playwright test test/portal-browser.spec.mjs",
     "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
     "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
@@ -27,6 +28,7 @@
   },
   "packageManager": "pnpm@11.25.0",
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "prettier": "3.9.6"
   }
 }
