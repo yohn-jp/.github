@@ -345,8 +345,9 @@ select:focus-visible {
 }
 
 .product-card {
-  position: relative;
-  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   padding: 34px 38px 36px 0;
   border-bottom: 1px solid var(--line-strong);
 }
@@ -395,6 +396,11 @@ select:focus-visible {
   letter-spacing: -0.055em;
 }
 
+.product-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .product-summary {
   max-width: 520px;
   margin: 20px 0 0;
@@ -404,15 +410,8 @@ select:focus-visible {
 }
 
 .product-actions {
-  position: absolute;
-  right: 38px;
-  bottom: 36px;
-  left: 0;
+  margin-top: 32px;
   justify-content: space-between;
-}
-
-.product-card:nth-child(even) .product-actions {
-  left: 38px;
 }
 
 .text-link,
@@ -566,6 +565,14 @@ select:focus-visible {
   color: var(--muted);
 }
 
+.work-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .footer {
   min-height: 100px;
   display: flex;
@@ -709,6 +716,10 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .work-actions {
+    justify-content: flex-start;
+  }
+
   .system-layout {
     gap: 40px;
   }
@@ -782,13 +793,8 @@ select:focus-visible {
 
   .product-card,
   .product-card:nth-child(even) {
-    min-height: 380px;
     border-left: 0;
     padding-inline: 0;
-  }
-
-  .product-card:nth-child(even) .product-actions {
-    left: 0;
   }
 
   .system-node:first-child {
