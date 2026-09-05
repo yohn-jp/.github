@@ -47,6 +47,7 @@ test("keeps product identity and status locale-independent", async () => {
     assert.equal(typeof product.repository, "string");
     assert.equal(typeof product.status, "string");
     assert.ok(product.status.length > 0);
+    assert.match(product.statusTone, /^(positive|caution|negative|neutral)$/);
     assert.equal(product.locales.en.status, undefined);
     assert.equal(product.locales.ja.status, undefined);
     for (const relation of product.relationships) {
@@ -99,6 +100,16 @@ test("rejects non-canonical repository URLs", async () => {
   assert.throws(
     () => validateProductCatalog(invalid),
     /canonical GitHub repository URL/
+  );
+});
+
+test("rejects unknown semantic status tones", async () => {
+  const catalog = await loadProductCatalog("portal/registry.json");
+  const invalid = clone(catalog);
+  invalid.products[0].statusTone = "mottainai";
+  assert.throws(
+    () => validateProductCatalog(invalid),
+    /products\[0\]\.statusTone must be one of/
   );
 });
 

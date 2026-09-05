@@ -18,6 +18,7 @@
         "ja": "境界付きのコーディングエージェントセッション、ワークフロー状態、コンテキスト投影、MCPルーティングを調整し、物理Gitと統制されたGitHub変更を各権限主体へ委譲します。"
       },
       "status": "Active dogfood · pre-1.0",
+      "statusTone": "positive",
       "owns": {
         "en": [
           "Managed coding-agent session orchestration and workflow state",
@@ -92,6 +93,7 @@
         "ja": "並行するコーディングエージェントのために、ローカルsession、worktree、ブランチ、リソース要求、認可、Git変更、調整、保守的なクリーンアップの権限を提供します。"
       },
       "status": "Active standalone runtime",
+      "statusTone": "positive",
       "owns": {
         "en": [
           "Session identity and exclusive worktree/branch ownership",
@@ -152,6 +154,7 @@
         "ja": "リポジトリネイティブのIssueフォームとPull Requestテンプレートを決定的な型付き契約へコンパイルし、構造化入力を検証し、正規アーティファクトを描画し、所有するGitHub変更を統制します。"
       },
       "status": "Active governed CLI",
+      "statusTone": "positive",
       "owns": {
         "en": [
           "Typed contracts derived from native Issue/PR templates",
@@ -220,6 +223,7 @@
         "ja": "明示的なソースアダプターと意味契約を、決定的なプロヴナンス、完全性、損失メタデータ、描画を伴う境界付きビューへ投影します。"
       },
       "status": "Active v0 semantic-view engine",
+      "statusTone": "positive",
       "owns": {
         "en": [
           "Deterministic source decoding and semantic-contract validation",
@@ -278,6 +282,7 @@
         "ja": "不変のプロバイダー証拠、プロヴナンスを保持した観測、明示的なエンティティ相関、証拠駆動の正規リポジトリ意味論に取り組む初期段階の意味権限プロジェクトです。"
       },
       "status": "Early architecture and provider-evidence programme",
+      "statusTone": "caution",
       "owns": {
         "en": [
           "Intended repository semantic-authority boundary",
@@ -338,6 +343,7 @@
         "ja": "Alibaba OpenCodeReviewやInariなどの決定的なCLI/APIツールをstdio MCPアダプターとしてラップし、汎用トランスポートゲートウェイとCloudflare Accessで保護されたWorkerを通じてホストLLM（ChatGPT）へリモート公開します。"
       },
       "status": "Active dogfood · pre-1.0",
+      "statusTone": "positive",
       "owns": {
         "en": [
           "Deterministic stdio MCP adapters wrapping fixed CLI executables",

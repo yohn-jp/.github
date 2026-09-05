@@ -134,7 +134,7 @@ function renderProductCard(product, t, locale) {
 <article class="product-card" data-product="${escapeHtml(product.id)}">
   <div class="product-card-topline">
     <span class="product-index">${String(product.order / 10).padStart(2, "0")}</span>
-    <span class="status-dot" aria-hidden="true"></span>
+    <span class="status-dot" data-status-tone="${escapeHtml(product.statusTone)}" aria-hidden="true"></span>
     <span class="product-status">${escapeHtml(product.status)}</span>
   </div>
   <div class="product-card-content">
@@ -326,7 +326,7 @@ export function renderProductOverviewPage(
         <p class="eyebrow">${escapeHtml(productContent.role)}</p>
         <h1>${escapeHtml(product.name)}</h1>
         <p class="product-page-summary">${escapeHtml(productContent.summary)}</p>
-        <div class="product-meta"><span>${escapeHtml(product.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.repository"))}</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">${escapeHtml(t("portal.product.documentation"))}</a></div>
+        <div class="product-meta"><span class="product-status" data-status-tone="${escapeHtml(product.statusTone)}">${escapeHtml(product.status)}</span><a href="${escapeHtml(product.repository)}" rel="noreferrer">${escapeHtml(t("portal.product.repository"))}</a><a href="${escapeHtml(product.documentation)}" rel="noreferrer">${escapeHtml(t("portal.product.documentation"))}</a></div>
       </section>
 
       <section class="product-why-wrap"><div class="shell product-why"><p class="eyebrow">${escapeHtml(t("portal.product.why"))}</p><p class="why-copy">${escapeHtml(detailContent.why)}</p></div></section>

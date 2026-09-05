@@ -2,6 +2,9 @@
   color-scheme: light;
   --ink: #111318;
   --muted: #626874;
+  --text-secondary: #444a54;
+  --text-tertiary: #515762;
+  --text-subtle: #9a9fa8;
   --line: #dfe2e8;
   --line-strong: #c8ccd4;
   --paper: #f7f6f2;
@@ -9,23 +12,51 @@
   --surface-quiet: #eeede8;
   --dark: #12151b;
   --dark-soft: #1c2028;
+  --dark-line: #303744;
+  --dark-line-strong: #3a414d;
+  --dark-text: #f6f7f9;
+  --dark-text-muted-strong: #858e9d;
+  --dark-text-muted: #8f98a7;
+  --dark-text-subtle: #929aa7;
   --dark-muted: #aeb5c2;
   --accent: #d9ff63;
   --accent-ink: #182000;
+  --accent-muted: #66731d;
+  --accent-text: #3f470f;
   --focus-light: #111318;
   --focus-dark: #ffffff;
+  --focus-outline-width: 3px;
+  --focus-outline-offset: 4px;
+  --focus-halo-size: 7px;
+  --focus-radius: 4px;
+  --status-tone-positive: #68a51b;
+  --status-tone-positive-halo: rgb(104 165 27 / 10%);
+  --status-tone-caution: #d29b2f;
+  --status-tone-caution-halo: rgb(210 155 47 / 12%);
   --radius-sm: 10px;
   --radius-md: 18px;
   --radius-lg: 30px;
   --shadow-soft: 0 18px 50px rgb(17 19 24 / 8%);
   --shell: 1180px;
-  --font:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  font-family: var(--font);
+  /* No webfont is loaded: this system stack is deliberate for deployed consistency. */
+  --font-family-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-display: 800;
+  --motion-duration-fast: 140ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-entrance: 420ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--font-family-sans);
   line-height: 1.5;
   color: var(--ink);
   background: var(--paper);
+  font-weight: var(--font-weight-regular);
   font-synthesis: none;
 }
 
@@ -54,6 +85,12 @@ a {
   color: inherit;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
+  transition:
+    color var(--motion-duration-fast) var(--motion-easing-standard),
+    background-color var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard),
+    text-decoration-color var(--motion-duration-fast)
+      var(--motion-easing-standard);
 }
 
 a:focus-visible,
@@ -61,9 +98,9 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 summary:focus-visible {
-  outline: 3px solid var(--focus-light);
-  outline-offset: 4px;
-  border-radius: 4px;
+  outline: var(--focus-outline-width) solid var(--focus-light);
+  outline-offset: var(--focus-outline-offset);
+  border-radius: var(--focus-radius);
 }
 
 .shell {
@@ -93,7 +130,7 @@ summary:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
   letter-spacing: -0.035em;
   text-decoration: none;
 }
@@ -114,7 +151,7 @@ summary:focus-visible {
   align-items: center;
   gap: 24px;
   font-size: 0.88rem;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
 }
 
 .nav-links a {
@@ -141,7 +178,7 @@ summary:focus-visible {
 
 .locale-switcher-label {
   margin-right: 2px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .locale-switcher a {
@@ -170,7 +207,7 @@ summary:focus-visible {
   margin: 0 0 14px;
   color: var(--muted);
   font-size: 0.71rem;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
@@ -180,7 +217,7 @@ summary:focus-visible {
   margin: 0;
   max-width: 850px;
   font-size: clamp(4rem, 9.8vw, 8.3rem);
-  font-weight: 870;
+  font-weight: var(--font-weight-display);
   letter-spacing: -0.075em;
   line-height: 0.88;
 }
@@ -192,7 +229,7 @@ summary:focus-visible {
 .lede {
   max-width: 760px;
   margin: 32px 0 0;
-  color: #454b55;
+  color: var(--text-secondary);
   font-size: clamp(1.05rem, 1.5vw, 1.28rem);
   line-height: 1.65;
 }
@@ -219,12 +256,13 @@ summary:focus-visible {
   border-radius: 999px;
   padding: 0 20px;
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
   text-decoration: none;
   transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    background 140ms ease;
+    transform var(--motion-duration-fast) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-base) var(--motion-easing-standard),
+    background-color var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .button:hover {
@@ -234,7 +272,7 @@ summary:focus-visible {
 .button.dark {
   border-color: var(--dark);
   background: var(--dark);
-  color: #fff;
+  color: var(--focus-dark);
 }
 
 .button.light {
@@ -257,15 +295,15 @@ summary:focus-visible {
 }
 
 .hero-note-index {
-  color: #9096a0;
+  color: var(--text-subtle);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 .hero-note p {
   margin: 42px 0;
   font-size: 1.2rem;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
   line-height: 1.55;
 }
 
@@ -297,9 +335,9 @@ summary:focus-visible {
 .principle-grid span {
   display: block;
   margin-bottom: 42px;
-  color: #9a9fa8;
+  color: var(--text-subtle);
   font-size: 0.7rem;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
 }
 
 .principle-grid strong {
@@ -375,27 +413,27 @@ summary:focus-visible {
 
 .product-index {
   margin-right: auto;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 .status-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #68a51b;
-  box-shadow: 0 0 0 4px rgb(104 165 27 / 10%);
+  background: var(--status-tone-positive);
+  box-shadow: 0 0 0 4px var(--status-tone-positive-halo);
 }
 
-.product-card[data-product="wabachi"] .status-dot {
-  background: #d29b2f;
-  box-shadow: 0 0 0 4px rgb(210 155 47 / 12%);
+.status-dot[data-status-tone="caution"] {
+  background: var(--status-tone-caution);
+  box-shadow: 0 0 0 4px var(--status-tone-caution-halo);
 }
 
 .product-role {
   margin: 65px 0 8px;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .product-card h3 {
@@ -412,7 +450,7 @@ summary:focus-visible {
 .product-summary {
   max-width: 520px;
   margin: 20px 0 0;
-  color: #515762;
+  color: var(--text-tertiary);
   font-size: 0.94rem;
   line-height: 1.7;
 }
@@ -426,7 +464,7 @@ summary:focus-visible {
 .quiet-link,
 .back-link {
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 .quiet-link {
@@ -436,12 +474,12 @@ summary:focus-visible {
 .system-section {
   padding-block: 118px;
   background: var(--dark);
-  color: #f6f7f9;
+  color: var(--dark-text);
 }
 
 .section-head.inverse .eyebrow,
 .system-section .eyebrow {
-  color: #858e9d;
+  color: var(--dark-text-muted-strong);
 }
 
 .section-head.inverse > p {
@@ -465,14 +503,14 @@ summary:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  border: 1px solid #303744;
+  border: 1px solid var(--dark-line);
   border-radius: var(--radius-md);
   padding: 24px;
   background: var(--dark-soft);
   text-decoration: none;
   transition:
-    border-color 140ms ease,
-    transform 140ms ease;
+    border-color var(--motion-duration-fast) var(--motion-easing-standard),
+    transform var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .system-node:first-child {
@@ -488,16 +526,16 @@ summary:focus-visible {
 }
 
 .system-section :focus-visible {
-  outline: 3px solid var(--focus-dark);
-  outline-offset: 4px;
-  box-shadow: 0 0 0 7px var(--dark);
+  outline: var(--focus-outline-width) solid var(--focus-dark);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: 0 0 0 var(--focus-halo-size) var(--dark);
 }
 
 .system-node-role {
   margin-bottom: 8px;
-  color: #8f98a7;
+  color: var(--dark-text-muted);
   font-size: 0.69rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -512,15 +550,15 @@ summary:focus-visible {
 }
 
 .relationship-panel {
-  border-top: 1px solid #3a414d;
+  border-top: 1px solid var(--dark-line-strong);
   padding-top: 18px;
 }
 
 .relationship-title {
   margin: 0 0 8px;
-  color: #8f98a7;
+  color: var(--dark-text-muted);
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -539,18 +577,18 @@ summary:focus-visible {
     );
   gap: 12px;
   align-items: center;
-  border-bottom: 1px solid #303744;
+  border-bottom: 1px solid var(--dark-line);
   padding-block: 15px;
   font-size: 0.76rem;
 }
 
 .relationship-list li span {
-  color: #929aa7;
+  color: var(--dark-text-subtle);
   line-height: 1.45;
 }
 
 .relationship-list a {
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 .work-strip,
@@ -620,7 +658,7 @@ summary:focus-visible {
 .product-page-summary {
   max-width: 850px;
   margin: 30px 0 26px;
-  color: #444a54;
+  color: var(--text-secondary);
   font-size: clamp(1.1rem, 2vw, 1.45rem);
   line-height: 1.65;
 }
@@ -667,7 +705,7 @@ summary:focus-visible {
   position: relative;
   border-top: 1px solid var(--line);
   padding: 15px 0 15px 24px;
-  color: #444a54;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
@@ -705,7 +743,7 @@ summary:focus-visible {
 
 .product-relations li a {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 @media (max-width: 900px) {
@@ -735,7 +773,11 @@ summary:focus-visible {
     color: var(--ink);
     background: transparent;
     font-size: 0.75rem;
-    font-weight: 800;
+    font-weight: var(--font-weight-display);
+    transition:
+      color var(--motion-duration-fast) var(--motion-easing-standard),
+      background-color var(--motion-duration-fast) var(--motion-easing-standard),
+      border-color var(--motion-duration-fast) var(--motion-easing-standard);
     cursor: pointer;
     list-style: none;
     user-select: none;
@@ -765,7 +807,7 @@ summary:focus-visible {
 
   .mobile-nav[open] .mobile-nav-toggle:focus-visible {
     outline-color: var(--focus-dark);
-    box-shadow: 0 0 0 7px var(--dark);
+    box-shadow: 0 0 0 var(--focus-halo-size) var(--dark);
   }
 
   .mobile-nav-icon {
@@ -804,7 +846,7 @@ summary:focus-visible {
     padding: 11px 12px;
     color: var(--ink);
     font-size: 0.86rem;
-    font-weight: 650;
+    font-weight: var(--font-weight-semibold);
     line-height: 1.35;
     text-decoration: none;
     overflow-wrap: anywhere;

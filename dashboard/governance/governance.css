@@ -59,7 +59,7 @@
 
 .governance-status-title {
   margin-bottom: 4px !important;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
 }
 
 .governance-status-detail {
@@ -84,7 +84,7 @@
   display: block;
   margin-bottom: 4px;
   font-size: 2.4rem;
-  font-weight: 850;
+  font-weight: var(--font-weight-display);
   letter-spacing: -0.05em;
 }
 
@@ -187,7 +187,7 @@
 
 .governance-repository-name {
   overflow: hidden;
-  font-weight: 800;
+  font-weight: var(--font-weight-display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -250,7 +250,7 @@
   justify-content: space-between;
   gap: 12px;
   font-size: 0.88rem;
-  font-weight: 750;
+  font-weight: var(--font-weight-bold);
 }
 
 .violation-group-label {
@@ -283,7 +283,7 @@
 
 .governance-issue a {
   display: block;
-  font-weight: 750;
+  font-weight: var(--font-weight-bold);
 }
 
 .governance-issue-meta {
