@@ -1,0 +1,45 @@
+# Shared coding-agent instructions distributed by sync-org-templates.yml.
+# Keep this target list aligned with the GitHub App token repository scope in
+# .github/workflows/sync-org-templates.yml.
+
+yohn-jp/gh-inari:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+
+yohn-jp/gh-makami:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+
+yohn-jp/suzukuri:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+
+yohn-jp/nawabari:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+
+yohn-jp/mottainai:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+
+yohn-jp/wabachi:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+
+yohn-jp/majiwari:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
