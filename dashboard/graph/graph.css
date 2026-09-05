@@ -145,6 +145,10 @@
   fill: none;
   stroke: #adb2bb;
   stroke-width: 1.4;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-easing-standard),
+    stroke var(--motion-duration-fast) var(--motion-easing-standard),
+    stroke-width var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .graph-edge.cross-repository {
@@ -153,12 +157,18 @@
 
 .graph-node {
   cursor: pointer;
+  transition: opacity var(--motion-duration-entrance)
+    var(--motion-easing-entrance);
 }
 
 .graph-node rect {
   fill: #fff;
   stroke: #cfd3da;
   stroke-width: 1;
+  transition:
+    fill var(--motion-duration-fast) var(--motion-easing-standard),
+    stroke var(--motion-duration-fast) var(--motion-easing-standard),
+    stroke-width var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .graph-node.blocked rect {
@@ -180,6 +190,35 @@
 .graph-node:hover rect {
   stroke: #111318;
   stroke-width: 2;
+}
+
+.graph-node:focus {
+  outline: none;
+}
+
+.graph-node:focus-visible rect {
+  stroke-width: 3;
+}
+
+.graph-node.selected rect {
+  fill: #f4f0e8;
+  stroke: #111318;
+  stroke-width: 2.5;
+}
+
+.graph-node.is-related:not(.selected) rect {
+  stroke: #69727e;
+  stroke-width: 2;
+}
+
+.graph-node.is-dimmed,
+.graph-edge.is-dimmed {
+  opacity: 0.34;
+}
+
+.graph-edge.is-related {
+  stroke: #596471;
+  stroke-width: 2.2;
 }
 
 .graph-node-repo {
@@ -289,6 +328,35 @@
   padding: 50px;
   color: var(--muted);
   text-align: center;
+}
+
+.graph-motion-ready .graph-edge,
+.graph-motion-ready .graph-node {
+  opacity: 0;
+}
+
+.graph-motion-ready.graph-motion-edges-revealed .graph-edge,
+.graph-motion-ready.graph-motion-nodes-revealed .graph-node,
+.graph-detail-motion-ready.graph-motion-detail-revealed {
+  opacity: 1;
+}
+
+.graph-detail-motion-ready {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--motion-duration-base) var(--motion-easing-standard),
+    transform var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-motion-ready .graph-edge,
+  .graph-motion-ready .graph-node,
+  .graph-detail-motion-ready {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 @media (max-width: 850px) {

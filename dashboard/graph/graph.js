@@ -21,7 +21,10 @@ const state = {
   graph: null,
   products: new Map(),
   repository: "",
-  includeDisconnected: false
+  includeDisconnected: false,
+  selectedNodeKey: "",
+  visibleGraph: null,
+  initialRevealStarted: false
 };
 
 const elements = {
@@ -167,6 +170,13 @@ function graphContext(node) {
   return { incoming, outgoing };
 }
 
+function renderDetailPrompt() {
+  elements.detail.replaceChildren(
+    htmlNode("p", "eyebrow", t("graph.detail.eyebrow")),
+    htmlNode("p", "", t("graph.detail.select"))
+  );
+}
+
 function pullRequestStatus(pullRequest) {
   return pullRequest.state === "closed"
     ? t("work.pr.closedWithoutMerge")
@@ -253,6 +263,42 @@ function renderDetail(node) {
   );
 }
 
+function updateSelectionState() {
+  const selectedKey = state.selectedNodeKey;
+  const relatedKeys = new Set(selectedKey ? [selectedKey] : []);
+  if (selectedKey) {
+    for (const edge of state.visibleGraph?.edges ?? []) {
+      if (edge.source === selectedKey) relatedKeys.add(edge.target);
+      if (edge.target === selectedKey) relatedKeys.add(edge.source);
+    }
+  }
+
+  elements.svg.querySelectorAll(".graph-node").forEach((node) => {
+    const isSelected = node.dataset.nodeKey === selectedKey;
+    const isRelated = !selectedKey || relatedKeys.has(node.dataset.nodeKey);
+    node.classList.toggle("selected", isSelected);
+    node.classList.toggle("is-related", Boolean(selectedKey && isRelated));
+    node.classList.toggle("is-dimmed", Boolean(selectedKey && !isRelated));
+    node.setAttribute("aria-pressed", String(isSelected));
+  });
+
+  elements.svg.querySelectorAll(".graph-edge").forEach((edge) => {
+    const isRelated =
+      !selectedKey ||
+      edge.dataset.source === selectedKey ||
+      edge.dataset.target === selectedKey;
+    edge.classList.toggle("is-related", Boolean(selectedKey && isRelated));
+    edge.classList.toggle("is-dimmed", Boolean(selectedKey && !isRelated));
+  });
+}
+
+function selectNode(node) {
+  state.selectedNodeKey = node.key;
+  renderDetail(node);
+  elements.detail.classList.add("graph-motion-detail-revealed");
+  updateSelectionState();
+}
+
 function appendMarker(svg) {
   const defs = svgNode("defs");
   const marker = svgNode("marker", {
@@ -289,6 +335,8 @@ function renderSvg(layout) {
     const path = svgNode("path", {
       d: `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`,
       class: `graph-edge${source.repository !== target.repository ? " cross-repository" : ""}`,
+      "data-source": source.key,
+      "data-target": target.key,
       "marker-end": "url(#graph-arrow)"
     });
     elements.svg.append(path);
@@ -300,6 +348,8 @@ function renderSvg(layout) {
       transform: `translate(${node.x} ${node.y})`,
       tabindex: 0,
       role: "button",
+      "aria-pressed": node.key === state.selectedNodeKey,
+      "data-node-key": node.key,
       "aria-label": t("graph.node.aria", {
         repository: node.repository,
         number: node.number,
@@ -343,15 +393,17 @@ function renderSvg(layout) {
     }
     status.textContent = statusParts.join(t("common.separator"));
     group.append(repo, title, status);
-    group.addEventListener("click", () => renderDetail(node));
+    group.addEventListener("click", () => selectNode(node));
     group.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        renderDetail(node);
+        selectNode(node);
       }
     });
     elements.svg.append(group);
   }
+
+  updateSelectionState();
 }
 
 function renderGraph() {
@@ -360,6 +412,16 @@ function renderGraph() {
     state.repository,
     state.includeDisconnected
   );
+  state.visibleGraph = filtered;
+  const selectedNode = filtered.nodes.find(
+    (node) => node.key === state.selectedNodeKey
+  );
+  if (state.selectedNodeKey && !selectedNode) {
+    state.selectedNodeKey = "";
+    renderDetailPrompt();
+  } else if (selectedNode) {
+    renderDetail(selectedNode);
+  }
   const layout = layoutDependencyGraph(filtered);
   elements.count.textContent = t("graph.count", {
     nodes: filtered.nodes.length,
@@ -368,7 +430,16 @@ function renderGraph() {
   elements.empty.hidden = filtered.nodes.length > 0;
   elements.svg.hidden = filtered.nodes.length === 0;
   renderBlockers(filtered);
-  if (filtered.nodes.length > 0) renderSvg(layout);
+  if (filtered.nodes.length > 0) {
+    renderSvg(layout);
+    if (!state.initialRevealStarted) {
+      state.initialRevealStarted = true;
+      window.portalMotion?.revealGraph?.({
+        svg: elements.svg,
+        detail: elements.detail
+      });
+    }
+  }
 }
 
 async function json(path) {
