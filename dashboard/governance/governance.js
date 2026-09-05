@@ -79,6 +79,14 @@ function governanceCollectionStatus(health) {
   return health?.snapshot?.complete ? "healthy" : "degraded";
 }
 
+function showLoading() {
+  elements.status.className = "governance-status-banner loading";
+  elements.status.setAttribute("aria-busy", "true");
+  elements.status.replaceChildren(
+    node("p", "governance-status-title", t("governance.snapshot.loading"))
+  );
+}
+
 function showStatus(dashboard, health) {
   const snapshot = health?.snapshot;
   const collection = health?.collection;
@@ -92,6 +100,8 @@ function showStatus(dashboard, health) {
           ? "unavailable"
           : "partial";
   elements.status.className = `governance-status-banner ${status}`;
+  elements.status.dataset.status = status;
+  elements.status.setAttribute("aria-busy", "false");
   elements.status.replaceChildren(
     node(
       "p",
@@ -396,9 +406,12 @@ async function loadDashboard() {
 }
 
 try {
+  showLoading();
   await loadDashboard();
 } catch (error) {
   elements.status.className = "governance-status-banner load-error";
+  elements.status.dataset.status = "load-error";
+  elements.status.setAttribute("aria-busy", "false");
   elements.status.replaceChildren(
     node("p", "governance-status-title", t("governance.load.failedTitle")),
     node("p", "governance-status-detail", error.message)

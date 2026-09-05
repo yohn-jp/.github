@@ -38,6 +38,10 @@
   padding-left: 24px;
 }
 
+.snapshot-copy {
+  min-width: 0;
+}
+
 .generated-at {
   margin: 0;
   color: var(--muted);
@@ -52,6 +56,23 @@
   font-size: 0.7rem;
   line-height: 1.35;
   text-align: right;
+}
+
+.snapshot-feedback {
+  min-height: 1.25em;
+  margin: 3px 0 0;
+  color: var(--accent-text);
+  font-size: 0.7rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.snapshot-feedback:empty {
+  visibility: hidden;
+}
+
+.snapshot-feedback.error {
+  color: var(--danger);
 }
 
 .refresh-button {
@@ -91,7 +112,21 @@
 }
 
 .status-inline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin: 0 0 8px;
+  color: var(--accent-text);
+  transition: color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.status-inline.complete::before {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--status-tone-positive);
+  content: "";
 }
 
 .status-inline .status-detail {
@@ -172,6 +207,13 @@
   flex-direction: column;
   justify-content: center;
   padding: 10px 20px 10px 0;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.metric-card.is-changed {
+  background: var(--surface-quiet);
 }
 
 .metric-card + .metric-card {
@@ -192,6 +234,18 @@
   font-size: 0.72rem;
 }
 
+.metric-change {
+  margin-left: 6px;
+  color: var(--accent-text);
+  font-size: 0.67rem;
+  font-weight: var(--font-weight-display);
+  white-space: nowrap;
+}
+
+.metric-change.decrease {
+  color: var(--warning);
+}
+
 .issue-section {
   margin-top: 0;
 }
@@ -204,6 +258,13 @@
   margin-bottom: 9px;
 }
 
+.result-summary {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  min-width: 150px;
+}
+
 .issue-heading h2 {
   margin: 0;
   font-size: 1.45rem;
@@ -211,7 +272,23 @@
 }
 
 .result-count {
+  margin: 0;
   text-align: right;
+}
+
+.interaction-feedback {
+  min-height: 1em;
+  margin: 0;
+  color: var(--accent-text);
+  font-size: 0.66rem;
+  line-height: 1.25;
+  opacity: 0;
+  text-align: right;
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.interaction-feedback.is-visible {
+  opacity: 1;
 }
 
 .filters {
@@ -266,14 +343,23 @@
   background: var(--surface);
   padding: 20px 22px;
   transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
     border-color var(--motion-duration-base) var(--motion-easing-standard),
     box-shadow var(--motion-duration-base) var(--motion-easing-standard);
 }
 
 .issue-row:hover,
 .issue-row:focus-within {
-  border-color: var(--line-strong);
+  border-color: var(--ink);
   box-shadow: var(--shadow-soft);
+}
+
+.issue-list {
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.issue-list.is-updating {
+  opacity: 0.68;
 }
 
 .issue-row-header,
@@ -656,8 +742,14 @@
   }
 
   .generated-at,
-  .result-count {
+  .result-count,
+  .snapshot-feedback,
+  .interaction-feedback {
     text-align: left;
+  }
+
+  .result-summary {
+    justify-items: start;
   }
 
   .snapshot-freshness {
@@ -722,5 +814,15 @@
   .distribution-section {
     margin-top: 58px;
     padding-top: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .issue-list.is-updating {
+    opacity: 1;
+  }
+
+  .metric-card.is-changed {
+    background: transparent;
   }
 }

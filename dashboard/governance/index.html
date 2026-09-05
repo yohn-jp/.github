@@ -82,7 +82,11 @@
     </header>
 
     <main class="shell governance-content">
-      <header class="governance-header" aria-labelledby="governance-title">
+      <header
+        class="governance-header"
+        aria-labelledby="governance-title"
+        data-motion="reveal"
+      >
         <div>
           <p class="eyebrow" data-message="governance.header.eyebrow"></p>
           <h1 id="governance-title" data-message="governance.header.title"></h1>
@@ -100,25 +104,41 @@
         class="governance-status-banner"
         role="status"
         aria-live="polite"
+        aria-busy="false"
+        data-motion="reveal"
       ></section>
 
       <section
         class="governance-summary"
         aria-label=""
         data-message-aria-label="governance.metrics.aria"
+        data-motion="reveal"
       >
-        <div id="governance-metrics" class="governance-metrics"></div>
+        <div
+          id="governance-metrics"
+          class="governance-metrics"
+          aria-live="polite"
+        ></div>
       </section>
 
       <section
         class="governance-summary"
         aria-label=""
         data-message-aria-label="governance.dependencies.aria"
+        data-motion="reveal"
       >
-        <div id="dependency-metrics" class="governance-metrics"></div>
+        <div
+          id="dependency-metrics"
+          class="governance-metrics"
+          aria-live="polite"
+        ></div>
       </section>
 
-      <section class="governance-section" aria-labelledby="diagnostics-title">
+      <section
+        class="governance-section"
+        aria-labelledby="diagnostics-title"
+        data-motion="reveal"
+      >
         <div class="governance-section-heading">
           <div>
             <p
@@ -134,7 +154,11 @@
         <div id="collection-diagnostics" class="collection-diagnostics"></div>
       </section>
 
-      <section class="governance-section" aria-labelledby="repositories-title">
+      <section
+        class="governance-section"
+        aria-labelledby="repositories-title"
+        data-motion="reveal"
+      >
         <div class="governance-section-heading">
           <div>
             <p
@@ -151,7 +175,10 @@
         <div id="repository-health" class="repository-health"></div>
       </section>
 
-      <section class="governance-section governance-two-column">
+      <section
+        class="governance-section governance-two-column"
+        data-motion="reveal"
+      >
         <div>
           <p class="eyebrow" data-message="governance.violations.eyebrow"></p>
           <h2 data-message="governance.violations.title"></h2>
