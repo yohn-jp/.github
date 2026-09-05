@@ -31,6 +31,14 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   padding: 16px 18px;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    border-color var(--motion-duration-base) var(--motion-easing-standard),
+    color var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.governance-status-banner.loading {
+  color: var(--muted);
 }
 
 .governance-status-banner.complete {
@@ -77,6 +85,27 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   padding: 22px;
+  box-shadow: var(--shadow-soft);
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    border-color var(--motion-duration-base) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.governance-metric.valid {
+  border-top: 3px solid var(--status-tone-positive);
+}
+
+.governance-metric.invalid {
+  border-top: 3px solid var(--danger);
+}
+
+.governance-metric.unknown {
+  border-top: 3px solid var(--warning);
+}
+
+.governance-metric:hover {
+  background: var(--surface-quiet);
   box-shadow: var(--shadow-soft);
 }
 
@@ -131,6 +160,16 @@
   border-radius: var(--radius-md);
   background: var(--warning-soft);
   padding: 14px 16px;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    border-color var(--motion-duration-base) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-base) var(--motion-easing-standard);
+}
+
+.governance-diagnostic:hover,
+.governance-diagnostic:focus-within {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-soft);
 }
 
 .governance-diagnostic-heading {
@@ -167,6 +206,10 @@
   border-block: 1px solid var(--line);
   background: var(--surface);
   padding: 16px;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    border-color var(--motion-duration-base) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-base) var(--motion-easing-standard);
 }
 
 .governance-repository + .governance-repository {
@@ -183,6 +226,14 @@
 
 .governance-repository.governance-unavailable {
   background: var(--danger-soft);
+}
+
+.governance-repository:hover,
+.governance-repository:focus-within,
+.governance-issue:hover,
+.governance-issue:focus-within {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-soft);
 }
 
 .governance-repository-name {
@@ -279,6 +330,10 @@
 .governance-issue {
   border-bottom: 1px solid var(--line);
   padding: 11px 0;
+  transition:
+    background-color var(--motion-duration-base) var(--motion-easing-standard),
+    border-color var(--motion-duration-base) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-base) var(--motion-easing-standard);
 }
 
 .governance-issue a {

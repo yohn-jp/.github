@@ -70,7 +70,11 @@
     </header>
 
     <main class="shell work-content">
-      <header class="work-header" aria-labelledby="work-title">
+      <header
+        class="work-header"
+        aria-labelledby="work-title"
+        data-motion="reveal"
+      >
         <div class="work-heading">
           <p class="eyebrow" data-message="work.header.eyebrow"></p>
           <h1 id="work-title" data-message="work.header.title"></h1>
@@ -81,7 +85,7 @@
           aria-label=""
           data-message-aria-label="work.snapshot.aria"
         >
-          <div>
+          <div class="snapshot-copy">
             <p
               id="generated-at"
               class="generated-at"
@@ -93,11 +97,20 @@
               aria-live="polite"
               data-message="work.snapshot.checking"
             ></p>
+            <p
+              id="snapshot-feedback"
+              class="snapshot-feedback"
+              role="status"
+              aria-live="polite"
+            ></p>
           </div>
           <button
             id="refresh-dashboard"
             class="refresh-button"
             type="button"
+            aria-controls="issue-list"
+            aria-describedby="snapshot-freshness"
+            aria-busy="false"
             data-message="work.snapshot.refresh"
           ></button>
         </div>
@@ -116,14 +129,27 @@
           class="work-summary"
           aria-label=""
           data-message-aria-label="work.metrics.aria"
+          data-motion="reveal"
         >
           <div id="metrics" class="metrics" aria-live="polite"></div>
         </section>
 
-        <section class="issue-section" aria-labelledby="issues-heading">
+        <section
+          class="issue-section"
+          aria-labelledby="issues-heading"
+          data-motion="reveal"
+        >
           <div class="issue-heading">
             <h2 id="issues-heading" data-message="work.issues.title"></h2>
-            <p id="issue-count" class="result-count" aria-live="polite"></p>
+            <div class="result-summary">
+              <p id="issue-count" class="result-count" aria-live="polite"></p>
+              <p
+                id="filter-feedback"
+                class="interaction-feedback"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </div>
           </div>
           <div
             class="filters"
@@ -165,6 +191,7 @@
             class="issue-list"
             role="list"
             aria-live="polite"
+            aria-busy="false"
           >
             <p class="empty-state" data-message="work.issues.loading"></p>
           </div>
@@ -173,6 +200,7 @@
         <section
           class="distribution-section"
           aria-labelledby="distribution-heading"
+          data-motion="reveal"
         >
           <div class="work-section-head">
             <div>

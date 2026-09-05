@@ -31,6 +31,10 @@ preserveLocaleQuery(document);
 const t = (key, values = {}) => message(key, values);
 
 const SNAPSHOT_REFRESH_INTERVAL_MS = 60_000;
+const RESULT_FEEDBACK_DURATION_MS = 220;
+const FILTER_FEEDBACK_DURATION_MS = 1_800;
+const METRIC_FEEDBACK_DURATION_MS = 2_400;
+const SNAPSHOT_FEEDBACK_DURATION_MS = 3_000;
 
 const state = {
   dashboard: null,
@@ -44,13 +48,18 @@ const state = {
   refreshTimer: null,
   refreshInFlight: null,
   lastCheckedAt: null,
-  refreshError: null
+  refreshError: null,
+  resultFeedbackTimer: null,
+  filterFeedbackTimer: null,
+  metricFeedbackTimer: null,
+  snapshotFeedbackTimer: null
 };
 
 const elements = {
   status: document.querySelector("#dataset-status"),
   generatedAt: document.querySelector("#generated-at"),
   freshness: document.querySelector("#snapshot-freshness"),
+  snapshotFeedback: document.querySelector("#snapshot-feedback"),
   refreshButton: document.querySelector("#refresh-dashboard"),
   metrics: document.querySelector("#metrics"),
   repositorySummary: document.querySelector("#repository-summary"),
@@ -60,6 +69,7 @@ const elements = {
   sortFilter: document.querySelector("#sort-filter"),
   issueSearch: document.querySelector("#issue-search"),
   issueCount: document.querySelector("#issue-count"),
+  filterFeedback: document.querySelector("#filter-feedback"),
   issueList: document.querySelector("#issue-list")
 };
 
@@ -74,6 +84,77 @@ function node(tag, className, content) {
   if (className) element.className = className;
   if (content !== undefined) element.textContent = content;
   return element;
+}
+
+function showSnapshotFeedback(key, values = {}, className = "", duration = 0) {
+  if (!elements.snapshotFeedback) return;
+  if (state.snapshotFeedbackTimer !== null) {
+    window.clearTimeout(state.snapshotFeedbackTimer);
+    state.snapshotFeedbackTimer = null;
+  }
+  elements.snapshotFeedback.className = `snapshot-feedback ${className}`.trim();
+  elements.snapshotFeedback.textContent = t(key, values);
+  if (duration > 0) {
+    state.snapshotFeedbackTimer = window.setTimeout(() => {
+      elements.snapshotFeedback.textContent = "";
+      elements.snapshotFeedback.className = "snapshot-feedback";
+      state.snapshotFeedbackTimer = null;
+    }, duration);
+  }
+}
+
+function showFilterFeedback(shown) {
+  if (!elements.filterFeedback) return;
+  if (state.filterFeedbackTimer !== null) {
+    window.clearTimeout(state.filterFeedbackTimer);
+    state.filterFeedbackTimer = null;
+  }
+  elements.filterFeedback.textContent = t("work.issue.filterFeedback", {
+    shown
+  });
+  elements.filterFeedback.classList.add("is-visible");
+  state.filterFeedbackTimer = window.setTimeout(() => {
+    elements.filterFeedback.classList.remove("is-visible");
+    elements.filterFeedback.textContent = "";
+    state.filterFeedbackTimer = null;
+  }, FILTER_FEEDBACK_DURATION_MS);
+}
+
+function flashResultUpdate() {
+  if (!elements.issueList) return;
+  if (state.resultFeedbackTimer !== null) {
+    window.clearTimeout(state.resultFeedbackTimer);
+    state.resultFeedbackTimer = null;
+  }
+  elements.issueList.classList.remove("is-updating");
+  elements.issueList.setAttribute("aria-busy", "true");
+  window.requestAnimationFrame(() => {
+    elements.issueList.classList.add("is-updating");
+    state.resultFeedbackTimer = window.setTimeout(() => {
+      elements.issueList.classList.remove("is-updating");
+      elements.issueList.setAttribute("aria-busy", "false");
+      state.resultFeedbackTimer = null;
+    }, RESULT_FEEDBACK_DURATION_MS);
+  });
+}
+
+function metricDelta(value, previousValue) {
+  if (previousValue === null || previousValue === undefined) return null;
+  const current = Number(value);
+  const previous = Number(previousValue);
+  if (!Number.isFinite(current) || !Number.isFinite(previous)) return null;
+  const delta = current - previous;
+  return delta === 0 ? null : delta;
+}
+
+function clearMetricFeedback() {
+  elements.metrics
+    ?.querySelectorAll(".metric-change")
+    .forEach((change) => change.remove());
+  elements.metrics
+    ?.querySelectorAll(".metric-card.is-changed")
+    .forEach((card) => card.classList.remove("is-changed"));
+  state.metricFeedbackTimer = null;
 }
 
 function link(url, label, className) {
@@ -99,6 +180,7 @@ function showStatus(dashboard) {
   const status = dashboard.status;
   const unavailableLinks = dashboard.metrics.pullRequestDataUnavailable ?? 0;
   const errors = dashboard.errors ?? [];
+  elements.status.dataset.status = status;
   elements.status.hidden = false;
   if (status === "complete") {
     elements.status.className = "status-inline complete";
@@ -185,37 +267,84 @@ function updateRefreshControl() {
   if (!elements.refreshButton) return;
   const active = Boolean(state.refreshInFlight);
   elements.refreshButton.disabled = active;
+  elements.refreshButton.setAttribute("aria-busy", String(active));
   elements.refreshButton.textContent = active
     ? t("work.snapshot.refreshing")
     : t("work.snapshot.refresh");
 }
 
-function renderMetrics(dashboard) {
+function renderMetrics(dashboard, previousDashboard = null) {
   const cards = [
-    [dashboard.metrics.issueCount, "work.metrics.openIssues"],
+    [dashboard.metrics.issueCount, "work.metrics.openIssues", "issueCount"],
     [
       dashboard.metrics.linkedPullRequests ?? 0,
-      "work.metrics.linkedPullRequests"
+      "work.metrics.linkedPullRequests",
+      "linkedPullRequests"
     ],
-    [dashboard.metrics.repositoryCount, "work.metrics.repositories"],
-    [dashboard.metrics.failedRepositories, "work.metrics.sourcesAttention"],
-    [dashboard.metrics.governanceValid ?? 0, "work.metrics.governanceValid"],
+    [
+      dashboard.metrics.repositoryCount,
+      "work.metrics.repositories",
+      "repositoryCount"
+    ],
+    [
+      dashboard.metrics.failedRepositories,
+      "work.metrics.sourcesAttention",
+      "failedRepositories"
+    ],
+    [
+      dashboard.metrics.governanceValid ?? 0,
+      "work.metrics.governanceValid",
+      "governanceValid"
+    ],
     [
       dashboard.metrics.governanceInvalid ?? 0,
-      "work.metrics.governanceInvalid"
+      "work.metrics.governanceInvalid",
+      "governanceInvalid"
     ],
-    [dashboard.metrics.governanceUnknown ?? 0, "work.metrics.governanceUnknown"]
+    [
+      dashboard.metrics.governanceUnknown ?? 0,
+      "work.metrics.governanceUnknown",
+      "governanceUnknown"
+    ]
   ];
+  if (state.metricFeedbackTimer !== null) {
+    window.clearTimeout(state.metricFeedbackTimer);
+    state.metricFeedbackTimer = null;
+  }
   elements.metrics.replaceChildren(
-    ...cards.map(([value, label]) => {
-      const card = node("div", "metric-card");
+    ...cards.map(([value, label, metricKey]) => {
+      const delta = metricDelta(value, previousDashboard?.metrics?.[metricKey]);
+      const card = node(
+        "div",
+        `metric-card${delta === null ? "" : " is-changed"}`
+      );
       card.append(
         node("span", "metric-value", text(value)),
         node("span", "metric-label", t(label))
       );
+      if (delta !== null) {
+        const direction = delta > 0 ? "increase" : "decrease";
+        const change = node(
+          "span",
+          `metric-change ${direction}`,
+          t(`work.metrics.${direction}d`, { count: Math.abs(delta) })
+        );
+        const changeDescription = t(`work.metrics.${direction}dAria`, {
+          count: Math.abs(delta)
+        });
+        change.title = changeDescription;
+        change.setAttribute("aria-label", changeDescription);
+        card.querySelector(".metric-label").append(change);
+      }
       return card;
     })
   );
+  if (previousDashboard) {
+    state.metricFeedbackTimer = window.setTimeout(
+      clearMetricFeedback,
+      METRIC_FEEDBACK_DURATION_MS
+    );
+  }
 }
 
 function renderRepositorySummary(dashboard) {
@@ -565,7 +694,7 @@ function renderIssue(issue) {
   return row;
 }
 
-function renderIssues() {
+function renderIssues({ announceFilter = false, flashUpdate = false } = {}) {
   const scopedIssues = state.dashboard.issues.filter(
     (issue) =>
       issueMatchesView(issue, state.view) &&
@@ -582,9 +711,11 @@ function renderIssues() {
     elements.issueList.replaceChildren(
       node("p", "empty-state", t("work.issue.noMatches"))
     );
-    return;
+  } else {
+    elements.issueList.replaceChildren(...issues.map(renderIssue));
   }
-  elements.issueList.replaceChildren(...issues.map(renderIssue));
+  if (announceFilter) showFilterFeedback(issues.length);
+  if (flashUpdate) flashResultUpdate();
 }
 
 function syncUrl() {
@@ -608,6 +739,7 @@ function showLoadError(error) {
   elements.generatedAt.textContent = t("work.load.snapshotUnavailable");
   elements.status.hidden = false;
   elements.status.className = "status-banner load-error";
+  elements.status.dataset.status = "load-error";
   elements.status.replaceChildren(
     node("p", "status-title", t("work.load.failedTitle")),
     node(
@@ -616,6 +748,7 @@ function showLoadError(error) {
       t("work.load.noSnapshot", { error: error.message })
     )
   );
+  showSnapshotFeedback("work.refresh.failedFeedback", {}, "error");
   renderFreshness();
 }
 
@@ -627,6 +760,7 @@ function showRefreshError(error) {
   }
   elements.status.hidden = false;
   elements.status.className = "status-banner stale";
+  elements.status.dataset.status = "stale";
   elements.status.replaceChildren(
     node("p", "status-title", t("work.refresh.failedTitle")),
     node(
@@ -635,6 +769,7 @@ function showRefreshError(error) {
       t("work.refresh.lastValid", { error: error.message })
     )
   );
+  showSnapshotFeedback("work.refresh.failedFeedback", {}, "error");
   renderFreshness();
 }
 
@@ -644,6 +779,7 @@ async function jsonResponse(response, path) {
 }
 
 function applyDashboard(dashboard, productCatalog) {
+  const previousDashboard = state.dashboard;
   const productIndex = productCatalog
     ? buildProductRepositoryIndex(productCatalog)
     : null;
@@ -665,13 +801,13 @@ function applyDashboard(dashboard, productCatalog) {
     date: formatDate(dashboard.generatedAt)
   });
   showStatus(dashboard);
-  renderMetrics(dashboard);
+  renderMetrics(dashboard, previousDashboard);
   renderRepositorySummary(dashboard);
   renderViewFilter();
   renderGovernanceFilter();
   renderRepositoryFilter(dashboard);
   renderSortFilter(dashboard.issues);
-  renderIssues();
+  renderIssues({ flashUpdate: Boolean(previousDashboard) });
   renderFreshness();
 }
 
@@ -679,6 +815,7 @@ async function loadDashboard() {
   if (state.refreshInFlight) return state.refreshInFlight;
 
   state.lastCheckedAt = new Date();
+  showSnapshotFeedback("work.snapshot.checking", {}, "checking");
   renderFreshness();
   updateRefreshControl();
   const refresh = (async () => {
@@ -704,15 +841,34 @@ async function loadDashboard() {
       const changed =
         !state.dashboard ||
         dashboard.generatedAt !== state.dashboard.generatedAt;
+      const hadSnapshot = Boolean(state.dashboard);
       const hadError = Boolean(state.refreshError);
       state.lastCheckedAt = new Date();
       state.refreshError = null;
       if (changed) {
         applyDashboard(dashboard, productCatalog);
+        showSnapshotFeedback(
+          hadSnapshot ? "work.snapshot.updated" : "work.snapshot.loaded",
+          { date: formatDate(dashboard.generatedAt) },
+          "updated",
+          SNAPSHOT_FEEDBACK_DURATION_MS
+        );
       } else if (hadError) {
         showStatus(state.dashboard);
+        showSnapshotFeedback(
+          "work.snapshot.current",
+          {},
+          "current",
+          SNAPSHOT_FEEDBACK_DURATION_MS
+        );
         renderFreshness();
       } else {
+        showSnapshotFeedback(
+          "work.snapshot.current",
+          {},
+          "current",
+          SNAPSHOT_FEEDBACK_DURATION_MS
+        );
         renderFreshness();
       }
     } catch (error) {
@@ -746,31 +902,31 @@ function startPolling() {
 elements.repositoryFilter.addEventListener("change", (event) => {
   state.repository = event.target.value;
   syncUrl();
-  renderIssues();
+  renderIssues({ announceFilter: true, flashUpdate: true });
 });
 
 elements.governanceFilter?.addEventListener("change", (event) => {
   state.governance = event.target.value;
   syncUrl();
-  renderIssues();
+  renderIssues({ announceFilter: true, flashUpdate: true });
 });
 
 elements.viewFilter?.addEventListener("change", (event) => {
   state.view = event.target.value;
   syncUrl();
-  renderIssues();
+  renderIssues({ announceFilter: true, flashUpdate: true });
 });
 
 elements.sortFilter?.addEventListener("change", (event) => {
   state.sort = event.target.value;
   syncUrl();
-  renderIssues();
+  renderIssues({ announceFilter: true, flashUpdate: true });
 });
 
 elements.issueSearch.addEventListener("input", (event) => {
   state.search = event.target.value;
   syncUrl();
-  renderIssues();
+  renderIssues({ announceFilter: true, flashUpdate: true });
 });
 
 elements.refreshButton?.addEventListener("click", () => {
