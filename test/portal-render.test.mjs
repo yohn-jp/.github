@@ -164,7 +164,11 @@ test("build publishes root and stable product routes", async () => {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "portal-render-"));
   const outputDirectory = join(temporaryDirectory, "site");
   const registryPath = join(temporaryDirectory, "registry.json");
-  const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
+  const [registrySource, motionSource] = await Promise.all([
+    readFile("portal/registry.json", "utf8"),
+    readFile("portal/motion.js", "utf8")
+  ]);
+  const registry = JSON.parse(registrySource);
   registry.collectionRepositories = ["example"];
   await writeFile(registryPath, JSON.stringify(registry));
   const fetchImpl = async (url) => {
@@ -186,6 +190,11 @@ test("build publishes root and stable product routes", async () => {
     await buildDashboard({ outputDirectory, registryPath, fetchImpl });
     const root = await readFile(join(outputDirectory, "index.html"), "utf8");
     assert.match(root, /Small tools\./);
+    assert.match(root, /<script defer src="\.\/motion\.js"><\/script>/);
+    assert.equal(
+      await readFile(join(outputDirectory, "motion.js"), "utf8"),
+      motionSource
+    );
     for (const id of [
       "mottainai",
       "nawabari",
@@ -203,6 +212,10 @@ test("build publishes root and stable product routes", async () => {
         new RegExp(`https://dev\\.yohn\\.jp/products/${id}/`)
       );
       assert.match(product, /Why it exists/);
+      assert.match(
+        product,
+        /<script defer src="\.\.\/\.\.\/motion\.js"><\/script>/
+      );
     }
     for (const locale of ["en", "ja"]) {
       const home = await readFile(
@@ -221,12 +234,23 @@ test("build publishes root and stable product routes", async () => {
         join(outputDirectory, locale, "work", "graph", "index.html"),
         "utf8"
       );
+      const localizedMotion = await readFile(
+        join(outputDirectory, locale, "motion.js"),
+        "utf8"
+      );
       assert.match(home, new RegExp(`<html lang="${locale}">`));
       assert.match(home, new RegExp(`https://dev\\.yohn\\.jp/${locale}/`));
+      assert.match(home, /<script defer src="\.\/motion\.js"><\/script>/);
+      assert.equal(localizedMotion, motionSource);
       assert.match(work, new RegExp(`https://dev\\.yohn\\.jp/${locale}/work/`));
+      assert.match(work, /<script defer src="\.\.\/motion\.js"><\/script>/);
       assert.match(
         graph,
         new RegExp(`https://dev\\.yohn\\.jp/${locale}/work/graph/`)
+      );
+      assert.match(
+        graph,
+        /<script defer src="\.\.\/\.\.\/motion\.js"><\/script>/
       );
       assert.match(work, /data-locale-switch="ja"/);
       assert.match(
@@ -313,6 +337,26 @@ test("visual tokens keep typography motion and status semantics explicit", async
   assert.match(
     html,
     /<span class="status-dot" data-status-tone="caution" aria-hidden="true"><\/span>/
+  );
+});
+
+test("portal motion runtime is progressive and fail-open", async () => {
+  const [runtime, css, template] = await Promise.all([
+    readFile("portal/motion.js", "utf8"),
+    readFile("portal/styles.css", "utf8"),
+    readFile("portal/index.html", "utf8")
+  ]);
+
+  assert.match(template, /<script defer src="\.\/motion\.js"><\/script>/);
+  assert.match(runtime, /IntersectionObserver/);
+  assert.match(runtime, /prefers-reduced-motion/);
+  assert.match(runtime, /motion-ready/);
+  assert.match(runtime, /failOpen/);
+  assert.match(css, /\.motion-ready \[data-motion="reveal"\]/);
+  assert.match(css, /prefers-reduced-motion/);
+  assert.doesNotMatch(
+    css,
+    /(?:^|\n)\s*\[data-motion="reveal"\]\s*\{[^}]*opacity:\s*0/
   );
 });
 
