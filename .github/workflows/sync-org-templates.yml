@@ -2,8 +2,9 @@ name: Sync org templates
 
 # Distributes this repository's Issue Forms, PR templates, machine-readable
 # Inari governance snapshot, shared agent instructions, and shared governance
-# adapters to the repositories listed in .github/sync.yml, pushing directly to
-# each target's default branch. See docs/github-metadata-inheritance.md.
+# adapters to the repositories listed in .github/sync.yml and
+# .github/sync-agents.yml, pushing directly to each target's default branch.
+# See docs/github-metadata-inheritance.md.
 on:
   push:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - ".github/inari/**"
       - ".github/codeql/**"
       - ".github/sync.yml"
+      - ".github/sync-agents.yml"
       - "templates/workflows/**"
       - "scripts/validate-action-pins.mjs"
       - "scripts/generate-inari-manifest.mjs"
@@ -58,7 +60,7 @@ jobs:
           # installed org-wide — every sync target then gets a token with no
           # access to it, which the Git Data API calls in the next step
           # report as "Resource not accessible by integration". Must list
-          # every push target from .github/sync.yml.
+          # every push target from both sync configuration files.
           repositories: |
             gh-inari
             gh-makami
@@ -97,4 +99,15 @@ jobs:
           # against .github/sync.yml fans out into a dozen-plus commits on
           # each target. false batches every changed file for a target into
           # one commit instead.
+          COMMIT_EACH_FILE: false
+
+      - name: Sync shared agent instructions
+        uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
+        with:
+          GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
+          GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
+          GIT_USERNAME: yohn-jp-template-sync[bot]
+          CONFIG_PATH: .github/sync-agents.yml
+          SKIP_PR: true
+          COMMIT_PREFIX: "chore: sync org-managed files"
           COMMIT_EACH_FILE: false
