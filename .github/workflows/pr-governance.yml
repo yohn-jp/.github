@@ -104,7 +104,7 @@ jobs:
 
       - name: Install shared governance validator
         working-directory: ${{ runner.temp }}/governance-tools
-        run: npm install --no-save --omit=dev gh-inari@0.9.0
+        run: npm install --no-save --omit=dev gh-inari@latest
 
       - name: Validate synchronized governance snapshot
         run: node "$RUNNER_TEMP/governance-tools/scripts/generate-inari-manifest.mjs" --check

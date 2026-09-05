@@ -89,7 +89,7 @@ jobs:
         run: node "$RUNNER_TEMP/metadata-tools/scripts/generate-inari-manifest.mjs" --check
 
       - name: Install gh-inari
-        run: npm install --global gh-inari@0.9.0
+        run: npm install --global gh-inari@latest
 
       - name: Check semantic template projection drift
         run: gh-inari template sync --check
