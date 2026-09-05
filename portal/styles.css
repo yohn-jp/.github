@@ -12,6 +12,8 @@
   --dark-muted: #aeb5c2;
   --accent: #d9ff63;
   --accent-ink: #182000;
+  --focus-light: #111318;
+  --focus-dark: #ffffff;
   --radius-sm: 10px;
   --radius-md: 18px;
   --radius-lg: 30px;
@@ -57,8 +59,9 @@ a {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 3px solid #111318;
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--focus-light);
   outline-offset: 4px;
   border-radius: 4px;
 }
@@ -78,6 +81,7 @@ select:focus-visible {
 }
 
 .site-nav {
+  position: relative;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -120,6 +124,10 @@ select:focus-visible {
 
 .nav-links a:hover {
   color: #000;
+}
+
+.mobile-nav {
+  display: none;
 }
 
 .locale-switcher {
@@ -479,6 +487,12 @@ select:focus-visible {
   border-color: #697486;
 }
 
+.system-section :focus-visible {
+  outline: 3px solid var(--focus-dark);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px var(--dark);
+}
+
 .system-node-role {
   margin-bottom: 8px;
   color: #8f98a7;
@@ -589,10 +603,6 @@ select:focus-visible {
   gap: 20px;
 }
 
-.product-page .site-nav-wrap {
-  position: static;
-}
-
 .product-hero {
   padding-block: 90px 70px;
 }
@@ -699,6 +709,112 @@ select:focus-visible {
 }
 
 @media (max-width: 900px) {
+  .site-nav {
+    min-height: 62px;
+    gap: 10px;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .mobile-nav {
+    position: relative;
+    display: block;
+    margin-left: auto;
+  }
+
+  .mobile-nav-toggle {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 0 11px;
+    color: var(--ink);
+    background: transparent;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+
+  .mobile-nav-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-nav-toggle::after {
+    content: "+";
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .mobile-nav[open] .mobile-nav-toggle {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .mobile-nav[open] .mobile-nav-toggle::after {
+    content: "−";
+    color: inherit;
+  }
+
+  .mobile-nav[open] .mobile-nav-toggle:focus-visible {
+    outline-color: var(--focus-dark);
+    box-shadow: 0 0 0 7px var(--dark);
+  }
+
+  .mobile-nav-icon {
+    width: 15px;
+    display: inline-grid;
+    gap: 3px;
+  }
+
+  .mobile-nav-icon span {
+    height: 1px;
+    display: block;
+    background: currentColor;
+  }
+
+  .mobile-nav-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 30;
+    width: min(260px, calc(100vw - 30px));
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .mobile-nav-links {
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobile-nav-links a {
+    display: block;
+    border-radius: var(--radius-sm);
+    padding: 11px 12px;
+    color: var(--ink);
+    font-size: 0.86rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-nav-links a:hover,
+  .mobile-nav-links a[aria-current="page"] {
+    background: var(--surface-quiet);
+  }
+
   .hero {
     min-height: auto;
     grid-template-columns: 1fr;
@@ -731,24 +847,35 @@ select:focus-visible {
   }
 
   .site-nav {
-    min-height: 62px;
+    gap: 6px;
   }
 
-  .nav-links {
-    gap: 13px;
-    font-size: 0.76rem;
+  .mobile-nav-toggle {
+    gap: 6px;
+    padding-inline: 8px;
+    font-size: 0.7rem;
+  }
+
+  .mobile-nav-toggle > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .locale-switcher {
-    font-size: 0.68rem;
+    gap: 4px;
+    font-size: 0.62rem;
   }
 
   .locale-switcher-label {
     display: none;
   }
 
-  .nav-links a:nth-last-child(1) {
-    display: none;
+  .locale-switcher a {
+    padding-inline: 5px;
   }
 
   .hero {

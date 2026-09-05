@@ -307,7 +307,16 @@ export function renderProductOverviewPage(
     <header class="site-nav-wrap">
       <nav class="shell site-nav" aria-label="${escapeHtml(t("portal.nav.primary"))}">
         <a class="brand" href="../../" aria-label="${escapeHtml(t("portal.nav.home"))}"><span class="brand-slash">/</span><span>yohn-jp</span></a>
-        <div class="nav-links"><a href="../../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="${workHref}">${escapeHtml(t("portal.nav.work"))}</a></div>
+        <div class="nav-links"><a href="../../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="../../work/">${escapeHtml(t("portal.nav.work"))}</a><a href="../../work/governance/">${escapeHtml(t("portal.nav.governance"))}</a><a href="../../work/graph/">${escapeHtml(t("portal.nav.graph"))}</a><a href="https://github.com/yohn-jp" rel="noreferrer">${escapeHtml(t("portal.nav.github"))}</a></div>
+        <details class="mobile-nav">
+          <summary class="mobile-nav-toggle">
+            <span class="mobile-nav-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+            <span>${escapeHtml(t("portal.nav.menu"))}</span>
+          </summary>
+          <div class="mobile-nav-panel">
+            <div class="mobile-nav-links"><a href="../../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="../../work/">${escapeHtml(t("portal.nav.work"))}</a><a href="../../work/governance/">${escapeHtml(t("portal.nav.governance"))}</a><a href="../../work/graph/">${escapeHtml(t("portal.nav.graph"))}</a><a href="https://github.com/yohn-jp" rel="noreferrer">${escapeHtml(t("portal.nav.github"))}</a></div>
+          </div>
+        </details>
         ${renderLocaleSelector({ locale: resolvedLocale, path: productPathname, t })}
       </nav>
     </header>
