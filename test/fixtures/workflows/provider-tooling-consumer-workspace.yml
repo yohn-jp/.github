@@ -5,15 +5,15 @@ jobs:
   metadata:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Checkout metadata validation tooling (yohn-jp/.github)
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
           path: .metadata-tools
       - name: Setup pnpm
-        uses: pnpm/action-setup@a15d269cd4658e1107c09f1fabf4cbd7bd1f308a # v4.4.0
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: .metadata-tools/package.json
       - name: Install validator dependencies

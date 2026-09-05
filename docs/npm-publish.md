@@ -24,9 +24,9 @@ jobs:
     uses: yohn-jp/.github/.github/workflows/npm-publish.yml@main
     with:
       working-directory: .              # optional, default "."
-      node-version: "22"                # optional, default "22"
-      smoke-test-node-versions: "22,24" # optional, default "22,24"
-      npm-cli-version: "11.5.1"         # optional, default "11.5.1"
+      node-version: "24"                # optional, default "24"
+      smoke-test-node-versions: "24"    # optional, default "24"
+      npm-cli-version: "12.0.2"        # optional, default "12.0.2"
 ```
 
 ## Required package.json scripts and files

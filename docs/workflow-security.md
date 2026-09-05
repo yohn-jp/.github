@@ -28,7 +28,7 @@ audits remain enabled.
 ## Determinism and permissions
 
 - zizmor action revision is SHA-pinned and its embedded scanner version is
-  fixed to `1.25.0`.
+  fixed to `1.30.0`.
 - Online audits, annotations, and colorized output are disabled. Findings are
   emitted as stable plain diagnostics with the rule name and source location.
 - The workflow writes no SARIF and requests no `security-events: write`; the
