@@ -151,7 +151,7 @@ function renderProductCard(product, t, locale) {
 
 function renderSystemNode(product, locale) {
   const content = localizedProductContent(product, locale);
-  return `<a class="system-node" data-product="${escapeHtml(product.id)}" href="${productPath(product.id)}">
+  return `<a class="system-node" data-product="${escapeHtml(product.id)}" data-motion="reveal" href="${productPath(product.id)}">
   <span class="system-node-role">${escapeHtml(content.role)}</span>
   <strong>${escapeHtml(product.name)}</strong>
 </a>`;
@@ -170,7 +170,7 @@ function renderRelationships(catalog, locale) {
       }))
     )
     .map(
-      ({ source, relation, target }) => `<li>
+      ({ source, relation, target }) => `<li data-motion="reveal">
   <a href="${productPath(source.id)}">${escapeHtml(source.name)}</a>
   <span>${escapeHtml(localizedRelationshipLabel(relation, locale))}</span>
   <a href="${productPath(target.id)}">${escapeHtml(target.name)}</a>
@@ -302,6 +302,7 @@ export function renderProductOverviewPage(
     <title>${escapeHtml(t("portal.product.title", { name: product.name }))}</title>
     <link rel="stylesheet" href="../../styles.css" />
     <link rel="stylesheet" href="../../product.css" />
+    <script defer src="../../motion.js"></script>
   </head>
   <body class="product-page">
     <header class="site-nav-wrap">

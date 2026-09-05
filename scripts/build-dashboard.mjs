@@ -26,7 +26,7 @@ const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 const GRAPH_DIRECTORY = join(DASHBOARD_DIRECTORY, "graph");
 const GOVERNANCE_DIRECTORY = join(DASHBOARD_DIRECTORY, "governance");
 
-const PORTAL_COPY_FILES = ["styles.css", "product.css"];
+const PORTAL_COPY_FILES = ["styles.css", "product.css", "motion.js"];
 const ROOT_COPY_FILES = ["messages.js"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];

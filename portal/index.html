@@ -13,6 +13,7 @@
     {{HREFLANG_LINKS}}
     <title data-message="portal.title"></title>
     <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./motion.js"></script>
   </head>
   <body>
     <header class="site-nav-wrap">
@@ -71,15 +72,23 @@
 
     <main>
       <section class="shell hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow" data-message="portal.hero.eyebrow"></p>
-          <h1 id="hero-title">
+        <div class="hero-copy" data-motion-stagger>
+          <p
+            class="eyebrow"
+            data-motion="reveal"
+            data-message="portal.hero.eyebrow"
+          ></p>
+          <h1 id="hero-title" data-motion="reveal">
             <span data-message="portal.hero.titleLead"></span><br /><span
               data-message="portal.hero.titleEmphasis"
             ></span>
           </h1>
-          <p class="lede" data-message="portal.hero.lede"></p>
-          <div class="hero-actions">
+          <p
+            class="lede"
+            data-motion="reveal"
+            data-message="portal.hero.lede"
+          ></p>
+          <div class="hero-actions" data-motion="reveal">
             <a
               class="button dark"
               href="#products"
@@ -94,6 +103,7 @@
         </div>
         <aside
           class="hero-note"
+          data-motion="reveal"
           aria-label=""
           data-message-aria-label="portal.hero.designPrinciple"
         >
@@ -111,22 +121,22 @@
         aria-label=""
         data-message-aria-label="portal.principles.title"
       >
-        <div class="shell principle-grid">
-          <div>
+        <div class="shell principle-grid" data-motion-stagger>
+          <div data-motion="reveal">
             <span>01</span
             ><strong
               data-message="portal.principles.explicitAuthority.title"
             ></strong>
             <p data-message="portal.principles.explicitAuthority.body"></p>
           </div>
-          <div>
+          <div data-motion="reveal">
             <span>02</span
             ><strong
               data-message="portal.principles.machineReadable.title"
             ></strong>
             <p data-message="portal.principles.machineReadable.body"></p>
           </div>
-          <div>
+          <div data-motion="reveal">
             <span>03</span
             ><strong data-message="portal.principles.failClosed.title"></strong>
             <p data-message="portal.principles.failClosed.body"></p>
@@ -139,14 +149,14 @@
         class="shell section"
         aria-labelledby="products-heading"
       >
-        <div class="section-head">
+        <div class="section-head" data-motion="reveal">
           <div>
             <p class="eyebrow" data-message="portal.products.eyebrow"></p>
             <h2 id="products-heading" data-message="portal.products.title"></h2>
           </div>
           <p data-message="portal.products.body"></p>
         </div>
-        <div class="product-grid">{{PRODUCT_CARDS}}</div>
+        <div class="product-grid" data-motion-stagger>{{PRODUCT_CARDS}}</div>
       </section>
 
       <section
@@ -155,7 +165,7 @@
         aria-labelledby="system-heading"
       >
         <div class="shell">
-          <div class="section-head inverse">
+          <div class="section-head inverse" data-motion="reveal">
             <div>
               <p class="eyebrow" data-message="portal.system.eyebrow"></p>
               <h2 id="system-heading" data-message="portal.system.title"></h2>
@@ -165,17 +175,18 @@
           <div class="system-layout">
             <div
               class="system-nodes"
+              data-motion-stagger
               aria-label=""
               data-message-aria-label="portal.system.nodes"
             >
               {{SYSTEM_NODES}}
             </div>
-            <div class="relationship-panel">
+            <div class="relationship-panel" data-motion="reveal">
               <p
                 class="relationship-title"
                 data-message="portal.system.relationships"
               ></p>
-              <ul class="relationship-list">
+              <ul class="relationship-list" data-motion-stagger>
                 {{RELATIONSHIPS}}
               </ul>
             </div>
