@@ -1,0 +1,65 @@
+name: Portal visual regression
+
+on:
+  pull_request:
+    paths:
+      - "portal/**"
+      - "dashboard/**"
+      - "messages.js"
+      - "scripts/build-dashboard.mjs"
+      - "scripts/dashboard-data.mjs"
+      - "scripts/governance-health.mjs"
+      - "scripts/inari-governance.mjs"
+      - "scripts/portal-registry.mjs"
+      - "scripts/product-catalog.mjs"
+      - "scripts/product-details.mjs"
+      - "scripts/render-portal.mjs"
+      - "scripts/github-pr-links.mjs"
+      - "scripts/pull-request-links.mjs"
+      - "test/portal-browser.spec.mjs"
+      - "playwright.config.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/portal-visual-regression.yml"
+  push:
+    branches: [main]
+    paths:
+      - "portal/**"
+      - "dashboard/**"
+      - "messages.js"
+      - "scripts/**"
+      - "test/portal-browser.spec.mjs"
+      - "playwright.config.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/portal-visual-regression.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: Portal browser smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          package_json_file: package.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run portal browser smoke tests
+        run: pnpm run test:portal:browser
