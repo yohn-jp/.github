@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "authority": "yohn-jp/.github",
+  "canvas": { "width": 512, "height": 512, "background": "transparent" },
+  "exports": [512, 256, 128, 64, 32, 16],
+  "style": {
+    "family": "minimal geometric product marks",
+    "rules": [
+      "No text inside the mark",
+      "Transparent background",
+      "Single product accent color",
+      "Readable at 16 px",
+      "Do not redraw or alter geometry downstream"
+    ]
+  },
+  "products": [
+    { "id": "mottainai", "name": "Mottainai", "accent": "#CCFF3D", "motif": "circular reuse / bounded orchestration", "source": "brand/products/mottainai/mottainai.svg", "pngPattern": "brand/products/mottainai/mottainai-{size}.png" },
+    { "id": "nawabari", "name": "Nawabari", "accent": "#8AB4FF", "motif": "territory / ownership boundary", "source": "brand/products/nawabari/nawabari.svg", "pngPattern": "brand/products/nawabari/nawabari-{size}.png" },
+    { "id": "inari", "name": "Inari", "accent": "#FF4E3A", "motif": "fox / governed issuance", "source": "brand/products/inari/inari.svg", "pngPattern": "brand/products/inari/inari-{size}.png" },
+    { "id": "suzukuri", "name": "Suzukuri", "accent": "#A78BFA", "motif": "nest / bounded semantic view", "source": "brand/products/suzukuri/suzukuri.svg", "pngPattern": "brand/products/suzukuri/suzukuri-{size}.png" },
+    { "id": "wabachi", "name": "Wabachi", "accent": "#FBBF24", "motif": "Japanese honeybee / canonical hive", "source": "brand/products/wabachi/wabachi.svg", "pngPattern": "brand/products/wabachi/wabachi-{size}.png" },
+    { "id": "majiwari", "name": "Majiwari", "accent": "#22D3EE", "motif": "crossing / adapter gateway", "source": "brand/products/majiwari/majiwari.svg", "pngPattern": "brand/products/majiwari/majiwari-{size}.png" }
+  ]
+}
