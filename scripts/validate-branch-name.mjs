@@ -3,8 +3,11 @@
 // (.github/workflows/pr-governance.yml). Pattern and exempt list are
 // configurable so consumer repositories can express real naming
 // differences without forking this script. The default pattern matches
-// yohn-jp/gh-inari's own <type>/<issue-number>-<slug> convention, while
-// release/<semver> is a separate, issue-less branch class.
+// yohn-jp/gh-inari's own <type>/<issue-number>-<slug> convention.
+// release/<semver> is a separate, issue-less branch class;
+// epic/<issue-number>-<slug> is a separate, Issue-bound integration branch
+// class (see epic-branch.mjs) — not an implementation leaf branch, so it is
+// likewise classified independently of the ordinary pattern.
 //
 // Branch naming is not part of gh-inari's semantic authority (it governs
 // Issue/PR *content* contracts, not branch names), so owning this check
@@ -12,10 +15,12 @@
 // owns.
 import { execFileSync } from "node:child_process";
 import { classifyReleaseBranch } from "./release-branch.mjs";
+import { classifyEpicBranch } from "./epic-branch.mjs";
 
 const DEFAULT_PATTERN = "^(feat|fix|docs|refactor|test|chore)/\\d+-[a-z0-9-]+$";
 const DEFAULT_EXEMPT = ["main"];
 export { RELEASE_BRANCH_PATTERN } from "./release-branch.mjs";
+export { EPIC_BRANCH_PATTERN } from "./epic-branch.mjs";
 
 // `pattern` is caller-supplied config (the pr-governance.yml workflow_call
 // `branch-name-pattern` input, set in a consumer repository's own committed
@@ -40,13 +45,14 @@ export function validateBranchName(branch, options = {}) {
 /**
  * Classify a branch before any PR-template detection occurs.
  *
- * `release/` is intentionally handled before the configurable ordinary
- * branch pattern. This makes malformed release branches fail closed even if a
- * consumer supplies a broad custom pattern or exempts the branch name.
+ * `release/` and `epic/` are intentionally handled before the configurable
+ * ordinary branch pattern. This makes malformed release/epic branches fail
+ * closed even if a consumer supplies a broad custom pattern or exempts the
+ * branch name.
  *
  * @param {string} branch
  * @param {{pattern?: string, exempt?: string[]}} [options]
- * @returns {{kind: "release"|"invalid-release"|"ordinary"|"exempt", valid: boolean, version?: string, errors: string[]}}
+ * @returns {{kind: "release"|"invalid-release"|"epic"|"invalid-epic"|"ordinary"|"exempt", valid: boolean, version?: string, issueNumber?: string, slug?: string, errors: string[]}}
  */
 export function classifyBranchName(branch, options = {}) {
   const pattern = options.pattern ?? DEFAULT_PATTERN;
@@ -60,7 +66,11 @@ export function classifyBranchName(branch, options = {}) {
   }
   if (branch.length > MAX_BRANCH_LENGTH) {
     return {
-      kind: branch.startsWith("release/") ? "invalid-release" : "ordinary",
+      kind: branch.startsWith("release/")
+        ? "invalid-release"
+        : branch.startsWith("epic/")
+          ? "invalid-epic"
+          : "ordinary",
       valid: false,
       errors: [
         `branch name exceeds the maximum supported length of ${MAX_BRANCH_LENGTH} characters`
@@ -68,15 +78,19 @@ export function classifyBranchName(branch, options = {}) {
     };
   }
 
-  // release/<semver> is a canonical branch class independent from the
-  // consumer-configured ordinary branch-name-pattern. It must be classified
-  // before that pattern is length-checked or compiled, so a malformed or
-  // overlong ordinary pattern can never reject a valid release branch, and a
-  // broad/exempting ordinary pattern can never authorize a malformed one.
-  // This fail-closed precedence is intentional: release/* is not
-  // overridable via branch-name-exempt or branch-name-pattern.
+  // release/<semver> and epic/<issue-number>-<slug> are canonical branch
+  // classes independent from the consumer-configured ordinary
+  // branch-name-pattern. Each must be classified before that pattern is
+  // length-checked or compiled, so a malformed or overlong ordinary pattern
+  // can never reject a valid release/epic branch, and a broad/exempting
+  // ordinary pattern can never authorize a malformed one. This fail-closed
+  // precedence is intentional: neither class is overridable via
+  // branch-name-exempt or branch-name-pattern.
   if (branch.startsWith("release/")) {
     return classifyReleaseBranch(branch);
+  }
+  if (branch.startsWith("epic/")) {
+    return classifyEpicBranch(branch);
   }
 
   if (pattern.length > MAX_PATTERN_LENGTH) {

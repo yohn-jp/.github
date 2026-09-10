@@ -45,7 +45,9 @@ test("release/1.0.0 uses the same release contract", async () => {
 });
 
 test("release contract ignores an ordinary default-template policy", async (t) => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "pr-governance-release-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(tmpdir(), "pr-governance-release-")
+  );
   t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
 
   await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });
@@ -85,6 +87,28 @@ test("malformed release branches are rejected before contract validation", async
       result.violations[0].code,
       "GOVERNANCE_RELEASE_BRANCH_INVALID"
     );
+  }
+});
+
+test("epic/890-runtime-certification passes branch-name validation as an integration branch", async () => {
+  assert.deepEqual(validateBranchName("epic/890-runtime-certification"), []);
+  const result = await validatePullRequest(
+    pullRequest("epic/890-runtime-certification", defaultBody)
+  );
+  // #177 is deliberately narrow: an epic branch is a new, protected
+  // integration branch class, but it does not introduce a new PR *content*
+  // contract or automatic child-Issue routing. PR content for an epic head
+  // branch keeps the same ordinary auto-detection path as any other branch.
+  assert.equal(result.valid, true);
+  assert.equal(result.branchClassification, "ordinary");
+  assert.equal(result.contract.templateIdentity.id, "default");
+});
+
+test("malformed epic branches are rejected by branch-name validation before reaching PR content checks", async () => {
+  for (const branch of ["epic/foo", "epic/890"]) {
+    const errors = validateBranchName(branch);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
   }
 });
 
@@ -129,7 +153,9 @@ test("a synchronized consumer accepts an Inari-generated ordinary PR body withou
 });
 
 test("auto-detected ordinary PR is not aborted by an unrelated release candidate's default-only policy", async (t) => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "pr-governance-ordinary-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(tmpdir(), "pr-governance-ordinary-")
+  );
   t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
 
   await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });
@@ -166,7 +192,9 @@ test("auto-detected ordinary PR is not aborted by an unrelated release candidate
 });
 
 test("auto-detected ordinary PR still fails closed when the applicable default template itself violates policy", async (t) => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "pr-governance-ordinary-failclosed-"));
+  const fixtureRoot = await mkdtemp(
+    path.join(tmpdir(), "pr-governance-ordinary-failclosed-")
+  );
   t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
 
   await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });

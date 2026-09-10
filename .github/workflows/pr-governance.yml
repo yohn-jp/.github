@@ -12,7 +12,9 @@ on:
         description: >-
           Regex for an ordinary development PR's head branch name. The
           canonical release/<semver> branch class is accepted separately and
-          never requires an Issue number.
+          never requires an Issue number. The canonical
+          epic/<issue-number>-<slug> integration branch class is likewise
+          accepted separately and is always Issue-bound.
         type: string
         default: '^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$'
       branch-name-exempt:

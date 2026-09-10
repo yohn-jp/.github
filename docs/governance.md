@@ -46,6 +46,24 @@ Issue; malformed `release/*` names fail closed. `branch-name-pattern` and
 `branch-name-exempt` remain available for ordinary consumer-specific naming
 differences, but cannot authorize a malformed release branch.
 
+The separate `epic/<issue-number>-<slug>` class (`scripts/epic-branch.mjs`,
+Issue #177) is a temporary **integration** branch for one tracking/Epic
+Issue and its independently implemented child Issues — not an
+implementation leaf branch. It is always Issue-bound, classified with the
+same fail-closed precedence as `release/*`, and malformed `epic/*` names
+fail closed the same way. This Issue enables and accepts the branch class
+only; it does not add automatic child-PR routing, a distinct PR content
+contract, merge-method semantics, certification freshness, or lifecycle
+automation — those belong to the follow-up Epic development model. Because
+no executable authority in this repository owns actual GitHub-native branch
+protection settings (there is no repository-ruleset-as-code here, only file
+sync — see `.github/workflows/sync-org-templates.yml`), the operator
+enabling `epic/**` in a consumer repository must also configure, via that
+repository's own GitHub branch protection settings: require a pull request
+before merging, block force pushes, and block deletion. This note does not
+create a competing authority — it names the one operator action this
+repository's code cannot perform on a consumer's behalf.
+
 ## `@main` is a live, mutable authority
 
 Reusable-workflow callers in this document and in synced wrappers
