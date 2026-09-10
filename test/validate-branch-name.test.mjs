@@ -80,6 +80,14 @@ test("overlong branch name is rejected before regex compilation", () => {
   assert.match(errors[0], /exceeds the maximum supported length/);
 });
 
+test("an overlong epic branch is rejected as invalid-epic before regex compilation", () => {
+  const branch = `epic/1-${"a".repeat(300)}`;
+  const errors = validateBranchName(branch);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /exceeds the maximum supported length/);
+  assert.equal(classifyBranchName(branch).kind, "invalid-epic");
+});
+
 test("overlong configured pattern is rejected before regex compilation", () => {
   const errors = validateBranchName("feat/1-x", {
     pattern: `^(${"a|".repeat(150)}z)$`
@@ -133,4 +141,74 @@ test("release prefix cannot be overridden by branch-name-exempt", () => {
   });
   assert.equal(errors.length, 1);
   assert.match(errors[0], /must match release\/<semver>/);
+});
+
+test("default pattern accepts a canonical epic integration branch", () => {
+  assert.deepEqual(validateBranchName("epic/890-runtime-certification"), []);
+  assert.deepEqual(classifyBranchName("epic/890-runtime-certification"), {
+    kind: "epic",
+    valid: true,
+    issueNumber: "890",
+    slug: "runtime-certification",
+    errors: []
+  });
+});
+
+test("a malformed epic branch is rejected explicitly", () => {
+  for (const branch of [
+    "epic/foo",
+    "epic/890",
+    "epic/-runtime-certification"
+  ]) {
+    const errors = validateBranchName(branch);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
+    assert.equal(classifyBranchName(branch).kind, "invalid-epic");
+  }
+});
+
+test("a valid epic branch passes even with a malformed configured ordinary pattern", () => {
+  assert.deepEqual(
+    validateBranchName("epic/890-runtime-certification", {
+      pattern: "[invalid"
+    }),
+    []
+  );
+  assert.equal(
+    classifyBranchName("epic/890-runtime-certification", {
+      pattern: "[invalid"
+    }).kind,
+    "epic"
+  );
+});
+
+test("a valid epic branch passes even with an overlong configured ordinary pattern", () => {
+  assert.deepEqual(
+    validateBranchName("epic/890-runtime-certification", {
+      pattern: `^(${"a|".repeat(150)}z)$`
+    }),
+    []
+  );
+});
+
+test("a malformed epic branch is rejected as invalid-epic even with a broad configured ordinary pattern", () => {
+  const result = classifyBranchName("epic/foo", { pattern: ".*" });
+  assert.equal(result.kind, "invalid-epic");
+  assert.equal(result.valid, false);
+  assert.match(result.errors[0], /must match epic\/<issue-number>-<slug>/);
+});
+
+test("epic prefix cannot be overridden by branch-name-exempt", () => {
+  const errors = validateBranchName("epic/foo", {
+    exempt: ["epic/foo"]
+  });
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
+});
+
+test("epic branches are never accepted by an unrelated ordinary pattern override", () => {
+  const errors = validateBranchName("epic/890-runtime-certification", {
+    pattern: "^release/\\d+\\.\\d+\\.\\d+$"
+  });
+  assert.deepEqual(errors, []);
 });
