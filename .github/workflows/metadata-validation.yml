@@ -88,6 +88,9 @@ jobs:
       - name: Validate Inari snapshot provenance
         run: node "$RUNNER_TEMP/metadata-tools/scripts/generate-inari-manifest.mjs" --check
 
+      - name: Validate agent runtime profiles
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-runtime-profiles.mjs"
+
       - name: Install gh-inari
         run: npm install --global gh-inari@latest
 
