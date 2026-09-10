@@ -206,6 +206,11 @@ yohn-jp/nawabari:
     dest: scripts/pr-contract-routing.mjs
   - source: scripts/release-branch.mjs
     dest: scripts/release-branch.mjs
+  # #180: validate-pr.mjs imports classifyEpicPrTitle from this module (see
+  # scripts/validate-pr.mjs, Issue #177/#179) — omitting it left the synced
+  # validate-pr.mjs with an unresolved relative import.
+  - source: scripts/epic-branch.mjs
+    dest: scripts/epic-branch.mjs
   - source: scripts/validate-issue.mjs
     dest: scripts/validate-issue.mjs
 

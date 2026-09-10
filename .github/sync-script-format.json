@@ -10,6 +10,7 @@
     "useTabs": false
   },
   "files": [
+    "scripts/epic-branch.mjs",
     "scripts/pr-contract-routing.mjs",
     "scripts/release-branch.mjs",
     "scripts/validate-issue.mjs",
