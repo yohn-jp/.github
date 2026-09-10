@@ -24,6 +24,7 @@ on:
       - "scripts/pr-contract-routing.mjs"
       - "scripts/release-branch.mjs"
       - "scripts/validate-issue.mjs"
+      - "scripts/epic-branch.mjs"
   workflow_dispatch: {}
 
 permissions:

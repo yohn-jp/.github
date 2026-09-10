@@ -11,6 +11,7 @@ const SYNC_FORMAT_CONFIG_RELATIVE_PATH = ".github/sync-script-format.json";
 const SYNC_MAPPING_CONFIG_RELATIVE_PATH = ".github/sync.yml";
 
 export const SYNCED_SCRIPT_PATHS = Object.freeze([
+  "scripts/epic-branch.mjs",
   "scripts/pr-contract-routing.mjs",
   "scripts/release-branch.mjs",
   "scripts/validate-issue.mjs",
