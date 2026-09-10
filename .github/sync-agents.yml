@@ -1,45 +1,106 @@
 # Shared coding-agent instructions distributed by sync-org-templates.yml.
 # Keep this target list aligned with the GitHub App token repository scope in
 # .github/workflows/sync-org-templates.yml.
+#
+# Canonical workflow/runtime sources remain in yohn-jp/.github. Consumer
+# copies under .github/agent-governance/ are generated distribution artifacts;
+# repository-local overlays use .github/agent-governance/repository-overlay.md
+# and are intentionally not managed here.
 
 yohn-jp/gh-inari:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/gh-makami:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/suzukuri:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/nawabari:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/mottainai:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/wabachi:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/majiwari:
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
