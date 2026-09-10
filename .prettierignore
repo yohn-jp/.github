@@ -1,0 +1,26 @@
+# Package-manager-owned lockfiles: pnpm writes these in its own
+# deterministic format, not Prettier's YAML printer. Running Prettier
+# against them would fight pnpm's own writer on every install.
+pnpm-lock.yaml
+test/fixtures/ts-cli/pnpm-lock.yaml
+
+# Deliberately non-canonical fixtures: their exact, non-canonical bytes are
+# the subject under test for validate-inari-format.mjs,
+# validate-issue-forms.mjs, and the workflow-security lane respectively.
+# Reformatting them would erase the defect each regression test exists to
+# detect.
+test/fixtures/inari-format/badly-formatted.json
+test/fixtures/issue-forms/invalid-flow-mapping.yml
+test/fixtures/workflows/workflow-security-invalid.yml
+
+# Governed by the separate synchronized-script formatter authority
+# (.github/sync-script-format.json, scripts/validate-synced-script-format.mjs,
+# test/synced-script-format.test.mjs): these five scripts are distributed to
+# yohn-jp/nawabari as byte-copies and must satisfy nawabari's own pinned
+# Prettier profile, not this repository's canonical profile. This Issue does
+# not redefine formatter policy for that consumer.
+scripts/epic-branch.mjs
+scripts/pr-contract-routing.mjs
+scripts/release-branch.mjs
+scripts/validate-issue.mjs
+scripts/validate-pr.mjs

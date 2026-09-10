@@ -11,13 +11,19 @@ override a default intentionally.
 
 ```sh
 pnpm install
-pnpm run validate   # Issue Form structure + Action reference policy + canonical Inari JSON formatting
-pnpm test           # unit tests, including the flow-mapping regression fixture
+pnpm run format:check   # canonical Prettier formatting for this repository
+pnpm run validate       # Issue Form structure + Action reference policy + canonical Inari JSON formatting
+pnpm test               # unit tests, including the flow-mapping regression fixture
 ```
 
-The same checks run in CI via
+The Issue Form/Action-policy/Inari checks run in CI via
 [`.github/workflows/metadata-validation.yml`](.github/workflows/metadata-validation.yml),
-which other repositories can also call as a reusable workflow.
+which other repositories can also call as a reusable workflow. Canonical
+Prettier formatting (`pnpm run format:check`) is validated separately, as a
+fail-closed prerequisite of
+[`.github/workflows/sync-org-templates.yml`](.github/workflows/sync-org-templates.yml)
+— it is this repository's own formatter policy and is not imposed on
+consumers that call the reusable workflow above.
 
 ## Reusable TypeScript CLI CI
 
