@@ -16,9 +16,14 @@ const defaultBody = await readFile(
   "utf8"
 );
 
-function pullRequest(branch, body, requestRoot = root) {
+function pullRequest(
+  branch,
+  body,
+  requestRoot = root,
+  title = "feat(core): deliver governed change"
+) {
   return {
-    title: "feat(core): deliver governed change",
+    title,
     body,
     root: requestRoot,
     branch
@@ -110,6 +115,47 @@ test("malformed epic branches are rejected by branch-name validation before reac
     assert.equal(errors.length, 1);
     assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
   }
+});
+
+test("a canonical Epic branch with a canonical Epic PR title passes end to end", async () => {
+  assert.deepEqual(validateBranchName("epic/890-runtime-certification"), []);
+  const result = await validatePullRequest(
+    pullRequest(
+      "epic/890-runtime-certification",
+      defaultBody,
+      root,
+      "epic(runtime): integrate certification pipeline"
+    )
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.branchClassification, "ordinary");
+  assert.equal(result.contract.templateIdentity.id, "default");
+});
+
+test("a malformed Epic PR title fails closed even with an otherwise valid Epic branch and body", async () => {
+  const result = await validatePullRequest(
+    pullRequest(
+      "epic/890-runtime-certification",
+      defaultBody,
+      root,
+      "epic: integrate certification pipeline"
+    )
+  );
+  assert.equal(result.valid, false);
+  assert.equal(result.violations[0].code, "GOVERNANCE_EPIC_PR_TITLE_INVALID");
+});
+
+test("an ordinary PR title that merely mentions epic is unaffected", async () => {
+  const result = await validatePullRequest(
+    pullRequest(
+      "fix/123-slug",
+      defaultBody,
+      root,
+      "feat(core): improve epic dashboard filters"
+    )
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.branchClassification, "ordinary");
 });
 
 test("ordinary Issue-bound PRs keep default contract auto-detection", async () => {

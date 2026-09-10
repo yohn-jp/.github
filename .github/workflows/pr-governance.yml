@@ -1,10 +1,12 @@
 name: PR governance
 
-# Reusable baseline PR governance: branch-name validation (owned here) and
-# PR contract validation delegated to the published gh-inari compiler. The
-# adapter is checked out from this repository, while its root is the
-# consumer checkout, so contract compilation reads the consumer's
-# synchronized .github/inari snapshot and native templates.
+# Reusable baseline PR governance: branch-name validation and the canonical
+# epic(<scope>): <description> PR-title check (both owned here, in
+# scripts/validate-branch-name.mjs and scripts/validate-pr.mjs respectively)
+# alongside PR content (body) contract validation delegated to the published
+# gh-inari compiler. The adapter is checked out from this repository, while
+# its root is the consumer checkout, so contract compilation reads the
+# consumer's synchronized .github/inari snapshot and native templates.
 on:
   workflow_call:
     inputs:

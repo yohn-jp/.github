@@ -64,6 +64,23 @@ before merging, block force pushes, and block deletion. This note does not
 create a competing authority — it names the one operator action this
 repository's code cannot perform on a consumer's behalf.
 
+**The separate `epic(<scope>): <description>` PR-title class**
+(`classifyEpicPrTitle()` in `scripts/epic-branch.mjs`, wired into
+`scripts/validate-pr.mjs`) is likewise owned directly here, for the same
+reason branch-name validation is: gh-inari's own scope is PR *content*
+(body) governance, and today it checks a title only for being non-empty —
+no shared governance anywhere validates a PR title's
+`<type>(<scope>): <description>` form at all, for any type. This addition
+is intentionally as narrow as that gap: `classifyEpicPrTitle()` only
+recognizes and validates a title that is itself attempting the epic type
+(starting `epic(` or `epic:`); a malformed attempt fails closed
+(`GOVERNANCE_EPIC_PR_TITLE_INVALID`), but every other title — ordinary,
+release, or anything else — is left completely unclassified and
+unaffected, exactly as before. It does not introduce a distinct Epic PR
+*content* contract, automatic child-PR routing, merge-method semantics,
+certification freshness, or lifecycle automation — those remain out of
+scope for #177 and belong to the follow-up Epic development model (#178).
+
 ## `@main` is a live, mutable authority
 
 Reusable-workflow callers in this document and in synced wrappers
