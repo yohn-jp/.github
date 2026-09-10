@@ -12,15 +12,3 @@ test/fixtures/ts-cli/pnpm-lock.yaml
 test/fixtures/inari-format/badly-formatted.json
 test/fixtures/issue-forms/invalid-flow-mapping.yml
 test/fixtures/workflows/workflow-security-invalid.yml
-
-# Governed by the separate synchronized-script formatter authority
-# (.github/sync-script-format.json, scripts/validate-synced-script-format.mjs,
-# test/synced-script-format.test.mjs): these five scripts are distributed to
-# yohn-jp/nawabari as byte-copies and must satisfy nawabari's own pinned
-# Prettier profile, not this repository's canonical profile. This Issue does
-# not redefine formatter policy for that consumer.
-scripts/epic-branch.mjs
-scripts/pr-contract-routing.mjs
-scripts/release-branch.mjs
-scripts/validate-issue.mjs
-scripts/validate-pr.mjs

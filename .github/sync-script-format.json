@@ -2,11 +2,11 @@
   "version": 1,
   "prettier": {
     "endOfLine": "lf",
-    "printWidth": 120,
+    "printWidth": 80,
     "semi": true,
     "singleQuote": false,
     "tabWidth": 2,
-    "trailingComma": "all",
+    "trailingComma": "none",
     "useTabs": false
   },
   "files": [
@@ -20,11 +20,11 @@
     "nawabari": {
       "prettier": {
         "endOfLine": "lf",
-        "printWidth": 120,
+        "printWidth": 80,
         "semi": true,
         "singleQuote": false,
         "tabWidth": 2,
-        "trailingComma": "all",
+        "trailingComma": "none",
         "useTabs": false
       }
     }

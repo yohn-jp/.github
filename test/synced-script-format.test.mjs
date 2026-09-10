@@ -126,7 +126,8 @@ test("sync/profile contract fails closed on drift", () => {
   );
 
   const mismatchedProfile = clone(authorityConfig);
-  mismatchedProfile.profiles.nawabari.prettier.printWidth = 80;
+  mismatchedProfile.profiles.nawabari.prettier.printWidth =
+    authorityConfig.prettier.printWidth + 1;
   assert.match(
     validateSyncedScriptMappings({
       sync,
