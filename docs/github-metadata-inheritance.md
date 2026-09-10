@@ -2,11 +2,11 @@
 
 This repository (`yohn-jp/.github`) is the organization's [special `.github`
 repository](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file-for-your-organization),
-but its Issue/PR templates are **not** left to GitHub's implicit
-community-health-file inheritance. They are pushed out explicitly by
-`.github/workflows/sync-org-templates.yml`. This document describes what
-is distributed, how, and how a repository should override a synced file on
-purpose.
+but its Issue/PR templates and shared coding-agent authorities are **not** left
+to GitHub's implicit community-health-file inheritance. They are pushed out
+explicitly by `.github/workflows/sync-org-templates.yml`. This document
+describes what is distributed, how, and how a repository should override or
+extend a synced file on purpose.
 
 ## Why not GitHub's automatic inheritance
 
@@ -17,22 +17,22 @@ file. This repository's PR templates live under `.github/PULL_REQUEST_TEMPLATE/`
 `?template=`. That directory form is outside what GitHub's org-defaults
 fallback serves, so relying on it would silently distribute Issue Forms
 while leaving every consumer without a PR template. `sync-org-templates.yml`
-is therefore the **only** distribution path for both Issue and PR
-templates — treat this repository's `.github/ISSUE_TEMPLATE/` and
-`.github/PULL_REQUEST_TEMPLATE/` as the source of truth, not as something
-GitHub also happens to serve automatically.
+is therefore the **only** distribution path for both Issue and PR templates
+and for the shared agent files described below. Treat their sources in this
+repository as authoritative, not as files GitHub also happens to inherit.
 
 ## What is distributed
 
-`.github/workflows/sync-org-templates.yml` runs on every push to `main`
-that touches `.github/ISSUE_TEMPLATE/**`, `.github/PULL_REQUEST_TEMPLATE/**`,
-or `.github/sync.yml` (also available via `workflow_dispatch`). It uses a
-GitHub App installation token (`ORG_TEMPLATE_SYNC_APP_ID` /
-`ORG_TEMPLATE_SYNC_APP_PRIVATE_KEY`) and
+`.github/workflows/sync-org-templates.yml` runs on pushes to `main` that touch
+its managed source/configuration paths (and is also available via
+`workflow_dispatch`). It uses a GitHub App installation token
+(`ORG_TEMPLATE_SYNC_APP_ID` / `ORG_TEMPLATE_SYNC_APP_PRIVATE_KEY`) and
 [`BetaHuhn/repo-file-sync-action`](https://github.com/BetaHuhn/repo-file-sync-action)
-to push the files listed in `.github/sync.yml` directly to each target
-repository's default branch (`SKIP_PR: true` — no review gate, matching
-this task's "Actions can commit directly to main" requirement):
+to push the configured files directly to each target repository's default
+branch (`SKIP_PR: true`). Two explicit maps are used:
+
+- `.github/sync.yml` for repository metadata, governance adapters, and opted-in workflow wrappers;
+- `.github/sync-agents.yml` for shared coding-agent instructions, workflow guidance, and runtime profiles.
 
 | File | Purpose |
 | --- | --- |
@@ -40,13 +40,24 @@ this task's "Actions can commit directly to main" requirement):
 | `.github/ISSUE_TEMPLATE/config.yml` | Issue template chooser configuration |
 | `.github/PULL_REQUEST_TEMPLATE/default.md` | Default PR template (general work) |
 | `.github/PULL_REQUEST_TEMPLATE/release.md` | Release PR template (no linked-Issue/scope sections) |
+| `AGENTS.md` | Minimal shared coding-agent execution contract. |
+| `CLAUDE.md` | Claude-specific style adapter; execution governance stays in the shared contract/profile authorities. |
+| `docs/agent-change-workflow.md` → `.github/agent-governance/change-workflow.md` | Canonical standalone/Epic change-execution workflow, distributed as a generated consumer copy. |
+| `docs/agent-runtime-profiles.md` → `.github/agent-governance/runtime-profiles.md` | Human-readable runtime-specific prompt/delegation guidance, distributed as a generated consumer copy. |
+| `.github/agents/runtime-profiles.json` → `.github/agent-governance/runtime-profiles.json` | Machine-readable runtime profile source for deterministic future prompt projection. |
+| `.github/agents/runtime-profiles.schema.json` → `.github/agent-governance/runtime-profiles.schema.json` | Structural contract for the machine-readable runtime profiles. |
 | `templates/workflows/*.yml` → `.github/workflows/*.yml` | Opt-in: canonical wrapper files (`codeql.yml`, `governance.yml`, `issue-governance.yml`, `publish.yml`) that call this repository's reusable workflows. Only listed per-target in `.github/sync.yml` for repositories whose `with:` values match the canonical file exactly — see `docs/typescript-cli-ci.md` and `docs/governance.md`. A repository whose governance workflow carries repository-specific jobs alongside the canonical caller (e.g. `yohn-jp/mottainai`) owns that file directly instead of receiving it via sync. |
 | `scripts/validate-action-pins.mjs` | Opt-in: the canonical Action-pin governance validator, replacing a consumer's own drifted copy. |
 
-`.github/sync.yml` explicitly lists every target `owner/repo` and which
-files it receives — there is no automatic org-wide or topic-based
-discovery. Adding a repository to the distribution means adding it to
-that file.
+Both sync configuration files explicitly list every target `owner/repo` and
+which files it receives — there is no automatic org-wide or topic-based
+discovery. Adding a repository to distribution means adding it to the
+appropriate map and keeping the GitHub App token repository scope aligned.
+
+The agent distribution intentionally does **not** manage
+`.github/agent-governance/repository-overlay.md`. That path is reserved for
+repository-owned constraints that extend the generated shared workflow without
+creating a competing copy of it.
 
 ## What is NOT distributed
 
@@ -69,33 +80,39 @@ that file.
   organization level via GitHub's Rulesets UI/API); nothing here changes
   that automatically. Organization-level Ruleset consolidation is tracked
   separately (see the parent EPIC, issue #1, item 10).
+- **Repository-specific agent overlays** are never generated from the shared
+  repository. A consumer may own `.github/agent-governance/repository-overlay.md`
+  for product-specific architecture, validation, generated-file, or stricter
+  execution constraints. It may not silently weaken the shared invariants.
 - `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `FUNDING.yml`,
   and profile `README.md` behave under the same file-presence rule as the
   Issue/PR templates above, but this repository does not currently define
   them; add them here if/when the organization wants shared defaults for
   those too.
 
-## How to override intentionally
+## How to override or extend intentionally
 
 A repository with genuinely different Issue/PR semantics should be removed
-from (or never added to) `.github/sync.yml`, then define its own copy of
-the relevant file locally. Because the sync workflow pushes directly to
-each target's default branch with no review gate (`SKIP_PR: true`),
-opting out of `sync.yml` is what makes a local override stick, not just
-adding the file — and the `sync.yml` removal must land and run *before*
-the local override is added, in its own commit/push to `main`, not bundled
-into the same push as other template edits. Bundling them risks the sync
-workflow run still reading the old `sync.yml` (still listing the target)
-while racing the override's own commit, which would silently overwrite
-the fresh local override. Document *why* the repository needs a different
-template in that file's own history/PR description so future maintainers
-understand it's a deliberate divergence rather than drift.
+from (or never added to) `.github/sync.yml`, then define its own copy of the
+relevant metadata file locally. Because the sync workflow pushes directly to
+each target's default branch with no review gate (`SKIP_PR: true`), opting out
+of the relevant sync map is what makes a local replacement stick, not just
+adding the file. The removal must land and run before a local replacement is
+added; otherwise an in-flight sync can overwrite the local change.
 
-Do not leave a repository in `sync.yml` while also locally patching "just
-one line" of a synced file — that patch will be silently overwritten by
-the next sync. Prefer requesting the change here if it is broadly useful,
-and only opt a repository out when the semantics are genuinely
-repository-specific.
+Shared agent governance follows a stricter extension model. Do not locally
+patch generated `AGENTS.md`, `CLAUDE.md`, or
+`.github/agent-governance/{change-workflow.md,runtime-profiles.md,runtime-profiles.json,runtime-profiles.schema.json}`
+while the repository remains in `.github/sync-agents.yml`: the next sync will
+replace the patch and would create an ambiguous authority in the meantime.
+Request broadly useful changes in this canonical repository. Put legitimate
+repository-specific additions in
+`.github/agent-governance/repository-overlay.md` instead.
+
+If a repository must fully opt out of shared agent governance, remove its
+mapping from `.github/sync-agents.yml` through a reviewed canonical change
+before replacing generated files locally. Document why the divergence is
+intentional so future maintainers do not mistake it for drift.
 
 ## Validating Issue Forms and workflow metadata
 
@@ -154,9 +171,13 @@ sync (see the table above and `docs/governance.md`): that file's
 other consumers reach through the synced wrapper, so there is one canonical
 `yohn-jp/.github` reusable-workflow reference org-wide, not a
 Mottainai-specific trust exception. Nawabari receives the routing helper
-alongside its synced validator so the copied adapter has no unresolved
-local dependency. After this change reaches `.github` `main`, the
-`sync-org-templates` workflow must run (automatically for the listed paths or
-manually via `workflow_dispatch`); its direct, batched consumer commits are
-the rollout completion evidence. A consumer snapshot is not considered
-aligned merely because the canonical source changed.
+alongside its synced validator so the copied adapter has no unresolved local
+dependency.
+
+Shared agent workflow/profile changes follow `.github/sync-agents.yml` and
+are triggered by changes to `AGENTS.md`, `CLAUDE.md`, the canonical agent
+workflow/profile docs, the machine-readable profile sources, or the sync map.
+After such a change reaches `.github` `main`, `sync-org-templates` must finish
+successfully; its direct, batched consumer commits are rollout evidence. A
+consumer snapshot is not considered aligned merely because the canonical
+source changed.
