@@ -62,8 +62,9 @@ function managedMappings(sync, repository) {
 /**
  * Validate the byte-copy contract declared by sync-script-format.json against
  * sync.yml. A consumer is valid only when it is explicitly profiled and owns
- * exactly the four source=destination mappings; any profile or mapping drift
- * is rejected before a direct sync can distribute an ambiguous artifact.
+ * exactly the declared SYNCED_SCRIPT_PATHS source=destination mappings; any
+ * profile or mapping drift is rejected before a direct sync can distribute an
+ * ambiguous artifact.
  */
 export function validateSyncedScriptMappings({ sync, config }) {
   if (!isRecord(config)) {
