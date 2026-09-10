@@ -65,8 +65,7 @@ export function buildDependencyGraph(dashboard) {
 
   return {
     nodes: [...nodes.values()].sort(
-      (a, b) =>
-        a.repository.localeCompare(b.repository) || a.number - b.number
+      (a, b) => a.repository.localeCompare(b.repository) || a.number - b.number
     ),
     edges: [...edges.values()]
   };
@@ -154,8 +153,7 @@ export function layoutDependencyGraph(graph) {
   }
   for (const nodes of layers.values()) {
     nodes.sort(
-      (a, b) =>
-        a.repository.localeCompare(b.repository) || a.number - b.number
+      (a, b) => a.repository.localeCompare(b.repository) || a.number - b.number
     );
   }
 
@@ -179,10 +177,7 @@ export function layoutDependencyGraph(graph) {
     sourceNode: positioned.get(edge.source),
     targetNode: positioned.get(edge.target)
   }));
-  const width = Math.max(
-    360,
-    ...nodes.map((node) => node.x + node.width + 24)
-  );
+  const width = Math.max(360, ...nodes.map((node) => node.x + node.width + 24));
   const height = Math.max(
     240,
     ...nodes.map((node) => node.y + node.height + 24)

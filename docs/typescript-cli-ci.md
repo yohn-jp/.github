@@ -20,11 +20,11 @@ jobs:
   ci:
     uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
     with:
-      working-directory: .          # optional, default "."
-      node-version: "24"            # optional, default "24"
-      committed-dist: false         # optional, default false
+      working-directory: . # optional, default "."
+      node-version: "24" # optional, default "24"
+      committed-dist: false # optional, default false
       release-docs-fast-path: false # optional, default false
-      conformance-script: ""        # optional, default "" (disabled)
+      conformance-script: "" # optional, default "" (disabled)
 ```
 
 Then add a branch Ruleset requirement on the `verify` check (the job name
@@ -36,13 +36,13 @@ The workflow assumes the target package defines these scripts (run via
 `pnpm run <script>` / `pnpm test`, so any implementation is acceptable as
 long as the script name and exit-code contract match):
 
-| Script | Used by |
-| --- | --- |
-| `format:check` | `format` job |
-| `lint` | `lint` job |
-| `typecheck` | `typecheck` job |
-| `test` | `test` job |
-| `build` | `build` job (must write to `dist/`) |
+| Script                                         | Used by                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| `format:check`                                 | `format` job                                                 |
+| `lint`                                         | `lint` job                                                   |
+| `typecheck`                                    | `typecheck` job                                              |
+| `test`                                         | `test` job                                                   |
+| `build`                                        | `build` job (must write to `dist/`)                          |
 | `<conformance-script>` (name of your choosing) | `conformance` job, only if `conformance-script` input is set |
 
 ## Capabilities (explicit inputs, never repo-name branching)
@@ -77,7 +77,7 @@ jobs — each still does its own checkout and install — rather than being
 merged into one sequential job. Merging would remove real failure
 isolation (a lint failure would mask whether tests also fail) and would
 serialize work that current runners parallelize for free. The actual
-repeated cost this avoids is dependency *download* time, not setup steps:
+repeated cost this avoids is dependency _download_ time, not setup steps:
 every job installs through `.github/actions/setup-node-pnpm`, which uses
 `actions/setup-node`'s built-in pnpm cache keyed on the lockfile hash, so
 `pnpm install --frozen-lockfile` in the 2nd through Nth job of a run is a

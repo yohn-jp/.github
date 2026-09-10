@@ -46,7 +46,8 @@ function graphQlError(message, response, errors = []) {
 }
 
 function normalizeState(pullRequest) {
-  if (pullRequest.merged === true || pullRequest.state === "MERGED") return "merged";
+  if (pullRequest.merged === true || pullRequest.state === "MERGED")
+    return "merged";
   if (pullRequest.state === "OPEN") return "open";
   if (pullRequest.state === "CLOSED") return "closed";
   return "unknown";
@@ -54,8 +55,14 @@ function normalizeState(pullRequest) {
 
 export function normalizeLinkedPullRequest(pullRequest) {
   const fullName = pullRequest?.repository?.nameWithOwner;
-  if (!fullName || !Number.isInteger(pullRequest?.number) || !pullRequest?.url) {
-    throw new Error("Linked pull request lacks canonical repository/PR identity");
+  if (
+    !fullName ||
+    !Number.isInteger(pullRequest?.number) ||
+    !pullRequest?.url
+  ) {
+    throw new Error(
+      "Linked pull request lacks canonical repository/PR identity"
+    );
   }
   return {
     repository: {
@@ -121,7 +128,11 @@ export async function collectIssuePullRequests({
       );
     }
     if (Array.isArray(body?.errors) && body.errors.length > 0) {
-      throw graphQlError("GitHub GraphQL returned errors", response, body.errors);
+      throw graphQlError(
+        "GitHub GraphQL returned errors",
+        response,
+        body.errors
+      );
     }
 
     const connection =

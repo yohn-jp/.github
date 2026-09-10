@@ -57,7 +57,9 @@ function isMain() {
 function main() {
   const patterns = process.argv.slice(2);
   if (patterns.length === 0) {
-    console.error("usage: is-docs-only-change.mjs <glob-pattern>... < changed-paths.txt");
+    console.error(
+      "usage: is-docs-only-change.mjs <glob-pattern>... < changed-paths.txt"
+    );
     process.exit(2);
   }
 

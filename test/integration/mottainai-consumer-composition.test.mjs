@@ -108,7 +108,10 @@ test("mottainai fixture: ordinary governance.yml contains the linked-Issue fetch
 
 test("mottainai fixture: validate-release selects the canonical release contract via the shared reusable workflow, with no local Issue fetch", () => {
   const job = governanceWorkflow.jobs["validate-release"];
-  assert.equal(job.uses, "yohn-jp/.github/.github/workflows/pr-governance.yml@main");
+  assert.equal(
+    job.uses,
+    "yohn-jp/.github/.github/workflows/pr-governance.yml@main"
+  );
   assert.equal(JSON.stringify(job).includes("gh issue view"), false);
 });
 

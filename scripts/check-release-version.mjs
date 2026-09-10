@@ -28,17 +28,23 @@ function main() {
   const packageVersion = get("--package-version");
   const tag = get("--tag");
   if (!packageVersion || !tag) {
-    console.error("usage: check-release-version.mjs --package-version <version> --tag <release-tag>");
+    console.error(
+      "usage: check-release-version.mjs --package-version <version> --tag <release-tag>"
+    );
     process.exitCode = 1;
     return;
   }
 
   if (releaseTagMatchesPackageVersion(packageVersion, tag)) {
-    console.log(`release tag "${tag}" matches package.json version "${packageVersion}".`);
+    console.log(
+      `release tag "${tag}" matches package.json version "${packageVersion}".`
+    );
     return;
   }
 
-  console.error(`package.json version "${packageVersion}" does not match release tag "${tag}".`);
+  console.error(
+    `package.json version "${packageVersion}" does not match release tag "${tag}".`
+  );
   process.exitCode = 1;
 }
 

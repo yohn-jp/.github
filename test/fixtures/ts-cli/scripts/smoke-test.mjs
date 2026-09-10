@@ -22,17 +22,30 @@ function main() {
   }
 
   const smokeDir = mkdtempSync(path.join(tmpdir(), "smoke-test-"));
-  writeFileSync(path.join(smokeDir, "package.json"), JSON.stringify({ private: true }));
-  execFileSync("npm", ["install", "--no-save", "--prefix", smokeDir, path.resolve(tarball)], {
-    stdio: "inherit",
-  });
+  writeFileSync(
+    path.join(smokeDir, "package.json"),
+    JSON.stringify({ private: true })
+  );
+  execFileSync(
+    "npm",
+    ["install", "--no-save", "--prefix", smokeDir, path.resolve(tarball)],
+    {
+      stdio: "inherit"
+    }
+  );
 
   const pkg = JSON.parse(readFileSync("package.json", "utf8"));
   const bin = pkg.bin;
-  const binNames = !bin ? [] : typeof bin === "string" ? [pkg.name] : Object.keys(bin);
+  const binNames = !bin
+    ? []
+    : typeof bin === "string"
+      ? [pkg.name]
+      : Object.keys(bin);
 
   if (binNames.length === 0) {
-    console.log("No bin entries declared in package.json; skipping executable smoke test.");
+    console.log(
+      "No bin entries declared in package.json; skipping executable smoke test."
+    );
     return;
   }
 

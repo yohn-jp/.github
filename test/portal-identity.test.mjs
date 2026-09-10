@@ -14,7 +14,11 @@ test("static portal surfaces use yohn-jp and dev.yohn.jp identity", async () => 
     "dashboard/graph/index.html"
   ]) {
     const source = await readFile(path, "utf8");
-    assert.doesNotMatch(source, LEGACY_IDENTITY, `${path} must not claim yohn.dev`);
+    assert.doesNotMatch(
+      source,
+      LEGACY_IDENTITY,
+      `${path} must not claim yohn.dev`
+    );
     assert.match(source, /yohn-jp/);
     assert.match(source, /https:\/\/dev\.yohn\.jp\//);
   }
@@ -22,8 +26,13 @@ test("static portal surfaces use yohn-jp and dev.yohn.jp identity", async () => 
 
 test("generated product pages use canonical organization and domain identity", async () => {
   const catalog = await loadProductCatalog("portal/registry.json");
-  const details = await loadProductDetails("portal/product-details.json", catalog);
-  const detailsById = new Map(details.products.map((detail) => [detail.id, detail]));
+  const details = await loadProductDetails(
+    "portal/product-details.json",
+    catalog
+  );
+  const detailsById = new Map(
+    details.products.map((detail) => [detail.id, detail])
+  );
 
   for (const product of catalog.products) {
     const html = renderProductOverviewPage(
@@ -31,7 +40,11 @@ test("generated product pages use canonical organization and domain identity", a
       catalog,
       detailsById.get(product.id)
     );
-    assert.doesNotMatch(html, LEGACY_IDENTITY, `${product.id} must not claim yohn.dev`);
+    assert.doesNotMatch(
+      html,
+      LEGACY_IDENTITY,
+      `${product.id} must not claim yohn.dev`
+    );
     assert.match(html, />yohn-jp<\/span>/);
     assert.match(
       html,

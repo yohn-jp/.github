@@ -1,11 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isDocsOnlyChange, globToRegExp } from "../scripts/is-docs-only-change.mjs";
+import {
+  isDocsOnlyChange,
+  globToRegExp
+} from "../scripts/is-docs-only-change.mjs";
 
 const PATTERNS = ["docs/**", "**/*.md", "CHANGELOG.md"];
 
 test("all changed files under docs/ are docs-only", () => {
-  assert.equal(isDocsOnlyChange(["docs/a.md", "docs/nested/b.md"], PATTERNS), true);
+  assert.equal(
+    isDocsOnlyChange(["docs/a.md", "docs/nested/b.md"], PATTERNS),
+    true
+  );
 });
 
 test("a top-level markdown file matches **/*.md", () => {
@@ -13,7 +19,10 @@ test("a top-level markdown file matches **/*.md", () => {
 });
 
 test("mixing a source file fails the docs-only check", () => {
-  assert.equal(isDocsOnlyChange(["docs/a.md", "src/index.ts"], PATTERNS), false);
+  assert.equal(
+    isDocsOnlyChange(["docs/a.md", "src/index.ts"], PATTERNS),
+    false
+  );
 });
 
 test("empty changed-file list is not docs-only (no signal to fast-path on)", () => {

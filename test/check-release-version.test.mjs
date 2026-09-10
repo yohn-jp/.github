@@ -15,5 +15,8 @@ test("mismatched version is rejected", () => {
 });
 
 test("only a leading v is stripped, not any other prefix", () => {
-  assert.equal(releaseTagMatchesPackageVersion("2.0.0", "version-2.0.0"), false);
+  assert.equal(
+    releaseTagMatchesPackageVersion("2.0.0", "version-2.0.0"),
+    false
+  );
 });

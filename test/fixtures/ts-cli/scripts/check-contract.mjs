@@ -7,16 +7,18 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url)));
+const pkg = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url))
+);
 
 const output = execFileSync("node", ["dist/cli.js", "--version"], {
   cwd: new URL("..", import.meta.url),
-  encoding: "utf8",
+  encoding: "utf8"
 }).trim();
 
 if (output !== pkg.version) {
   console.error(
-    `conformance: \`ts-cli-fixture --version\` printed "${output}", expected "${pkg.version}" (package.json version)`,
+    `conformance: \`ts-cli-fixture --version\` printed "${output}", expected "${pkg.version}" (package.json version)`
   );
   process.exit(1);
 }
