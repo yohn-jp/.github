@@ -44,7 +44,7 @@ branch (`SKIP_PR: true`). Two explicit maps are used:
 | `CLAUDE.md` | Claude-specific style adapter; execution governance stays in the shared contract/profile authorities. |
 | `docs/agent-change-workflow.md` → `.github/agent-governance/change-workflow.md` | Canonical standalone/Epic change-execution workflow, distributed as a generated consumer copy. |
 | `docs/agent-runtime-profiles.md` → `.github/agent-governance/runtime-profiles.md` | Human-readable runtime-specific prompt/delegation guidance, distributed as a generated consumer copy. |
-| `.github/agents/runtime-profiles.json` → `.github/agent-governance/runtime-profiles.json` | Machine-readable runtime profile source for deterministic future prompt projection. |
+| `.github/agents/runtime-profiles.json` → `.github/agent-governance/runtime-profiles.json` | Machine-readable runtime profile source for deterministic future prompt projection. Each authority reference carries both a `canonical` (provider-relative) and `projected` (consumer-relative) path so the same copied document resolves correctly in both contexts. |
 | `.github/agents/runtime-profiles.schema.json` → `.github/agent-governance/runtime-profiles.schema.json` | Structural contract for the machine-readable runtime profiles. |
 | `templates/workflows/*.yml` → `.github/workflows/*.yml` | Opt-in: canonical wrapper files (`codeql.yml`, `governance.yml`, `issue-governance.yml`, `publish.yml`) that call this repository's reusable workflows. Only listed per-target in `.github/sync.yml` for repositories whose `with:` values match the canonical file exactly — see `docs/typescript-cli-ci.md` and `docs/governance.md`. A repository whose governance workflow carries repository-specific jobs alongside the canonical caller (e.g. `yohn-jp/mottainai`) owns that file directly instead of receiving it via sync. |
 | `scripts/validate-action-pins.mjs` | Opt-in: the canonical Action-pin governance validator, replacing a consumer's own drifted copy. |
@@ -177,7 +177,14 @@ dependency.
 Shared agent workflow/profile changes follow `.github/sync-agents.yml` and
 are triggered by changes to `AGENTS.md`, `CLAUDE.md`, the canonical agent
 workflow/profile docs, the machine-readable profile sources, or the sync map.
-After such a change reaches `.github` `main`, `sync-org-templates` must finish
-successfully; its direct, batched consumer commits are rollout evidence. A
-consumer snapshot is not considered aligned merely because the canonical
-source changed.
+`sync-org-templates.yml`'s `sync` job is fail-closed: it declares `needs:
+validate`, where `validate` calls `metadata-validation.yml` (the same gate
+that structurally and semantically validates
+`.github/agents/runtime-profiles.json`) as a job in the same workflow run.
+Distribution to consumer default branches cannot start unless that
+validation of the exact provider revision being distributed succeeds — this
+is an explicit in-workflow dependency, not timing between independent
+`main`-push workflows. After such a change reaches `.github` `main` and
+`sync-org-templates` finishes successfully, its direct, batched consumer
+commits are rollout evidence. A consumer snapshot is not considered aligned
+merely because the canonical source changed.

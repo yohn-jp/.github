@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "kind": "yohn-agent-runtime-profiles",
+  "authority": {
+    "workflow": {
+      "canonical": "docs/agent-change-workflow.md",
+      "projected": ".github/agent-governance/change-workflow.md"
+    },
+    "promptGuide": {
+      "canonical": "docs/agent-runtime-profiles.md",
+      "projected": ".github/agent-governance/runtime-profiles.md"
+    }
+  },
+  "profiles": [
+    {
+      "id": "example-worker",
+      "runtime": "Example Runtime",
+      "role": "scoped-worker",
+      "implementationAuthority": "one bounded leaf",
+      "delegation": "No orchestration by default.",
+      "parallelism": "External orchestrator decides parallel placement.",
+      "topLevelSession": "scoped",
+      "contextStrategy": "Keep only task identity and changed files.",
+      "requiredPromptClauses": ["State exact Issue/task identity."],
+      "prohibitions": ["scope expansion beyond the assigned leaf"]
+    }
+  ]
+}

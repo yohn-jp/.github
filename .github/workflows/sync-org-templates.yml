@@ -39,8 +39,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate provider state before distribution
+    uses: ./.github/workflows/metadata-validation.yml
+
   sync:
     name: Sync managed templates
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
