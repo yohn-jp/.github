@@ -1,9 +1,10 @@
 name: Sync org templates
 
 # Distributes this repository's Issue Forms, PR templates, machine-readable
-# Inari governance snapshot, shared agent instructions, and shared governance
-# adapters to the repositories listed in .github/sync.yml and
-# .github/sync-agents.yml, pushing directly to each target's default branch.
+# Inari governance snapshot, shared agent instructions, shared agent workflow
+# and runtime-profile authorities, and shared governance adapters to the
+# repositories listed in .github/sync.yml and .github/sync-agents.yml, pushing
+# directly to each target's default branch.
 # See docs/github-metadata-inheritance.md.
 on:
   push:
@@ -11,6 +12,9 @@ on:
     paths:
       - "AGENTS.md"
       - "CLAUDE.md"
+      - "docs/agent-change-workflow.md"
+      - "docs/agent-runtime-profiles.md"
+      - ".github/agents/**"
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
       - ".github/inari/**"
