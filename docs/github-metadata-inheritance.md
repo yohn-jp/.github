@@ -63,8 +63,8 @@ creating a competing copy of it.
 
 - **GitHub Actions workflows** (`.github/workflows/*.yml`) are never
   inherited implicitly by GitHub itself. Every consumer repository must
-  explicitly reference this repository's reusable workflows via `uses:
-yohn-jp/.github/.github/workflows/<name>.yml@main` in its own
+  explicitly reference this repository's reusable workflows via
+  `uses: yohn-jp/.github/.github/workflows/<name>.yml@main` in its own
   workflow files. See the versioning note below. This is separate from
   the explicit `.github/sync.yml` mechanism above: a repository may
   additionally opt in to having the thin wrapper file itself (the file
