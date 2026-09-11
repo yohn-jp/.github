@@ -1,13 +1,18 @@
 name: gh extension precompiled release
 
-# Reusable workflow: builds a precompiled GitHub CLI extension from an exact
-# Release/tag source revision, verifies the resulting binaries, and uploads
-# them to that already-existing GitHub Release under the naming/layout `gh`
-# requires to discover precompiled extensions (`<extension-name>-<os>-<arch>[.exe]`,
-# see https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions).
-# Consumers own their own build command and product semantics; this workflow
-# owns only the packaging/verification/upload contract, so it stays reusable
-# across any GitHub CLI extension repository.
+# Reusable workflow: checks out an exact Release/tag source revision, runs
+# the consumer's own build command to produce already-finished, already
+# correctly-named precompiled GitHub CLI extension artifacts, verifies their
+# naming/presence, and uploads them to that already-existing GitHub Release.
+#
+# The consumer owns build implementation end-to-end — language, toolchain,
+# cross-compilation strategy, and which target platforms it ships. This
+# workflow owns only the GitHub CLI artifact naming contract
+# (`<extension-name>-<os>-<arch>[.exe]`, see
+# https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions),
+# generic pre-upload validation, and the Release upload — so it stays
+# reusable across any GitHub CLI extension repository regardless of
+# implementation language.
 on:
   workflow_call:
     inputs:
@@ -19,37 +24,25 @@ on:
         required: true
       build-command:
         description: >-
-          Shell command that builds a single extension binary for one
-          target platform. Runs with GOOS, GOARCH, and OUTPUT_PATH set;
-          it must write the compiled binary to the exact path in
-          $OUTPUT_PATH.
+          Shell command, owned entirely by the consumer, that builds every
+          extension artifact it intends to ship. It must write each
+          finished, already platform-named binary directly into
+          $ARTIFACT_DIR, following the required
+          <extension-name>-<os>-<arch>[.exe] naming — this workflow does not
+          invoke it per platform or inject any cross-compilation env vars.
         type: string
         required: true
-      setup-command:
-        description: >-
-          Optional shell command run once, before the platform build loop,
-          to prepare the build environment (e.g. installing dependencies).
-        type: string
-        default: ""
       working-directory:
         description: Directory containing the extension source to build.
         type: string
         default: "."
       extension-name:
         description: >-
-          Extension name used as the artifact filename prefix. Defaults to
-          the repository name, which is the correct value for a
+          Extension name used as the required artifact filename prefix.
+          Defaults to the repository name, which is the correct value for a
           conventionally named `gh-<name>` extension repository.
         type: string
         default: ""
-      platforms:
-        description: >-
-          Comma-separated go-tool-dist-list-style os-arch targets to build
-          and release.
-        type: string
-        default: >-
-          darwin-amd64,darwin-arm64,freebsd-386,freebsd-amd64,freebsd-arm64,
-          linux-386,linux-amd64,linux-arm,linux-arm64,windows-386,windows-amd64,windows-arm64
     secrets: {}
 
 permissions:
@@ -81,72 +74,55 @@ jobs:
           fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
 
-      - name: Run setup command
-        if: inputs.setup-command != ''
-        shell: bash
-        working-directory: ${{ inputs.working-directory }}
-        env:
-          SETUP_COMMAND: ${{ inputs.setup-command }}
-        run: bash -c "$SETUP_COMMAND"
-
-      - name: Build platform binaries
+      - name: Run consumer build command
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
-          PLATFORMS: ${{ inputs.platforms }}
-          EXTENSION_NAME: ${{ steps.extension.outputs.name }}
-          DIST_DIR: ${{ github.workspace }}/dist
+          ARTIFACT_DIR: ${{ github.workspace }}/dist
         run: |
           set -euo pipefail
-          mkdir -p "$DIST_DIR"
-          IFS=',' read -r -a targets <<< "${PLATFORMS// /}"
-          for target in "${targets[@]}"; do
-            goos="${target%-*}"
-            goarch="${target#*-}"
-            ext=""
-            [ "$goos" = "windows" ] && ext=".exe"
-            output="$DIST_DIR/${EXTENSION_NAME}-${goos}-${goarch}${ext}"
-            echo "building ${goos}/${goarch} -> ${output}"
-            GOOS="$goos" GOARCH="$goarch" OUTPUT_PATH="$output" bash -c "$BUILD_COMMAND"
-          done
+          mkdir -p "$ARTIFACT_DIR"
+          bash -c "$BUILD_COMMAND"
 
       - name: Verify artifacts
         shell: bash
         env:
           EXTENSION_NAME: ${{ steps.extension.outputs.name }}
-          DIST_DIR: ${{ github.workspace }}/dist
+          ARTIFACT_DIR: ${{ github.workspace }}/dist
         run: |
           set -euo pipefail
           shopt -s nullglob
-          assets=("$DIST_DIR"/*)
+          assets=("$ARTIFACT_DIR"/*)
           if [ "${#assets[@]}" -eq 0 ]; then
-            echo "::error::no artifacts produced in $DIST_DIR" >&2
+            echo "::error::no artifacts produced in $ARTIFACT_DIR" >&2
             exit 1
           fi
+          # os/arch vocabulary per GitHub CLI's precompiled-extension naming
+          # contract (the platform identifiers `gh` itself recognizes) —
+          # this is a naming/discovery requirement, not a build toolchain.
+          os_pattern="darwin|freebsd|linux|windows|android"
+          arch_pattern="amd64|arm64|386|arm"
+          name_pattern="^${EXTENSION_NAME}-(${os_pattern})-(${arch_pattern})(\.exe)?\$"
           for f in "${assets[@]}"; do
             base="$(basename "$f")"
-            if [[ "$base" != "${EXTENSION_NAME}-"*"-"* ]]; then
-              echo "::error::$base does not match the required <extension-name>-<os>-<arch>[.exe] naming" >&2
+            if [[ ! "$base" =~ $name_pattern ]]; then
+              echo "::error::$base does not match the required <extension-name>-<os>-<arch>[.exe] naming (extension-name: $EXTENSION_NAME)" >&2
+              exit 1
+            fi
+            if [[ "$base" == *"-windows-"* && "$base" != *.exe ]]; then
+              echo "::error::$base targets windows but is missing the required .exe suffix" >&2
+              exit 1
+            fi
+            if [[ "$base" != *"-windows-"* && "$base" == *.exe ]]; then
+              echo "::error::$base has a .exe suffix but does not target windows" >&2
               exit 1
             fi
             if [ ! -s "$f" ]; then
               echo "::error::$base is empty" >&2
               exit 1
             fi
-            filetype="$(file -b "$f")"
-            case "$base" in
-              *windows*)
-                [[ "$filetype" == *"PE32"* ]] || { echo "::error::$base is not a Windows PE binary: $filetype" >&2; exit 1; }
-                ;;
-              *darwin*)
-                [[ "$filetype" == *"Mach-O"* ]] || { echo "::error::$base is not a Mach-O binary: $filetype" >&2; exit 1; }
-                ;;
-              *)
-                [[ "$filetype" == *"ELF"* ]] || { echo "::error::$base is not an ELF binary: $filetype" >&2; exit 1; }
-                ;;
-            esac
-            echo "verified $base ($filetype)"
+            echo "verified $base"
           done
 
       - name: Upload assets to release ${{ inputs.release-tag }}
@@ -154,5 +130,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release-tag }}
-          DIST_DIR: ${{ github.workspace }}/dist
-        run: gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber -- "$DIST_DIR"/*
+          ARTIFACT_DIR: ${{ github.workspace }}/dist
+        run: gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber -- "$ARTIFACT_DIR"/*
