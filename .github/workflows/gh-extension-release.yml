@@ -1,0 +1,158 @@
+name: gh extension precompiled release
+
+# Reusable workflow: builds a precompiled GitHub CLI extension from an exact
+# Release/tag source revision, verifies the resulting binaries, and uploads
+# them to that already-existing GitHub Release under the naming/layout `gh`
+# requires to discover precompiled extensions (`<extension-name>-<os>-<arch>[.exe]`,
+# see https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions).
+# Consumers own their own build command and product semantics; this workflow
+# owns only the packaging/verification/upload contract, so it stays reusable
+# across any GitHub CLI extension repository.
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: >-
+          Exact Release/tag name to check out, build from, and upload
+          artifacts to (e.g. the release event's tag_name).
+        type: string
+        required: true
+      build-command:
+        description: >-
+          Shell command that builds a single extension binary for one
+          target platform. Runs with GOOS, GOARCH, and OUTPUT_PATH set;
+          it must write the compiled binary to the exact path in
+          $OUTPUT_PATH.
+        type: string
+        required: true
+      setup-command:
+        description: >-
+          Optional shell command run once, before the platform build loop,
+          to prepare the build environment (e.g. installing dependencies).
+        type: string
+        default: ""
+      working-directory:
+        description: Directory containing the extension source to build.
+        type: string
+        default: "."
+      extension-name:
+        description: >-
+          Extension name used as the artifact filename prefix. Defaults to
+          the repository name, which is the correct value for a
+          conventionally named `gh-<name>` extension repository.
+        type: string
+        default: ""
+      platforms:
+        description: >-
+          Comma-separated go-tool-dist-list-style os-arch targets to build
+          and release.
+        type: string
+        default: >-
+          darwin-amd64,darwin-arm64,freebsd-386,freebsd-amd64,freebsd-arm64,
+          linux-386,linux-amd64,linux-arm,linux-arm64,windows-386,windows-amd64,windows-arm64
+    secrets: {}
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build, verify, and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout ${{ inputs.release-tag }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.release-tag }}
+          persist-credentials: false
+
+      - name: Resolve extension name
+        id: extension
+        shell: bash
+        env:
+          EXTENSION_NAME_INPUT: ${{ inputs.extension-name }}
+        run: |
+          set -euo pipefail
+          name="$EXTENSION_NAME_INPUT"
+          if [ -z "$name" ]; then
+            name="${GITHUB_REPOSITORY#*/}"
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Run setup command
+        if: inputs.setup-command != ''
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          SETUP_COMMAND: ${{ inputs.setup-command }}
+        run: bash -c "$SETUP_COMMAND"
+
+      - name: Build platform binaries
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          BUILD_COMMAND: ${{ inputs.build-command }}
+          PLATFORMS: ${{ inputs.platforms }}
+          EXTENSION_NAME: ${{ steps.extension.outputs.name }}
+          DIST_DIR: ${{ github.workspace }}/dist
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIST_DIR"
+          IFS=',' read -r -a targets <<< "${PLATFORMS// /}"
+          for target in "${targets[@]}"; do
+            goos="${target%-*}"
+            goarch="${target#*-}"
+            ext=""
+            [ "$goos" = "windows" ] && ext=".exe"
+            output="$DIST_DIR/${EXTENSION_NAME}-${goos}-${goarch}${ext}"
+            echo "building ${goos}/${goarch} -> ${output}"
+            GOOS="$goos" GOARCH="$goarch" OUTPUT_PATH="$output" bash -c "$BUILD_COMMAND"
+          done
+
+      - name: Verify artifacts
+        shell: bash
+        env:
+          EXTENSION_NAME: ${{ steps.extension.outputs.name }}
+          DIST_DIR: ${{ github.workspace }}/dist
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=("$DIST_DIR"/*)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "::error::no artifacts produced in $DIST_DIR" >&2
+            exit 1
+          fi
+          for f in "${assets[@]}"; do
+            base="$(basename "$f")"
+            if [[ "$base" != "${EXTENSION_NAME}-"*"-"* ]]; then
+              echo "::error::$base does not match the required <extension-name>-<os>-<arch>[.exe] naming" >&2
+              exit 1
+            fi
+            if [ ! -s "$f" ]; then
+              echo "::error::$base is empty" >&2
+              exit 1
+            fi
+            filetype="$(file -b "$f")"
+            case "$base" in
+              *windows*)
+                [[ "$filetype" == *"PE32"* ]] || { echo "::error::$base is not a Windows PE binary: $filetype" >&2; exit 1; }
+                ;;
+              *darwin*)
+                [[ "$filetype" == *"Mach-O"* ]] || { echo "::error::$base is not a Mach-O binary: $filetype" >&2; exit 1; }
+                ;;
+              *)
+                [[ "$filetype" == *"ELF"* ]] || { echo "::error::$base is not an ELF binary: $filetype" >&2; exit 1; }
+                ;;
+            esac
+            echo "verified $base ($filetype)"
+          done
+
+      - name: Upload assets to release ${{ inputs.release-tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          DIST_DIR: ${{ github.workspace }}/dist
+        run: gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber -- "$DIST_DIR"/*

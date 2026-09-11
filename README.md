@@ -63,6 +63,15 @@ See [`docs/npm-publish.md`](docs/npm-publish.md) for
 packed-tarball smoke testing across a Node-version matrix, and idempotent
 publishing via npm Trusted Publishing (OIDC) — no long-lived npm token.
 
+## Reusable precompiled GitHub CLI extension release
+
+See [`docs/gh-extension-release.md`](docs/gh-extension-release.md) for
+`.github/workflows/gh-extension-release.yml`: building precompiled GitHub
+CLI extension binaries from an exact Release/tag source revision,
+verifying them, and uploading them to that existing Release under the
+naming/layout GitHub CLI requires — independent of, and runnable alongside,
+the reusable npm publishing workflow above.
+
 ## Developer portal and public work dashboard
 
 `portal/` defines the static landing page for `https://dev.yohn.jp/`, including
