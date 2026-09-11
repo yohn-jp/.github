@@ -1,0 +1,133 @@
+name: gh extension precompiled release
+
+# Reusable workflow: checks out an exact Release/tag source revision, runs
+# the consumer's version-controlled build entrypoint
+# (scripts/build-gh-extension-release.sh) to produce already-finished,
+# already correctly-named precompiled GitHub CLI extension artifacts,
+# verifies their naming/presence, and uploads them to that already-existing
+# GitHub Release.
+#
+# The consumer owns build implementation end-to-end — language/toolchain
+# setup, dependency install, build, cross-platform strategy, and which
+# target platforms it ships — entirely inside that committed script. This
+# workflow takes no caller-controlled command to execute; it owns only the
+# fixed entrypoint invocation, the GitHub CLI artifact naming contract
+# (`<extension-name>-<os>-<arch>[.exe]`, see
+# https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions),
+# generic pre-upload validation, and the Release upload — so it stays
+# reusable across any GitHub CLI extension repository regardless of
+# implementation language.
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: >-
+          Exact Release/tag name to check out, build from, and upload
+          artifacts to (e.g. the release event's tag_name).
+        type: string
+        required: true
+      working-directory:
+        description: Directory containing the extension source to build.
+        type: string
+        default: "."
+      extension-name:
+        description: >-
+          Extension name used as the required artifact filename prefix.
+          Defaults to the repository name, which is the correct value for a
+          conventionally named `gh-<name>` extension repository.
+        type: string
+        default: ""
+    secrets: {}
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build, verify, and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout ${{ inputs.release-tag }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.release-tag }}
+          persist-credentials: false
+
+      - name: Resolve extension name
+        id: extension
+        shell: bash
+        env:
+          EXTENSION_NAME_INPUT: ${{ inputs.extension-name }}
+        run: |
+          set -euo pipefail
+          name="$EXTENSION_NAME_INPUT"
+          if [ -z "$name" ]; then
+            name="${GITHUB_REPOSITORY#*/}"
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Run consumer build entrypoint
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          ARTIFACT_DIR: ${{ github.workspace }}/dist
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$ARTIFACT_DIR"
+          entrypoint="./scripts/build-gh-extension-release.sh"
+          if [ ! -f "$entrypoint" ]; then
+            echo "::error::$entrypoint not found in $WORKING_DIRECTORY (required, version-controlled build entrypoint)" >&2
+            exit 1
+          fi
+          bash "$entrypoint"
+
+      - name: Verify artifacts
+        shell: bash
+        env:
+          EXTENSION_NAME: ${{ steps.extension.outputs.name }}
+          ARTIFACT_DIR: ${{ github.workspace }}/dist
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=("$ARTIFACT_DIR"/*)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "::error::no artifacts produced in $ARTIFACT_DIR" >&2
+            exit 1
+          fi
+          # os/arch vocabulary per GitHub CLI's precompiled-extension naming
+          # contract (the platform identifiers `gh` itself recognizes) —
+          # this is a naming/discovery requirement, not a build toolchain.
+          os_pattern="darwin|freebsd|linux|windows|android"
+          arch_pattern="amd64|arm64|386|arm"
+          name_pattern="^${EXTENSION_NAME}-(${os_pattern})-(${arch_pattern})(\.exe)?\$"
+          for f in "${assets[@]}"; do
+            base="$(basename "$f")"
+            if [[ ! "$base" =~ $name_pattern ]]; then
+              echo "::error::$base does not match the required <extension-name>-<os>-<arch>[.exe] naming (extension-name: $EXTENSION_NAME)" >&2
+              exit 1
+            fi
+            if [[ "$base" == *"-windows-"* && "$base" != *.exe ]]; then
+              echo "::error::$base targets windows but is missing the required .exe suffix" >&2
+              exit 1
+            fi
+            if [[ "$base" != *"-windows-"* && "$base" == *.exe ]]; then
+              echo "::error::$base has a .exe suffix but does not target windows" >&2
+              exit 1
+            fi
+            if [ ! -s "$f" ]; then
+              echo "::error::$base is empty" >&2
+              exit 1
+            fi
+            echo "verified $base"
+          done
+
+      - name: Upload assets to release ${{ inputs.release-tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+          ARTIFACT_DIR: ${{ github.workspace }}/dist
+        run: gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber -- "$ARTIFACT_DIR"/*
