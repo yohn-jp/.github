@@ -1,13 +1,17 @@
 name: gh extension precompiled release
 
 # Reusable workflow: checks out an exact Release/tag source revision, runs
-# the consumer's own build command to produce already-finished, already
-# correctly-named precompiled GitHub CLI extension artifacts, verifies their
-# naming/presence, and uploads them to that already-existing GitHub Release.
+# the consumer's version-controlled build entrypoint
+# (scripts/build-gh-extension-release.sh) to produce already-finished,
+# already correctly-named precompiled GitHub CLI extension artifacts,
+# verifies their naming/presence, and uploads them to that already-existing
+# GitHub Release.
 #
-# The consumer owns build implementation end-to-end — language, toolchain,
-# cross-compilation strategy, and which target platforms it ships. This
-# workflow owns only the GitHub CLI artifact naming contract
+# The consumer owns build implementation end-to-end — language/toolchain
+# setup, dependency install, build, cross-platform strategy, and which
+# target platforms it ships — entirely inside that committed script. This
+# workflow takes no caller-controlled command to execute; it owns only the
+# fixed entrypoint invocation, the GitHub CLI artifact naming contract
 # (`<extension-name>-<os>-<arch>[.exe]`, see
 # https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions),
 # generic pre-upload validation, and the Release upload — so it stays
@@ -20,16 +24,6 @@ on:
         description: >-
           Exact Release/tag name to check out, build from, and upload
           artifacts to (e.g. the release event's tag_name).
-        type: string
-        required: true
-      build-command:
-        description: >-
-          Shell command, owned entirely by the consumer, that builds every
-          extension artifact it intends to ship. It must write each
-          finished, already platform-named binary directly into
-          $ARTIFACT_DIR, following the required
-          <extension-name>-<os>-<arch>[.exe] naming — this workflow does not
-          invoke it per platform or inject any cross-compilation env vars.
         type: string
         required: true
       working-directory:
@@ -74,16 +68,21 @@ jobs:
           fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
 
-      - name: Run consumer build command
+      - name: Run consumer build entrypoint
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         env:
-          BUILD_COMMAND: ${{ inputs.build-command }}
           ARTIFACT_DIR: ${{ github.workspace }}/dist
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
         run: |
           set -euo pipefail
           mkdir -p "$ARTIFACT_DIR"
-          bash -c "$BUILD_COMMAND"
+          entrypoint="./scripts/build-gh-extension-release.sh"
+          if [ ! -f "$entrypoint" ]; then
+            echo "::error::$entrypoint not found in $WORKING_DIRECTORY (required, version-controlled build entrypoint)" >&2
+            exit 1
+          fi
+          bash "$entrypoint"
 
       - name: Verify artifacts
         shell: bash

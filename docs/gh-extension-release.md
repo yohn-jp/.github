@@ -2,16 +2,18 @@
 
 `.github/workflows/gh-extension-release.yml` is the shared release-triggered
 publishing contract for precompiled [GitHub CLI extensions](https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions#precompiled-binaries):
-checkout the exact Release/tag source revision, run the consumer's own build
-command, verify the resulting artifacts, and upload them to that
-already-existing GitHub Release.
+checkout the exact Release/tag source revision, run the consumer's own
+version-controlled build entrypoint, verify the resulting artifacts, and
+upload them to that already-existing GitHub Release.
 
-The workflow is generic and does not own build implementation: the consumer
-owns its build command end-to-end — language, toolchain, and which target
-platforms it ships. This workflow owns only the GitHub CLI
-precompiled-extension artifact naming contract, generic pre-upload
-validation, and the Release upload. It does not know about, or branch on,
-any specific consumer repository or language.
+The workflow takes no caller-controlled command to execute. It calls a
+fixed, version-controlled entrypoint script the consumer commits at
+`scripts/build-gh-extension-release.sh`; that script owns build
+implementation end-to-end — language/toolchain setup, dependency install,
+build, and cross-platform strategy. This workflow owns only invoking that
+fixed entrypoint, the GitHub CLI precompiled-extension artifact naming
+contract, generic pre-upload validation, and the Release upload. It does not
+know about, or branch on, any specific consumer repository or language.
 
 ## Consuming it from another repository
 
@@ -30,19 +32,27 @@ jobs:
     uses: yohn-jp/.github/.github/workflows/gh-extension-release.yml@main
     with:
       release-tag: ${{ github.event.release.tag_name }}
-      build-command: |
-        npm ci
-        npm run build:binaries -- --out "$ARTIFACT_DIR"
 ```
 
-`build-command` above is illustrative only: it is whatever the consumer's
-own script does to produce finished binaries — Go cross-compilation, a
-Node/TypeScript packager (e.g. Node single executable applications, `pkg`,
-`nexe`, a Bun compile), or anything else. This workflow never invokes it per
-platform and never sets `GOOS`/`GOARCH` or any other build-toolchain
-variable; the consumer's own command must already write each finished
-binary directly into `$ARTIFACT_DIR`, one file per platform it ships, named
-per the contract below.
+```sh
+# scripts/build-gh-extension-release.sh in the consumer repository
+#!/bin/bash
+set -euo pipefail
+
+# Consumer-owned: language/toolchain setup, dependency install, build, and
+# cross-platform strategy — Go cross-compilation, a Node/TypeScript packager
+# (e.g. Node single executable applications, `pkg`, `nexe`, a Bun compile),
+# or anything else. Must write each finished binary directly into
+# $ARTIFACT_DIR, already named per the contract below.
+npm ci
+npm run build:binaries -- --out "$ARTIFACT_DIR"
+```
+
+This script is the entire build contract: the shared workflow always runs
+`scripts/build-gh-extension-release.sh` (relative to `working-directory`)
+exactly once via `bash`, with no per-platform invocation and no
+build-toolchain variables (no `GOOS`/`GOARCH`) injected into it. Everything
+about how many platforms it targets and how is entirely up to this script.
 
 npm publishing (if the same repository also ships an npm package) is a
 separate job/workflow calling `npm-publish.yml`, run independently from the
@@ -50,28 +60,35 @@ same Release — this workflow never merges with, or depends on, that one.
 
 ## Inputs
 
-| Input               | Required | Default         | Purpose                                                                                                                                                                      |
-| ------------------- | -------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `release-tag`       | yes      | —               | Exact Release/tag to check out, build from, and upload assets to.                                                                                                            |
-| `build-command`     | yes      | —               | Shell command, owned entirely by the consumer, that builds every artifact it intends to ship and writes each one into `$ARTIFACT_DIR`, already named per the contract below. |
-| `working-directory` | no       | `.`             | Directory containing the extension source, and the working directory `build-command` runs in.                                                                                |
-| `extension-name`    | no       | repository name | Required artifact filename prefix. The repository name is correct as-is for a conventionally named `gh-<name>` extension repo.                                               |
+| Input               | Required | Default         | Purpose                                                                                                                        |
+| ------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `release-tag`       | yes      | —               | Exact Release/tag to check out, build from, and upload assets to.                                                              |
+| `working-directory` | no       | `.`             | Directory containing the extension source, `scripts/build-gh-extension-release.sh`, and the working directory it runs in.      |
+| `extension-name`    | no       | repository name | Required artifact filename prefix. The repository name is correct as-is for a conventionally named `gh-<name>` extension repo. |
+
+## Build entrypoint contract
+
+`scripts/build-gh-extension-release.sh`, committed in the consumer
+repository under `working-directory`, is the fixed, required entrypoint:
+
+- The workflow fails clearly if the file doesn't exist.
+- It is run once, via `bash`, with `$ARTIFACT_DIR` set to a directory the
+  script must create its finished artifacts in.
+- It receives no other workflow-controlled inputs and is invoked with no
+  caller-supplied shell string — the shared workflow contains no
+  command-execution surface driven by `workflow_call` input.
 
 ## Artifact naming/layout contract
 
-Each file the consumer's `build-command` places in `$ARTIFACT_DIR` must be
-named `<extension-name>-<os>-<arch>[.exe]` (`.exe` suffix required for, and
-only for, `windows-*` targets), matching the `OS-ARCHITECTURE[EXTENSION]`
-suffix GitHub CLI requires to discover a precompiled extension binary for a
-platform. `os`/`arch` must be one of the platform identifiers `gh` itself
-recognizes (`darwin`/`freebsd`/`linux`/`windows`/`android` ×
-`amd64`/`arm64`/`386`/`arm`) — this is a naming/discovery vocabulary, not a
+Each file `scripts/build-gh-extension-release.sh` places in `$ARTIFACT_DIR`
+must be named `<extension-name>-<os>-<arch>[.exe]` (`.exe` suffix required
+for, and only for, `windows-*` targets), matching the
+`OS-ARCHITECTURE[EXTENSION]` suffix GitHub CLI requires to discover a
+precompiled extension binary for a platform. `os`/`arch` must be one of the
+platform identifiers `gh` itself recognizes (`darwin`/`freebsd`/`linux`/`windows`/`android`
+× `amd64`/`arm64`/`386`/`arm`) — this is a naming/discovery vocabulary, not a
 build-toolchain requirement; a consumer can produce a `linux-amd64` binary
 from Go, Node, Rust, or any other toolchain.
-
-The workflow does not build, cross-compile, or invoke anything per
-platform — it runs `build-command` exactly once and validates whatever ends
-up in `$ARTIFACT_DIR` afterwards.
 
 ## Verification before upload
 
