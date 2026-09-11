@@ -6,7 +6,8 @@
 
 const FALLBACK_VIOLATION = {
   code: "GOVERNANCE_VALIDATION_FAILED",
-  message: "The Issue governance validator did not produce structured diagnostics. Check the workflow run logs.",
+  message:
+    "The Issue governance validator did not produce structured diagnostics. Check the workflow run logs."
 };
 
 /**
@@ -14,7 +15,8 @@ const FALLBACK_VIOLATION = {
  * @returns {string} Markdown comment body (trailing newline included)
  */
 export function formatGovernanceViolations(violations) {
-  const list = violations && violations.length > 0 ? violations : [FALLBACK_VIOLATION];
+  const list =
+    violations && violations.length > 0 ? violations : [FALLBACK_VIOLATION];
   const lines = ["Issue governance contract violation:", ""];
   for (const violation of list) {
     const code = violation.code ?? "GOVERNANCE_VALIDATION_FAILED";

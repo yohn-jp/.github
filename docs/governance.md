@@ -37,7 +37,7 @@ does not control.
 
 **Branch-name validation is owned directly by `.github/workflows/pr-governance.yml`**
 (via `scripts/validate-branch-name.mjs`), because gh-inari's own scope is
-explicitly Issue/PR *content* governance — it does not validate branch
+explicitly Issue/PR _content_ governance — it does not validate branch
 names. Owning this here does not create a competing authority over
 anything gh-inari already owns; it fills a gap next to it. The default
 pattern (`^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$`) remains
@@ -67,7 +67,7 @@ repository's code cannot perform on a consumer's behalf.
 **The separate `epic(<scope>): <description>` PR-title class**
 (`classifyEpicPrTitle()` in `scripts/epic-branch.mjs`, wired into
 `scripts/validate-pr.mjs`) is likewise owned directly here, for the same
-reason branch-name validation is: gh-inari's own scope is PR *content*
+reason branch-name validation is: gh-inari's own scope is PR _content_
 (body) governance, and today it checks a title only for being non-empty —
 no shared governance anywhere validates a PR title's
 `<type>(<scope>): <description>` form at all, for any type. This addition
@@ -77,7 +77,7 @@ recognizes and validates a title that is itself attempting the epic type
 (`GOVERNANCE_EPIC_PR_TITLE_INVALID`), but every other title — ordinary,
 release, or anything else — is left completely unclassified and
 unaffected, exactly as before. It does not introduce a distinct Epic PR
-*content* contract, automatic child-PR routing, merge-method semantics,
+_content_ contract, automatic child-PR routing, merge-method semantics,
 certification freshness, or lifecycle automation — those remain out of
 scope for #177 and belong to the follow-up Epic development model (#178).
 
@@ -100,18 +100,18 @@ enforces for third-party Actions/workflows:
   without a second, per-consumer bump. `scripts/validate-action-pins.mjs`
   requires this specific reference to stay unpinned for exactly that reason.
 
-**This means the reusable-workflow *engine* a consumer's PR run actually
+**This means the reusable-workflow _engine_ a consumer's PR run actually
 executes can be newer than what any point-in-time reading of this repository
 shows, and does not move in lockstep with that consumer's synced
 `.github/inari/**` snapshot.** The snapshot (Issue Form / PR template
 content, `manifest.json` digests) only changes when `.github/sync.yml`'s
 rollout runs and commits to the consumer; the `@main` reusable-workflow
-*logic* changes the moment this repository's `main` moves, independent of
+_logic_ changes the moment this repository's `main` moves, independent of
 that sync. A consumer can therefore be running last week's content snapshot
 against today's workflow logic. This divergence is expected and is not
 silently hidden: it is the direct, accepted consequence of choosing `@main`
 live authority over pinning, and consumers relying on exact reproducibility
-of governance *behavior* (not just content) should treat `.github`'s commit
+of governance _behavior_ (not just content) should treat `.github`'s commit
 history, not their own snapshot commit, as the source of truth for what ran.
 
 ## Consuming these workflows
@@ -210,7 +210,7 @@ tarball before publish.
 - **PR governance fails the check.** `validate-pr-contract` simply exits
   non-zero when `gh-inari pr validate` reports a violation. There is no
   labeling or commenting step — a failing required-status check, enforced
-  by the repository's Ruleset, *is* the enforcement mechanism for
+  by the repository's Ruleset, _is_ the enforcement mechanism for
   something that gates a merge.
 - **Issue governance labels and comments instead.** Issues aren't merged,
   so there's no natural check to block. On violation, `issue-governance.yml`

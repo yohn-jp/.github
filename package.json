@@ -12,6 +12,8 @@
     "test": "node --test test/*.test.mjs",
     "test:dashboard": "node --test test/dashboard.test.mjs",
     "test:portal:browser": "playwright test test/portal-browser.spec.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "validate:issue-forms": "node scripts/validate-issue-forms.mjs",
     "validate:action-pins": "node scripts/validate-action-pins.mjs",
     "validate:provider-tooling-resolution": "node scripts/validate-provider-tooling-resolution.mjs",
@@ -21,7 +23,7 @@
     "validate:inari-manifest": "node scripts/generate-inari-manifest.mjs --check",
     "validate:runtime-profiles": "node scripts/validate-runtime-profiles.mjs",
     "test:governance:integration": "node --test test/integration/*.test.mjs",
-    "validate": "npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:quality-contract && npm run validate:sync-script-format && npm run validate:inari-format && npm run validate:inari-manifest && npm run validate:runtime-profiles"
+    "validate": "npm run format:check && npm run validate:issue-forms && npm run validate:action-pins && npm run validate:provider-tooling-resolution && npm run validate:quality-contract && npm run validate:sync-script-format && npm run validate:inari-format && npm run validate:inari-manifest && npm run validate:runtime-profiles"
   },
   "dependencies": {
     "gh-inari": "latest",

@@ -23,20 +23,20 @@ jobs:
   publish:
     uses: yohn-jp/.github/.github/workflows/npm-publish.yml@main
     with:
-      working-directory: .              # optional, default "."
-      node-version: "24"                # optional, default "24"
-      smoke-test-node-versions: "24"    # optional, default "24"
-      npm-cli-version: "12.0.2"        # optional, default "12.0.2"
+      working-directory: . # optional, default "."
+      node-version: "24" # optional, default "24"
+      smoke-test-node-versions: "24" # optional, default "24"
+      npm-cli-version: "12.0.2" # optional, default "12.0.2"
 ```
 
 ## Required package.json scripts and files
 
-| Contract | Used by |
-| --- | --- |
-| `pnpm run typecheck` | `build` job |
-| `pnpm test` | `build` job |
-| `pnpm run build` | `build` job (must write whatever `files` in package.json packs) |
-| `node scripts/smoke-test.mjs --tarball <path>` | `smoke-test` job |
+| Contract                                       | Used by                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| `pnpm run typecheck`                           | `build` job                                                     |
+| `pnpm test`                                    | `build` job                                                     |
+| `pnpm run build`                               | `build` job (must write whatever `files` in package.json packs) |
+| `node scripts/smoke-test.mjs --tarball <path>` | `smoke-test` job                                                |
 
 `scripts/smoke-test.mjs` must work using **only Node built-ins** — the
 `smoke-test` job deliberately does not install this package's own

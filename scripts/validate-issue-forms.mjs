@@ -23,7 +23,7 @@ const TOP_LEVEL_KEYS = new Set([
   "title",
   "labels",
   "assignees",
-  "body",
+  "body"
 ]);
 const TOP_LEVEL_REQUIRED = ["name", "description", "body"];
 
@@ -35,24 +35,36 @@ const VALIDATIONS_KEYS = new Set(["required"]);
 const ATTRIBUTE_SCHEMA = {
   markdown: {
     allowed: new Set(["value"]),
-    required: new Set(["value"]),
+    required: new Set(["value"])
   },
   textarea: {
-    allowed: new Set(["label", "description", "placeholder", "value", "render"]),
-    required: new Set(["label"]),
+    allowed: new Set([
+      "label",
+      "description",
+      "placeholder",
+      "value",
+      "render"
+    ]),
+    required: new Set(["label"])
   },
   input: {
     allowed: new Set(["label", "description", "placeholder", "value"]),
-    required: new Set(["label"]),
+    required: new Set(["label"])
   },
   dropdown: {
-    allowed: new Set(["label", "description", "multiple", "options", "default"]),
-    required: new Set(["label", "options"]),
+    allowed: new Set([
+      "label",
+      "description",
+      "multiple",
+      "options",
+      "default"
+    ]),
+    required: new Set(["label", "options"])
   },
   checkboxes: {
     allowed: new Set(["label", "description", "options"]),
-    required: new Set(["label", "options"]),
-  },
+    required: new Set(["label", "options"])
+  }
 };
 
 const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -112,7 +124,7 @@ function validateBodyItem(item, index, err) {
   const type = item.type;
   if (typeof type !== "string" || !(type in ATTRIBUTE_SCHEMA)) {
     err(
-      `${where}: unsupported or missing "type" (expected one of: ${Object.keys(ATTRIBUTE_SCHEMA).join(", ")})`,
+      `${where}: unsupported or missing "type" (expected one of: ${Object.keys(ATTRIBUTE_SCHEMA).join(", ")})`
     );
     return;
   }
@@ -128,7 +140,11 @@ function validateBodyItem(item, index, err) {
 
   if (attributes === undefined) {
     err(`${where}: missing "attributes"`);
-  } else if (attributes === null || typeof attributes !== "object" || Array.isArray(attributes)) {
+  } else if (
+    attributes === null ||
+    typeof attributes !== "object" ||
+    Array.isArray(attributes)
+  ) {
     err(`${where}: "attributes" must be a mapping`);
   } else {
     for (const key of Object.keys(attributes)) {
@@ -136,7 +152,9 @@ function validateBodyItem(item, index, err) {
         const hint = /\s/.test(key)
           ? " (a key containing spaces is a strong signal of an unquoted-comma flow-mapping regression splitting a single value into multiple keys)"
           : "";
-        err(`${where}: attribute "${key}" is not valid for type "${type}"${hint}`);
+        err(
+          `${where}: attribute "${key}" is not valid for type "${type}"${hint}`
+        );
       }
     }
     for (const key of schema.required) {
@@ -148,7 +166,11 @@ function validateBodyItem(item, index, err) {
 
   if ("validations" in item) {
     const validations = item.validations;
-    if (validations === null || typeof validations !== "object" || Array.isArray(validations)) {
+    if (
+      validations === null ||
+      typeof validations !== "object" ||
+      Array.isArray(validations)
+    ) {
       err(`${where}: "validations" must be a mapping`);
     } else {
       for (const key of Object.keys(validations)) {
@@ -156,7 +178,10 @@ function validateBodyItem(item, index, err) {
           err(`${where}: unexpected "validations" key "${key}"`);
         }
       }
-      if ("required" in validations && typeof validations.required !== "boolean") {
+      if (
+        "required" in validations &&
+        typeof validations.required !== "boolean"
+      ) {
         err(`${where}: "validations.required" must be a boolean`);
       }
     }
@@ -196,7 +221,11 @@ function main() {
   }
 
   const targets = entries
-    .filter((name) => (name.endsWith(".yml") || name.endsWith(".yaml")) && basename(name) !== "config.yml")
+    .filter(
+      (name) =>
+        (name.endsWith(".yml") || name.endsWith(".yaml")) &&
+        basename(name) !== "config.yml"
+    )
     .map((name) => join(dir, name));
 
   if (targets.length === 0) {

@@ -8,7 +8,7 @@ function main(argv: string[]): void {
     return;
   }
   console.log(
-    "ts-cli-fixture: a minimal fixture CLI used to self-test yohn-jp/.github's reusable TypeScript CLI CI workflow.",
+    "ts-cli-fixture: a minimal fixture CLI used to self-test yohn-jp/.github's reusable TypeScript CLI CI workflow."
   );
 }
 

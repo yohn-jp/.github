@@ -43,7 +43,10 @@ test("portal collection token never falls back to repository-scoped credentials"
 });
 
 test("Pages workflow mints bounded App token from configured repository scope", async () => {
-  const source = await readFile(".github/workflows/dashboard-pages.yml", "utf8");
+  const source = await readFile(
+    ".github/workflows/dashboard-pages.yml",
+    "utf8"
+  );
   const workflow = yaml.load(source);
   const steps = buildSteps(workflow);
   const scope = namedStep(steps, "Resolve portal collection scope");
@@ -57,7 +60,10 @@ test("Pages workflow mints bounded App token from configured repository scope", 
   assert.equal(token.uses, APP_TOKEN_ACTION);
   assert.equal(token.if, "${{ vars.PORTAL_APP_CLIENT_ID != '' }}");
   assert.equal(token.with["client-id"], "${{ vars.PORTAL_APP_CLIENT_ID }}");
-  assert.equal(token.with["private-key"], "${{ secrets.PORTAL_APP_PRIVATE_KEY }}");
+  assert.equal(
+    token.with["private-key"],
+    "${{ secrets.PORTAL_APP_PRIVATE_KEY }}"
+  );
   assert.equal(token.with.owner, "${{ steps.portal-scope.outputs.owner }}");
   assert.equal(
     token.with.repositories,
@@ -82,14 +88,20 @@ test("workflow repository scope comes from the portal registry projection", asyn
   ]);
   const config = dashboardConfigFromRegistry(registry);
   const workflow = yaml.load(source);
-  const scope = namedStep(buildSteps(workflow), "Resolve portal collection scope");
+  const scope = namedStep(
+    buildSteps(workflow),
+    "Resolve portal collection scope"
+  );
 
   assert.match(scope.run, /portal\/registry\.json/);
   assert.match(scope.run, /dashboardConfigFromRegistry/);
   for (const repository of config.repositories) {
     assert.doesNotMatch(
       scope.run,
-      new RegExp(`^[\\s-]*${repository.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s]*$`, "m"),
+      new RegExp(
+        `^[\\s-]*${repository.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s]*$`,
+        "m"
+      ),
       `workflow must not duplicate configured repository ${repository}`
     );
   }

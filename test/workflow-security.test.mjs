@@ -51,7 +51,10 @@ test("consumer config-file is structurally validated, not just probed", () => {
   );
   assert.ok(step, "expected a config structure validation step");
   assert.equal(step.if, "inputs.config-file != ''");
-  assert.match(step.run, /npm install --no-save --ignore-scripts js-yaml@4\.3\.2/);
+  assert.match(
+    step.run,
+    /npm install --no-save --ignore-scripts js-yaml@4\.3\.2/
+  );
   assert.match(step.run, /disabled !== true/);
   assert.doesNotMatch(step.run, /--global/);
 

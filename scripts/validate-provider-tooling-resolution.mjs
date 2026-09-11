@@ -37,8 +37,14 @@ import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
 
 const UNSAFE_REF_EXPRESSIONS = [
-  { pattern: /github\.sha/, reason: "github.sha is the CALLER's checked-out commit, not this provider's" },
-  { pattern: /github\.job_workflow_ref/, reason: "github.job_workflow_ref is not a real GitHub Actions context field" },
+  {
+    pattern: /github\.sha/,
+    reason: "github.sha is the CALLER's checked-out commit, not this provider's"
+  },
+  {
+    pattern: /github\.job_workflow_ref/,
+    reason: "github.job_workflow_ref is not a real GitHub Actions context field"
+  }
 ];
 const SAFE_REF_EXPRESSION = /job\.workflow_sha/;
 const SAFE_REPOSITORY_EXPRESSION = /job\.workflow_repository/;
@@ -68,28 +74,38 @@ export function validateProviderToolingResolution(doc, sourceLabel) {
     const jobSource = JSON.stringify(steps);
 
     for (const [i, step] of steps.entries()) {
-      if (typeof step?.uses !== "string" || !step.uses.startsWith("actions/checkout")) continue;
+      if (
+        typeof step?.uses !== "string" ||
+        !step.uses.startsWith("actions/checkout")
+      )
+        continue;
       const withBlock = step.with ?? {};
       const repository = withBlock.repository;
       if (typeof repository !== "string") continue; // checking out the caller's own repo; not provider tooling
 
       const where = `${sourceLabel}:jobs.${jobId}.steps[${i}]`;
       const refExpr = String(withBlock.ref ?? "");
-      const isDirectSafeForm = SAFE_REF_EXPRESSION.test(refExpr) && SAFE_REPOSITORY_EXPRESSION.test(repository);
+      const isDirectSafeForm =
+        SAFE_REF_EXPRESSION.test(refExpr) &&
+        SAFE_REPOSITORY_EXPRESSION.test(repository);
 
       if (!isDirectSafeForm) {
         let matchedUnsafePattern = false;
         for (const { pattern, reason } of UNSAFE_REF_EXPRESSIONS) {
           if (pattern.test(refExpr) || pattern.test(jobSource)) {
             matchedUnsafePattern = true;
-            errors.push(`${where}: provider tooling checkout in job "${jobId}" — ${reason}`);
+            errors.push(
+              `${where}: provider tooling checkout in job "${jobId}" — ${reason}`
+            );
           }
         }
         errors.push(
           `${where}: provider tooling checkout (repository: "${repository}", ref: "${refExpr}") must resolve ` +
             `repository from job.workflow_repository and ref from job.workflow_sha directly, the exact provider ` +
             `revision the caller pinned to` +
-            (matchedUnsafePattern ? "" : " (found an indirect or unrecognized ref expression)"),
+            (matchedUnsafePattern
+              ? ""
+              : " (found an indirect or unrecognized ref expression)")
         );
       } else if (typeof withBlock.path === "string") {
         providerCheckoutPaths.add(withBlock.path);
@@ -106,13 +122,13 @@ export function validateProviderToolingResolution(doc, sourceLabel) {
 
       const where = `${sourceLabel}:jobs.${jobId}.steps[${i}]`;
       const matchesProviderCheckout = [...providerCheckoutPaths].some(
-        (path) => ref === `./${path}` || ref.startsWith(`./${path}/`),
+        (path) => ref === `./${path}` || ref.startsWith(`./${path}/`)
       );
       if (!matchesProviderCheckout) {
         errors.push(
           `${where}: local action reference "${ref}" resolves against the CALLER's checked-out workspace, not ` +
             `this provider repository, when this workflow is invoked cross-repository; it must point into a path ` +
-            `checked out from job.workflow_repository/job.workflow_sha`,
+            `checked out from job.workflow_repository/job.workflow_sha`
         );
       }
     }
@@ -147,24 +163,33 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
     const steps = Array.isArray(job?.steps) ? job.steps : [];
 
     for (const [i, step] of steps.entries()) {
-      if (typeof step?.uses !== "string" || !step.uses.startsWith("actions/checkout")) continue;
+      if (
+        typeof step?.uses !== "string" ||
+        !step.uses.startsWith("actions/checkout")
+      )
+        continue;
       const withBlock = step.with ?? {};
-      if (!SAFE_REPOSITORY_EXPRESSION.test(String(withBlock.repository ?? ""))) continue;
+      if (!SAFE_REPOSITORY_EXPRESSION.test(String(withBlock.repository ?? "")))
+        continue;
       if (!SAFE_REF_EXPRESSION.test(String(withBlock.ref ?? ""))) continue;
 
       const checkoutPath = String(withBlock.path ?? "");
       if (!checkoutPath) continue;
       const escapedPath = checkoutPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const movePattern = new RegExp(`\\bmv\\s+${escapedPath}\\s+[\"']?\\$RUNNER_TEMP/`);
+      const movePattern = new RegExp(
+        `\\bmv\\s+${escapedPath}\\s+[\"']?\\$RUNNER_TEMP/`
+      );
       const moveIndex = steps.findIndex(
         (candidate, candidateIndex) =>
-          candidateIndex > i && typeof candidate?.run === "string" && movePattern.test(candidate.run),
+          candidateIndex > i &&
+          typeof candidate?.run === "string" &&
+          movePattern.test(candidate.run)
       );
       const where = `${sourceLabel}:jobs.${jobId}.steps[${i}]`;
 
       if (moveIndex < 0) {
         errors.push(
-          `${where}: provider checkout path "${checkoutPath}" must be moved under $RUNNER_TEMP before consumer commands run`,
+          `${where}: provider checkout path "${checkoutPath}" must be moved under $RUNNER_TEMP before consumer commands run`
         );
       }
 
@@ -175,21 +200,30 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
         (candidate, candidateIndex) =>
           candidateIndex > i &&
           typeof candidate?.uses === "string" &&
-          (candidate.uses === `./${checkoutPath}` || candidate.uses.startsWith(`./${checkoutPath}/`)),
+          (candidate.uses === `./${checkoutPath}` ||
+            candidate.uses.startsWith(`./${checkoutPath}/`))
       );
       if (localActionIndex >= 0) {
-        const checkoutBasename = checkoutPath.split("/").pop().replace(/^\./, "");
-        const escapedBasename = checkoutBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const checkoutBasename = checkoutPath
+          .split("/")
+          .pop()
+          .replace(/^\./, "");
+        const escapedBasename = checkoutBasename.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&"
+        );
         const restorePattern = new RegExp(
-          `\\bmv\\s+[\"']?\\$RUNNER_TEMP/${escapedBasename}[\"']?\\s+${escapedPath}(?:\\s|$)`,
+          `\\bmv\\s+[\"']?\\$RUNNER_TEMP/${escapedBasename}[\"']?\\s+${escapedPath}(?:\\s|$)`
         );
         const restoreIndex = steps.findIndex(
           (candidate, candidateIndex) =>
-            candidateIndex > moveIndex && typeof candidate?.run === "string" && restorePattern.test(candidate.run),
+            candidateIndex > moveIndex &&
+            typeof candidate?.run === "string" &&
+            restorePattern.test(candidate.run)
         );
         if (restoreIndex < 0) {
           errors.push(
-            `${where}: provider local action "./${checkoutPath}" must be restored after the consumer command for its post steps`,
+            `${where}: provider local action "./${checkoutPath}" must be restored after the consumer command for its post steps`
           );
         }
       }
@@ -200,13 +234,18 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
       // ancestor workspace configuration.
       if (!checkoutPath.includes("metadata-tools")) continue;
       const installStep = steps.find(
-        (candidate) => typeof candidate?.run === "string" && /pnpm\s+install\s+--frozen-lockfile/.test(candidate.run),
+        (candidate) =>
+          typeof candidate?.run === "string" &&
+          /pnpm\s+install\s+--frozen-lockfile/.test(candidate.run)
       );
       if (installStep) {
         const workingDirectory = String(installStep["working-directory"] ?? "");
-        if (!/runner\.temp|\$RUNNER_TEMP/.test(workingDirectory) || !workingDirectory.includes("metadata-tools")) {
+        if (
+          !/runner\.temp|\$RUNNER_TEMP/.test(workingDirectory) ||
+          !workingDirectory.includes("metadata-tools")
+        ) {
           errors.push(
-            `${where}: provider dependency installation must use the moved metadata-tools directory under runner.temp`,
+            `${where}: provider dependency installation must use the moved metadata-tools directory under runner.temp`
           );
         }
       }
@@ -215,17 +254,19 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
         (candidate) =>
           typeof candidate?.uses === "string" &&
           candidate.uses.startsWith("pnpm/action-setup") &&
-          typeof candidate.with?.package_json_file === "string",
+          typeof candidate.with?.package_json_file === "string"
       );
       if (setupStepIndex >= 0) {
         const setupStep = steps[setupStepIndex];
         const packageJsonFile = String(setupStep.with.package_json_file);
         const usesMovedProviderPackage =
-          /runner\.temp|\$RUNNER_TEMP/.test(packageJsonFile) && packageJsonFile.includes("metadata-tools");
-        const usesWorkspaceShim = packageJsonFile === ".provider-pnpm/package.json";
+          /runner\.temp|\$RUNNER_TEMP/.test(packageJsonFile) &&
+          packageJsonFile.includes("metadata-tools");
+        const usesWorkspaceShim =
+          packageJsonFile === ".provider-pnpm/package.json";
         if (!usesMovedProviderPackage && !usesWorkspaceShim) {
           errors.push(
-            `${where}: pnpm setup must read package_json_file from the moved metadata-tools directory under runner.temp`,
+            `${where}: pnpm setup must read package_json_file from the moved metadata-tools directory under runner.temp`
           );
         }
         if (usesWorkspaceShim) {
@@ -233,11 +274,13 @@ export function validateProviderToolingIsolation(doc, sourceLabel) {
             (candidate, candidateIndex) =>
               candidateIndex > setupStepIndex &&
               typeof candidate?.run === "string" &&
-              /\bmv\s+\.provider-pnpm\s+[\"']?\$RUNNER_TEMP\/provider-pnpm-metadata/.test(candidate.run),
+              /\bmv\s+\.provider-pnpm\s+[\"']?\$RUNNER_TEMP\/provider-pnpm-metadata/.test(
+                candidate.run
+              )
           );
           if (shimMoveIndex < 0) {
             errors.push(
-              `${where}: provider pnpm metadata shim must leave the consumer workspace before provider install`,
+              `${where}: provider pnpm metadata shim must leave the consumer workspace before provider install`
             );
           }
         }
@@ -262,7 +305,7 @@ export function validateProviderToolingResolutionFile(filePath) {
   }
   return [
     ...validateProviderToolingResolution(doc, filePath),
-    ...validateProviderToolingIsolation(doc, filePath),
+    ...validateProviderToolingIsolation(doc, filePath)
   ];
 }
 

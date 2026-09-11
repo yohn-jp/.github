@@ -58,12 +58,17 @@ test("normalizes open, merged, and closed-without-merge PR states", () => {
   assert.equal(normalizeLinkedPullRequest(pullRequest()).state, "open");
   assert.equal(
     normalizeLinkedPullRequest(
-      pullRequest({ state: "CLOSED", merged: true, mergedAt: "2026-08-23T00:00:00Z" })
+      pullRequest({
+        state: "CLOSED",
+        merged: true,
+        mergedAt: "2026-08-23T00:00:00Z"
+      })
     ).state,
     "merged"
   );
   assert.equal(
-    normalizeLinkedPullRequest(pullRequest({ state: "CLOSED", merged: false })).state,
+    normalizeLinkedPullRequest(pullRequest({ state: "CLOSED", merged: false }))
+      .state,
     "closed"
   );
 });
@@ -169,12 +174,7 @@ test("collects paginated same- and cross-repository authoritative links", async 
     [
       ["yohn-jp/example", 8, "open", "Open implementation"],
       ["yohn-jp/example", 9, "closed", "Closed attempt"],
-      [
-        "yohn-jp/nawabari",
-        91,
-        "merged",
-        "Cross-repository implementation"
-      ]
+      ["yohn-jp/nawabari", 91, "merged", "Cross-repository implementation"]
     ]
   );
 });
@@ -203,11 +203,9 @@ test("GraphQL errors remain explicit and bounded by the hydrate layer", async ()
         }
       });
     }
-    return response(
-      { errors: [{ message: "API rate limit exceeded" }] },
-      429,
-      { "x-ratelimit-remaining": "0" }
-    );
+    return response({ errors: [{ message: "API rate limit exceeded" }] }, 429, {
+      "x-ratelimit-remaining": "0"
+    });
   };
 
   await hydrateDashboardPullRequests({
@@ -224,8 +222,14 @@ test("GraphQL errors remain explicit and bounded by the hydrate layer", async ()
   assert.equal(dashboard.errors.length, 1);
   assert.equal(dashboard.errors[0].stage, "pull-request-links");
   assert.equal(dashboard.errors[0].rateLimited, true);
-  assert.equal(dashboard.issues[0].relationships.pullRequests.status, "complete");
-  assert.equal(dashboard.issues[1].relationships.pullRequests.status, "partial");
+  assert.equal(
+    dashboard.issues[0].relationships.pullRequests.status,
+    "complete"
+  );
+  assert.equal(
+    dashboard.issues[1].relationships.pullRequests.status,
+    "partial"
+  );
   assert.equal(
     dashboard.source.relationships.pullRequests,
     PULL_REQUEST_LINKAGE_SOURCE
@@ -251,10 +255,7 @@ test("portal build publishes linked PR data without browser credentials", async 
   const registryPath = join(temporaryDirectory, "registry.json");
   const registry = JSON.parse(await readFile("portal/registry.json", "utf8"));
   registry.collectionRepositories = ["example"];
-  await writeFile(
-    registryPath,
-    JSON.stringify(registry)
-  );
+  await writeFile(registryPath, JSON.stringify(registry));
 
   const fetchImpl = async (url, options) => {
     if (url === "https://api.github.com/graphql") {
@@ -324,7 +325,10 @@ test("portal build publishes linked PR data without browser credentials", async 
     assert.equal(data.metrics.linkedPullRequests, 1);
     assert.equal(data.metrics.issuesWithPullRequests, 1);
     assert.equal(data.metrics.pullRequestDataUnavailable, 0);
-    assert.equal(data.issues[0].relationships.pullRequests.items[0].state, "merged");
+    assert.equal(
+      data.issues[0].relationships.pullRequests.items[0].state,
+      "merged"
+    );
     assert.equal(
       data.issues[0].relationships.pullRequests.items[0].repository.fullName,
       "yohn-jp/nawabari"

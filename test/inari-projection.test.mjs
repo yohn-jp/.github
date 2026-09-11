@@ -109,7 +109,10 @@ test("default Validation is a canonical checklist shared by render and validate"
     renderedWithoutReviewFocus
   );
   assert.equal(validatedWithoutReviewFocus.valid, true);
-  assert.deepEqual(validatedWithoutReviewFocus.parse.values, withoutReviewFocus);
+  assert.deepEqual(
+    validatedWithoutReviewFocus.parse.values,
+    withoutReviewFocus
+  );
 
   const incomplete = rendered.replace("- [x] Build", "- [ ] Build");
   const invalid = validateExistingPullRequestArtifact(contract, incomplete);

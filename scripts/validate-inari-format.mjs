@@ -22,7 +22,11 @@ const INARI_ROOT = join(process.cwd(), ".github", "inari");
 // workflow). Resolving config by searching upward from the target file
 // instead would let a consumer's own .prettierrc silently override the
 // canonical formatting contract.
-const CANONICAL_CONFIG_PATH = join(dirname(fileURLToPath(import.meta.url)), "..", ".prettierrc.json");
+const CANONICAL_CONFIG_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  ".prettierrc.json"
+);
 const canonicalConfig = JSON.parse(readFileSync(CANONICAL_CONFIG_PATH, "utf8"));
 
 /**
@@ -56,9 +60,14 @@ function listJsonFilesRecursive(dir) {
  */
 export async function validateInariFormatFile(filePath) {
   const raw = readFileSync(filePath, "utf8");
-  const formatted = await prettier.format(raw, { ...canonicalConfig, filepath: filePath });
+  const formatted = await prettier.format(raw, {
+    ...canonicalConfig,
+    filepath: filePath
+  });
   if (formatted !== raw) {
-    return [`${filePath}: not formatted with the canonical Prettier configuration (run \`prettier --write\`)`];
+    return [
+      `${filePath}: not formatted with the canonical Prettier configuration (run \`prettier --write\`)`
+    ];
   }
   return [];
 }
@@ -71,7 +80,9 @@ async function main() {
   const targets = listJsonFilesRecursive(INARI_ROOT);
 
   if (targets.length === 0) {
-    console.log(`No JSON files found under ${INARI_ROOT}; nothing to validate.`);
+    console.log(
+      `No JSON files found under ${INARI_ROOT}; nothing to validate.`
+    );
     return;
   }
 

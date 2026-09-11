@@ -1,0 +1,14 @@
+# Package-manager-owned lockfiles: pnpm writes these in its own
+# deterministic format, not Prettier's YAML printer. Running Prettier
+# against them would fight pnpm's own writer on every install.
+pnpm-lock.yaml
+test/fixtures/ts-cli/pnpm-lock.yaml
+
+# Deliberately non-canonical fixtures: their exact, non-canonical bytes are
+# the subject under test for validate-inari-format.mjs,
+# validate-issue-forms.mjs, and the workflow-security lane respectively.
+# Reformatting them would erase the defect each regression test exists to
+# detect.
+test/fixtures/inari-format/badly-formatted.json
+test/fixtures/issue-forms/invalid-flow-mapping.yml
+test/fixtures/workflows/workflow-security-invalid.yml

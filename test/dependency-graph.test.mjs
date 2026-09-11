@@ -35,11 +35,19 @@ test("collects native dependency edges without inferring from prose", async () =
   const second = rawIssue(2, { blocked_by: 1, blocking: 0 });
   const fetchImpl = async (url) => {
     if (url.endsWith("/repos/yohn-jp/alpha")) {
-      return response({ id: 10, name: "alpha", full_name: "yohn-jp/alpha", html_url: "https://github.com/yohn-jp/alpha", visibility: "public" });
+      return response({
+        id: 10,
+        name: "alpha",
+        full_name: "yohn-jp/alpha",
+        html_url: "https://github.com/yohn-jp/alpha",
+        visibility: "public"
+      });
     }
     if (url.includes("/issues?state=open")) return response([first, second]);
-    if (url.includes("/issues/1/dependencies/blocking")) return response([second]);
-    if (url.includes("/issues/2/dependencies/blocked_by")) return response([first]);
+    if (url.includes("/issues/1/dependencies/blocking"))
+      return response([second]);
+    if (url.includes("/issues/2/dependencies/blocked_by"))
+      return response([first]);
     throw new Error(`Unexpected URL: ${url}`);
   };
   const data = await collectDashboardData({
@@ -58,15 +66,27 @@ test("collects native dependency edges without inferring from prose", async () =
   const graph = buildDependencyGraph(data);
   assert.equal(graph.edges.length, 1);
   const layout = layoutDependencyGraph(graph);
-  assert.ok(layout.nodes.find((node) => node.number === 1).layer < layout.nodes.find((node) => node.number === 2).layer);
+  assert.ok(
+    layout.nodes.find((node) => node.number === 1).layer <
+      layout.nodes.find((node) => node.number === 2).layer
+  );
 });
 
 test("dependency endpoint failure is explicit and does not drop issue data", async () => {
   const issue = rawIssue(1, { blocked_by: 1, blocking: 0 });
   const fetchImpl = async (url) => {
-    if (url.endsWith("/repos/yohn-jp/alpha")) return response({ id: 10, name: "alpha", full_name: "yohn-jp/alpha", visibility: "public" });
+    if (url.endsWith("/repos/yohn-jp/alpha"))
+      return response({
+        id: 10,
+        name: "alpha",
+        full_name: "yohn-jp/alpha",
+        visibility: "public"
+      });
     if (url.includes("/issues?state=open")) return response([issue]);
-    if (url.includes("/dependencies/blocked_by")) return response({ message: "API rate limit exceeded" }, 429, { "x-ratelimit-remaining": "0" });
+    if (url.includes("/dependencies/blocked_by"))
+      return response({ message: "API rate limit exceeded" }, 429, {
+        "x-ratelimit-remaining": "0"
+      });
     throw new Error(`Unexpected URL: ${url}`);
   };
   const data = await collectDashboardData({
@@ -105,11 +125,25 @@ test("graph layout keeps cycles explicit and disconnected nodes optional", () =>
     url: `https://github.com/yohn-jp/alpha/issues/${number}`,
     relationships: { dependencies }
   });
-  const ref = (number) => ({ repository: { fullName: "yohn-jp/alpha" }, number, title: `Issue ${number}`, state: "open", url: `https://github.com/yohn-jp/alpha/issues/${number}` });
+  const ref = (number) => ({
+    repository: { fullName: "yohn-jp/alpha" },
+    number,
+    title: `Issue ${number}`,
+    state: "open",
+    url: `https://github.com/yohn-jp/alpha/issues/${number}`
+  });
   const dashboard = {
     issues: [
-      makeIssue(1, { status: "complete", blockedBy: [ref(2)], blocking: [ref(2)] }),
-      makeIssue(2, { status: "complete", blockedBy: [ref(1)], blocking: [ref(1)] }),
+      makeIssue(1, {
+        status: "complete",
+        blockedBy: [ref(2)],
+        blocking: [ref(2)]
+      }),
+      makeIssue(2, {
+        status: "complete",
+        blockedBy: [ref(1)],
+        blocking: [ref(1)]
+      }),
       makeIssue(3, { status: "complete", blockedBy: [], blocking: [] })
     ]
   };

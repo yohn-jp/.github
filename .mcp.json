@@ -3,11 +3,7 @@
     "mottainai": {
       "type": "stdio",
       "command": "mottainai",
-      "args": [
-        "serve",
-        "--config",
-        "mottainai.config.json"
-      ],
+      "args": ["serve", "--config", "mottainai.config.json"],
       "env": {}
     }
   }
