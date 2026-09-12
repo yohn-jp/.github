@@ -17,9 +17,10 @@ name: gh extension precompiled release
 # generic pre-upload validation, and the Release upload — so it stays
 # reusable across any GitHub CLI extension repository regardless of
 # implementation language. An optional certification-verification-script
-# input can gate the release on a consumer-owned Node script; unlike the
-# build entrypoint, this is opt-in and pulls in a pnpm/Node setup only when
-# requested, to keep the non-Node/non-gated default fully toolchain-neutral.
+# input can gate the release on a consumer-owned Node script after the exact
+# artifacts have been verified; unlike the build entrypoint, this is opt-in
+# and pulls in a pnpm/Node setup only when requested, to keep the
+# non-Node/non-gated default fully toolchain-neutral.
 on:
   workflow_call:
     inputs:
@@ -45,13 +46,14 @@ on:
           Optional path (relative to working-directory) to a consumer-owned,
           version-controlled Node script that fails closed unless the
           consumer's own release-certification evidence is complete and
-          valid. Run with no workflow-controlled arguments via
-          `node --import tsx` after a pnpm install in working-directory (the
-          consumer's package.json must declare an exact pnpm `packageManager`
-          version, same as the `npm-publish.yml` contract) — the script owns
-          locating or producing its own evidence and exits non-zero to block
-          the release. Empty (default) skips this gate and the Node/pnpm
-          setup it requires entirely.
+          valid. It runs after the consumer build and generic artifact
+          verification, before upload, with only the documented generic
+          release context in environment variables. Run with no
+          workflow-controlled arguments via `node --import tsx` after a pnpm
+          install in working-directory (the consumer's package.json must
+          declare an exact pnpm `packageManager` version, same as the
+          `npm-publish.yml` contract). Empty (default) skips this gate and
+          the Node/pnpm setup it requires entirely.
         type: string
         default: ""
     secrets: {}
@@ -72,6 +74,16 @@ jobs:
           ref: refs/tags/${{ inputs.release-tag }}
           persist-credentials: false
 
+      - name: Resolve release context
+        id: release-context
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: |
+          set -euo pipefail
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Resolve extension name
         id: extension
         shell: bash
@@ -84,40 +96,6 @@ jobs:
             name="${GITHUB_REPOSITORY#*/}"
           fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout release tooling (yohn-jp/.github)
-        if: inputs.certification-verification-script != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ job.workflow_repository }}
-          ref: ${{ job.workflow_sha }}
-          path: .release-tools
-          persist-credentials: false
-
-      - name: Setup Node.js and pnpm for release certification
-        if: inputs.certification-verification-script != ''
-        uses: ./.release-tools/.github/actions/setup-node-pnpm
-        with:
-          working-directory: ${{ inputs.working-directory }}
-
-      - name: Isolate release tooling
-        if: inputs.certification-verification-script != ''
-        shell: bash
-        run: mv .release-tools "$RUNNER_TEMP/release-tools"
-
-      - name: Verify release certification
-        if: inputs.certification-verification-script != ''
-        shell: bash
-        working-directory: ${{ inputs.working-directory }}
-        env:
-          CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
-        run: |
-          set -euo pipefail
-          if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
-            echo "::error::certification-verification-script '$CERTIFICATION_VERIFICATION_SCRIPT' not found" >&2
-            exit 1
-          fi
-          node --import tsx "$CERTIFICATION_VERIFICATION_SCRIPT"
 
       - name: Run consumer build entrypoint
         shell: bash
@@ -175,6 +153,47 @@ jobs:
             fi
             echo "verified $base"
           done
+
+      - name: Checkout release tooling (yohn-jp/.github)
+        if: inputs.certification-verification-script != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .release-tools
+          persist-credentials: false
+
+      - name: Setup Node.js and pnpm for release certification
+        if: inputs.certification-verification-script != ''
+        uses: ./.release-tools/.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Isolate release tooling
+        if: inputs.certification-verification-script != ''
+        shell: bash
+        run: mv .release-tools "$RUNNER_TEMP/release-tools"
+
+      - name: Verify release certification
+        if: inputs.certification-verification-script != ''
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+          RELEASE_SOURCE_SHA: ${{ steps.release-context.outputs.source_sha }}
+          RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
+          RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
+        run: |
+          set -euo pipefail
+          if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
+            echo "::error::certification-verification-script '$CERTIFICATION_VERIFICATION_SCRIPT' not found" >&2
+            exit 1
+          fi
+          if [ ! -d "$RELEASE_ARTIFACT_DIR" ]; then
+            echo "::error::release artifact directory '$RELEASE_ARTIFACT_DIR' not found" >&2
+            exit 1
+          fi
+          node --import tsx "$CERTIFICATION_VERIFICATION_SCRIPT"
 
       - name: Upload assets to release ${{ inputs.release-tag }}
         shell: bash

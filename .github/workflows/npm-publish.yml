@@ -1,10 +1,11 @@
 name: npm publish
 
 # Reusable release-triggered npm publishing: build/test, verify the release
-# tag matches package.json's version, pack a tarball, smoke-test that exact
-# tarball across a Node-version matrix, then publish it via npm Trusted
-# Publishing (OIDC) — no long-lived npm token secret. Package name/version
-# are discovered from package.json, never from repository-name branching.
+# tag matches package.json's version, pack one exact tarball, certify that
+# tarball, smoke-test the same bytes across a Node-version matrix, then
+# publish them via npm Trusted Publishing (OIDC) — no long-lived npm token
+# secret. Package name/version are discovered from package.json, never from
+# repository-name branching.
 on:
   workflow_call:
     inputs:
@@ -30,9 +31,11 @@ on:
         description: >-
           Optional path (relative to working-directory) to a consumer-owned,
           version-controlled script that fails closed unless the consumer's
-          own release-certification evidence is complete and valid. Run with
-          no workflow-controlled arguments — the script owns locating or
-          producing its own evidence and exits non-zero to block the release.
+          own release-certification evidence is complete and valid. It runs
+          after the exact tarball is packed and before that tarball is made
+          available to smoke/publish, with only the documented generic
+          release context in environment variables. The script receives no
+          workflow-controlled arguments and exits non-zero to block release.
           Empty (default) skips this gate entirely for consumers that don't
           define one.
         type: string
@@ -64,11 +67,24 @@ jobs:
     outputs:
       package-name: ${{ steps.package.outputs.name }}
       package-version: ${{ steps.package.outputs.version }}
+      tarball-name: ${{ steps.pack.outputs.name }}
+      tarball-sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
           persist-credentials: false
+
+      - name: Resolve release context
+        id: release-context
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Checkout release tooling (yohn-jp/.github)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -113,32 +129,69 @@ jobs:
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: node "$RUNNER_TEMP/release-tools/scripts/check-release-version.mjs" --package-version "$PACKAGE_VERSION" --tag "$RELEASE_TAG"
 
+      - name: Pack tarball
+        id: pack
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing_tarballs=( ./*.tgz )
+          if [ "${#existing_tarballs[@]}" -gt 0 ]; then
+            rm -f -- "${existing_tarballs[@]}"
+          fi
+          pnpm pack
+          tarballs=( ./*.tgz )
+          if [ "${#tarballs[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one packed tarball, found ${#tarballs[@]}" >&2
+            exit 1
+          fi
+          tarball="${tarballs[0]}"
+          echo "name=$(basename "$tarball")" >> "$GITHUB_OUTPUT"
+          echo "path=$PWD/${tarball#./}" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$tarball" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
       - name: Verify release certification
         if: inputs.certification-verification-script != ''
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         env:
           CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+          RELEASE_SOURCE_SHA: ${{ steps.release-context.outputs.source_sha }}
+          RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
+          RELEASE_ARTIFACT_PATH: ${{ steps.pack.outputs.path }}
         run: |
           set -euo pipefail
           if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
             echo "::error::certification-verification-script '$CERTIFICATION_VERIFICATION_SCRIPT' not found" >&2
             exit 1
           fi
+          if [ ! -f "$RELEASE_ARTIFACT_PATH" ]; then
+            echo "::error::release artifact '$RELEASE_ARTIFACT_PATH' not found" >&2
+            exit 1
+          fi
           node --import tsx "$CERTIFICATION_VERIFICATION_SCRIPT"
 
-      - name: Pack tarball
+      - name: Verify packed tarball unchanged
+        if: inputs.certification-verification-script != ''
         shell: bash
-        working-directory: ${{ inputs.working-directory }}
+        env:
+          RELEASE_ARTIFACT_PATH: ${{ steps.pack.outputs.path }}
+          EXPECTED_TARBALL_SHA256: ${{ steps.pack.outputs.sha256 }}
         run: |
-          rm -f ./*.tgz
-          pnpm pack
+          set -euo pipefail
+          actual_sha256="$(sha256sum "$RELEASE_ARTIFACT_PATH" | cut -d ' ' -f 1)"
+          if [ "$actual_sha256" != "$EXPECTED_TARBALL_SHA256" ]; then
+            echo "::error::release certification changed the packed tarball bytes" >&2
+            exit 1
+          fi
 
       - name: Upload tarball
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: package-tarball
-          path: ${{ inputs.working-directory }}/*.tgz
+          path: ${{ steps.pack.outputs.path }}
+          if-no-files-found: error
           retention-days: 1
 
       - name: Restore release tooling for action cleanup
@@ -177,9 +230,21 @@ jobs:
       - name: Smoke test packed tarball
         shell: bash
         working-directory: ${{ inputs.working-directory }}
+        env:
+          TARBALL_NAME: ${{ needs.build.outputs.tarball-name }}
+          EXPECTED_TARBALL_SHA256: ${{ needs.build.outputs.tarball-sha256 }}
         run: |
-          tarballs=( ./*.tgz )
-          node scripts/smoke-test.mjs --tarball "${tarballs[0]}"
+          set -euo pipefail
+          if [ ! -f "$TARBALL_NAME" ]; then
+            echo "::error::expected packed tarball '$TARBALL_NAME' was not downloaded" >&2
+            exit 1
+          fi
+          actual_sha256="$(sha256sum "$TARBALL_NAME" | cut -d ' ' -f 1)"
+          if [ "$actual_sha256" != "$EXPECTED_TARBALL_SHA256" ]; then
+            echo "::error::downloaded tarball bytes do not match the packed tarball" >&2
+            exit 1
+          fi
+          node scripts/smoke-test.mjs --tarball "$TARBALL_NAME"
 
   publish:
     name: Publish (OIDC Trusted Publishing)
@@ -212,6 +277,24 @@ jobs:
           name: package-tarball
           path: ${{ inputs.working-directory }}
 
+      - name: Verify downloaded tarball
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          TARBALL_NAME: ${{ needs.build.outputs.tarball-name }}
+          EXPECTED_TARBALL_SHA256: ${{ needs.build.outputs.tarball-sha256 }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$TARBALL_NAME" ]; then
+            echo "::error::expected packed tarball '$TARBALL_NAME' was not downloaded" >&2
+            exit 1
+          fi
+          actual_sha256="$(sha256sum "$TARBALL_NAME" | cut -d ' ' -f 1)"
+          if [ "$actual_sha256" != "$EXPECTED_TARBALL_SHA256" ]; then
+            echo "::error::downloaded tarball bytes do not match the packed tarball" >&2
+            exit 1
+          fi
+
       - name: Check whether version is already published
         id: registry
         shell: bash
@@ -230,7 +313,8 @@ jobs:
         if: steps.registry.outputs.published != 'true'
         shell: bash
         working-directory: ${{ inputs.working-directory }}
+        env:
+          TARBALL_NAME: ${{ needs.build.outputs.tarball-name }}
         run: |
           set -euo pipefail
-          tarballs=( ./*.tgz )
-          npm publish "${tarballs[0]}"
+          npm publish "$TARBALL_NAME"

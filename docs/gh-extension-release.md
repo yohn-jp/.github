@@ -3,8 +3,9 @@
 `.github/workflows/gh-extension-release.yml` is the shared release-triggered
 publishing contract for precompiled [GitHub CLI extensions](https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions#precompiled-binaries):
 checkout the exact Release/tag source revision, run the consumer's own
-version-controlled build entrypoint, verify the resulting artifacts, and
-upload them to that already-existing GitHub Release.
+version-controlled build entrypoint, verify the resulting artifacts, run the
+optional certification gate against those exact artifacts, and upload them to
+that already-existing GitHub Release.
 
 The workflow takes no caller-controlled command to execute. It calls a
 fixed, version-controlled entrypoint script the consumer commits at
@@ -127,19 +128,29 @@ Node/pnpm and the consumer's `devDependencies` (the consumer's
 `package.json` must declare an exact pnpm `packageManager` version, same
 requirement as `npm-publish.yml`), then runs
 `node --import tsx <certification-verification-script>` with no
-workflow-controlled arguments before the build entrypoint. A non-zero exit
+workflow-controlled arguments after the consumer build and generic artifact
+verification, immediately before upload. A missing script or non-zero exit
 fails the release. The release-tooling checkout is removed immediately
-after use so it can't be mistaken for consumer source by the build
-entrypoint or artifact verification steps that follow.
+after setup so it cannot be mistaken for consumer source by the build,
+artifact verification, or upload steps.
 
-The script is entirely consumer-owned: it is responsible for locating or
-producing whatever evidence it needs and for deciding what "certified"
-means for that repository. This workflow knows nothing about evidence
-shape, location, or schema and never will, to avoid this repository
-becoming a second certification authority. Leaving the input empty (the
-default) skips the gate and the Node/pnpm setup it requires entirely, so
-non-Node consumers and consumers without a certification contract are
-unaffected.
+The verifier receives this bounded, product-neutral context through
+environment variables:
+
+| Variable               | Value                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| `RELEASE_SOURCE_SHA`   | Full SHA of the exact commit checked out from `refs/tags/<release-tag>`.                     |
+| `RELEASE_TAG`          | Exact `release-tag` input used for checkout and the target GitHub Release.                   |
+| `RELEASE_ARTIFACT_DIR` | Absolute `$RUNNER_TEMP/gh-extension-artifacts` directory after generic presence/name checks. |
+
+`RELEASE_ARTIFACT_DIR` is the same dedicated directory used by the consumer
+build, generic verification, and `gh release upload`; every file in it is an
+exact upload candidate. The script remains entirely consumer-owned: it
+decides what "certified" means and where its own evidence lives. This
+workflow knows nothing about evidence shape, location, schema, or
+product-specific contract versions. Leaving the input empty (the default)
+skips the gate and the Node/pnpm setup it requires entirely, so non-Node
+consumers and consumers without a certification contract are unaffected.
 
 ## Existing Release required
 

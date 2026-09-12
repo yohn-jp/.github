@@ -168,7 +168,7 @@ test("release artifacts are isolated from consumer build output", () => {
   }
 });
 
-test("release certification gate is optional, fails closed, and runs before the build entrypoint", () => {
+test("release certification gate is optional, fails closed, and runs after verified artifacts", () => {
   const verifyStep = stepNamed("Verify release certification");
   assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
   assert.equal(
@@ -176,6 +176,13 @@ test("release certification gate is optional, fails closed, and runs before the 
       .default,
     ""
   );
+  assert.deepEqual(verifyStep.env, {
+    CERTIFICATION_VERIFICATION_SCRIPT:
+      "${{ inputs.certification-verification-script }}",
+    RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
+    RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
+    RELEASE_ARTIFACT_DIR: "${{ runner.temp }}/gh-extension-artifacts"
+  });
 
   const gatedStepNames = [
     "Checkout release tooling (yohn-jp/.github)",
@@ -214,8 +221,30 @@ test("release certification gate is optional, fails closed, and runs before the 
   const buildIndex = releaseJob.steps.findIndex(
     (step) => step.name === "Run consumer build entrypoint"
   );
-  assert.ok(verifyIndex !== -1 && buildIndex !== -1);
-  assert.ok(verifyIndex < buildIndex);
+  const artifactIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Verify artifacts"
+  );
+  const uploadIndex = releaseJob.steps.findIndex((step) =>
+    step.name.startsWith("Upload assets to release")
+  );
+  assert.ok(
+    verifyIndex !== -1 &&
+      buildIndex !== -1 &&
+      artifactIndex !== -1 &&
+      uploadIndex !== -1
+  );
+  assert.ok(buildIndex < artifactIndex);
+  assert.ok(artifactIndex < verifyIndex);
+  assert.ok(verifyIndex < uploadIndex);
+
+  const contextStep = stepNamed("Resolve release context");
+  assert.match(contextStep.run, /git rev-parse HEAD/);
+  assert.equal(
+    releaseJob.steps.findIndex(
+      (step) => step.name === "Checkout release tooling (yohn-jp/.github)"
+    ) > artifactIndex,
+    true
+  );
 
   const root = mkdtempSync(join(tmpdir(), "gh-extension-certification-"));
   try {
@@ -239,22 +268,43 @@ test("release certification gate is optional, fails closed, and runs before the 
 
     const scripts = join(root, "scripts");
     mkdirSync(scripts, { recursive: true });
+    const artifactDir = join(root, "release-artifacts");
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(join(artifactDir, "fixture-linux-amd64"), "artifact bytes\n");
     const script = join(scripts, "verify-release-certification.mjs");
-    writeFileSync(script, "process.exitCode = 1;\n");
+    writeFileSync(
+      script,
+      'console.error("certification failed"); process.exitCode = 1;\n'
+    );
     assertStepFails(
       verifyStep.run,
       root,
       {
         CERTIFICATION_VERIFICATION_SCRIPT:
-          "scripts/verify-release-certification.mjs"
+          "scripts/verify-release-certification.mjs",
+        RELEASE_SOURCE_SHA: "0123456789abcdef",
+        RELEASE_TAG: "v0.1.0",
+        RELEASE_ARTIFACT_DIR: root
       },
-      /.*/
+      /certification failed/
     );
 
-    writeFileSync(script, "process.exitCode = 0;\n");
+    writeFileSync(
+      script,
+      [
+        'import { readdirSync, readFileSync } from "node:fs";',
+        'if (process.env.RELEASE_SOURCE_SHA !== "0123456789abcdef") process.exitCode = 1;',
+        'if (process.env.RELEASE_TAG !== "v0.1.0") process.exitCode = 1;',
+        'if (readdirSync(process.env.RELEASE_ARTIFACT_DIR).join() !== "fixture-linux-amd64") process.exitCode = 1;',
+        'if (readFileSync(`${process.env.RELEASE_ARTIFACT_DIR}/fixture-linux-amd64`, "utf8") !== "artifact bytes\\n") process.exitCode = 1;'
+      ].join("\n") + "\n"
+    );
     runStep(verifyStep.run, root, {
       CERTIFICATION_VERIFICATION_SCRIPT:
-        "scripts/verify-release-certification.mjs"
+        "scripts/verify-release-certification.mjs",
+      RELEASE_SOURCE_SHA: "0123456789abcdef",
+      RELEASE_TAG: "v0.1.0",
+      RELEASE_ARTIFACT_DIR: artifactDir
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

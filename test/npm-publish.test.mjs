@@ -59,9 +59,22 @@ function stubTsx(root) {
   writeFileSync(join(tsxDir, "index.mjs"), "");
 }
 
-test("verify release certification step is gated by input and fails closed", () => {
+test("release certification gate is optional and receives only the generic exact-release context", () => {
   const verifyStep = stepNamed("Verify release certification");
   assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
+  assert.deepEqual(verifyStep.env, {
+    CERTIFICATION_VERIFICATION_SCRIPT:
+      "${{ inputs.certification-verification-script }}",
+    RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
+    RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
+    RELEASE_ARTIFACT_PATH: "${{ steps.pack.outputs.path }}"
+  });
+  assert.match(verifyStep.run, /node --import tsx/);
+  assert.match(stepNamed("Resolve release context").run, /git rev-parse HEAD/);
+  assert.equal(
+    stepNamed("Checkout").with.ref,
+    "refs/tags/${{ github.event.release.tag_name }}"
+  );
 
   const root = mkdtempSync(join(tmpdir(), "npm-publish-certification-"));
   try {
@@ -79,37 +92,108 @@ test("verify release certification step is gated by input and fails closed", () 
     const scripts = join(root, "scripts");
     mkdirSync(scripts, { recursive: true });
     const failingScript = join(scripts, "verify-release-certification.mjs");
-    writeFileSync(failingScript, "process.exitCode = 1;\n");
+    writeFileSync(
+      failingScript,
+      'console.error("certification failed"); process.exitCode = 1;\n'
+    );
     chmodSync(failingScript, 0o644);
     assertStepFails(
       verifyStep.run,
       root,
       {
         CERTIFICATION_VERIFICATION_SCRIPT:
-          "scripts/verify-release-certification.mjs"
+          "scripts/verify-release-certification.mjs",
+        RELEASE_SOURCE_SHA: "0123456789abcdef",
+        RELEASE_TAG: "v1.0.0",
+        RELEASE_ARTIFACT_PATH: failingScript
       },
-      /.*/
+      /certification failed/
     );
 
-    writeFileSync(failingScript, "process.exitCode = 0;\n");
+    const tarballPath = join(root, "package-1.0.0.tgz");
+    writeFileSync(tarballPath, "the exact packed bytes\n");
+    writeFileSync(
+      failingScript,
+      [
+        'import { existsSync, readFileSync } from "node:fs";',
+        'if (process.env.RELEASE_SOURCE_SHA !== "0123456789abcdef") process.exitCode = 1;',
+        'if (process.env.RELEASE_TAG !== "v1.0.0") process.exitCode = 1;',
+        "if (!existsSync(process.env.RELEASE_ARTIFACT_PATH)) process.exitCode = 1;",
+        'if (readFileSync(process.env.RELEASE_ARTIFACT_PATH, "utf8") !== "the exact packed bytes\\n") process.exitCode = 1;'
+      ].join("\n") + "\n"
+    );
     runStep(verifyStep.run, root, {
       CERTIFICATION_VERIFICATION_SCRIPT:
-        "scripts/verify-release-certification.mjs"
+        "scripts/verify-release-certification.mjs",
+      RELEASE_SOURCE_SHA: "0123456789abcdef",
+      RELEASE_TAG: "v1.0.0",
+      RELEASE_ARTIFACT_PATH: tarballPath
     });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("verify release certification step runs before packing the tarball", () => {
+test("npm certification runs after one pack and before the exact tarball is uploaded", () => {
+  const packStep = stepNamed("Pack tarball");
   const verifyIndex = buildJob.steps.findIndex(
     (step) => step.name === "Verify release certification"
   );
   const packIndex = buildJob.steps.findIndex(
     (step) => step.name === "Pack tarball"
   );
-  assert.ok(verifyIndex !== -1 && packIndex !== -1);
-  assert.ok(verifyIndex < packIndex);
+  const uploadIndex = buildJob.steps.findIndex(
+    (step) => step.name === "Upload tarball"
+  );
+  const unchangedIndex = buildJob.steps.findIndex(
+    (step) => step.name === "Verify packed tarball unchanged"
+  );
+  assert.ok(
+    verifyIndex !== -1 &&
+      packIndex !== -1 &&
+      unchangedIndex !== -1 &&
+      uploadIndex !== -1
+  );
+  assert.ok(packIndex < verifyIndex);
+  assert.ok(verifyIndex < unchangedIndex);
+  assert.ok(unchangedIndex < uploadIndex);
+  assert.equal((packStep.run.match(/\bpnpm pack\b/g) ?? []).length, 1);
+  assert.equal(
+    stepNamed("Upload tarball").with.path,
+    "${{ steps.pack.outputs.path }}"
+  );
+});
+
+test("smoke and publish consume the packed artifact without repacking", () => {
+  assert.deepEqual(workflow.jobs.build.outputs, {
+    "package-name": "${{ steps.package.outputs.name }}",
+    "package-version": "${{ steps.package.outputs.version }}",
+    "tarball-name": "${{ steps.pack.outputs.name }}",
+    "tarball-sha256": "${{ steps.pack.outputs.sha256 }}"
+  });
+
+  const smokeStep = workflow.jobs["smoke-test"].steps.find(
+    (step) => step.name === "Smoke test packed tarball"
+  );
+  const publishJob = workflow.jobs.publish;
+  const publishStep = publishJob.steps.find((step) => step.name === "Publish");
+  assert.ok(smokeStep && publishStep);
+  assert.equal(
+    smokeStep.env.TARBALL_NAME,
+    "${{ needs.build.outputs.tarball-name }}"
+  );
+  assert.equal(
+    publishStep.env.TARBALL_NAME,
+    "${{ needs.build.outputs.tarball-name }}"
+  );
+  assert.match(
+    smokeStep.run,
+    /node scripts\/smoke-test\.mjs --tarball "\$TARBALL_NAME"/
+  );
+  assert.match(publishStep.run, /npm publish "\$TARBALL_NAME"/);
+  assert.doesNotMatch(smokeStep.run, /\b(?:pnpm|npm) pack\b/);
+  assert.doesNotMatch(publishStep.run, /\b(?:pnpm|npm) pack\b/);
+  assert.deepEqual(publishJob.needs, ["build", "smoke-test"]);
 });
 
 test("certification-verification-script input defaults to empty (gate disabled)", () => {

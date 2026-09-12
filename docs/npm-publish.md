@@ -3,8 +3,9 @@
 `.github/workflows/npm-publish.yml` is the shared release-triggered npm
 publishing contract for `yohn-jp` TypeScript CLI packages: build/test,
 verify the release tag matches `package.json`'s version, pack a tarball,
-smoke-test that exact tarball across a Node-version matrix, then publish
-it via npm Trusted Publishing (OIDC) — no long-lived `npm publish` token.
+run the optional certification gate against that exact tarball, smoke-test
+the same bytes across a Node-version matrix, then publish them via npm
+Trusted Publishing (OIDC) — no long-lived `npm publish` token.
 
 ## Consuming it from another repository
 
@@ -65,23 +66,39 @@ so it always matches the exact provider revision selected by the caller's
 ## Optional release-certification gate
 
 If `certification-verification-script` is set, the `build` job runs it
-(`node --import tsx <script>`, relative to `working-directory`) with no
-workflow-controlled arguments right before packing the tarball, and fails
-the release if it exits non-zero. The script is entirely consumer-owned: it
-is responsible for locating or producing whatever evidence it needs and for
-deciding what "certified" means for that repository — this workflow knows
-nothing about evidence shape, location, or schema and never will, to avoid
-this repository becoming a second certification authority. Leaving the
-input empty (the default) skips the gate entirely, so existing consumers
-without a certification contract are unaffected.
+(`node --import tsx <script>`, relative to `working-directory`) after
+`pnpm pack` has created exactly one tarball and before it is uploaded for
+smoke/publish. The script receives no workflow-controlled arguments and the
+release fails if it is missing or exits non-zero. The workflow also checks
+that the script did not change the packed tarball bytes before uploading it;
+there is no second pack operation.
+
+The verifier receives this bounded, product-neutral context through
+environment variables:
+
+| Variable                | Value                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `RELEASE_SOURCE_SHA`    | Full SHA of the exact release-tag commit checked out by the workflow.                                |
+| `RELEASE_TAG`           | Exact tag from the triggering Release.                                                               |
+| `RELEASE_ARTIFACT_PATH` | Absolute path to the one packed `.tgz` file; this is the file uploaded, smoke-tested, and published. |
+
+The consumer script may read the tarball and its metadata, but must treat
+`RELEASE_ARTIFACT_PATH` as the immutable release artifact. The script remains
+entirely consumer-owned: it decides what "certified" means and where its own
+evidence lives. This workflow knows nothing about evidence shape, location,
+schema, or product-specific contract versions. Leaving the input empty (the
+default) skips the gate entirely, so existing consumers without a
+certification contract are unaffected.
 
 ## Idempotent publish
 
-The `publish` job checks `npm view <name>@<version> version` before
-publishing; if that version is already on the registry, the publish step
-is skipped rather than failing. This makes it safe to re-run a publish
-workflow (e.g. after a transient failure earlier in the same run) without
-manual registry cleanup.
+The `publish` job downloads the exact tarball produced by `build`, verifies
+its SHA-256 against the build output, and passes that same file to
+`npm publish`. It then checks `npm view <name>@<version> version` before
+publishing; if that version is already on the registry, the publish step is
+skipped rather than failing. This makes it safe to re-run a publish workflow
+(e.g. after a transient failure earlier in the same run) without manual
+registry cleanup.
 
 ## OIDC Trusted Publishing setup (per consumer repository)
 
