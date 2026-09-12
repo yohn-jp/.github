@@ -62,9 +62,19 @@ function stubTsx(root) {
 test("release certification gate is optional and receives only the generic exact-release context", () => {
   const verifyStep = stepNamed("Verify release certification");
   assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
+  assert.deepEqual(workflow.permissions, { contents: "read" });
+  assert.deepEqual(buildJob.permissions, {
+    actions: "read",
+    contents: "read"
+  });
+  assert.deepEqual(workflow.jobs.publish.permissions, {
+    contents: "read",
+    "id-token": "write"
+  });
   assert.deepEqual(verifyStep.env, {
     CERTIFICATION_VERIFICATION_SCRIPT:
       "${{ inputs.certification-verification-script }}",
+    GITHUB_TOKEN: "${{ github.token }}",
     RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
     RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
     RELEASE_ARTIFACT_PATH: "${{ steps.pack.outputs.path }}",
@@ -120,6 +130,7 @@ test("release certification gate is optional and receives only the generic exact
         'import { existsSync, readFileSync } from "node:fs";',
         'if (process.env.RELEASE_SOURCE_SHA !== "0123456789abcdef") process.exitCode = 1;',
         'if (process.env.RELEASE_TAG !== "v1.0.0") process.exitCode = 1;',
+        'if (process.env.GITHUB_TOKEN !== "job-token") process.exitCode = 1;',
         'if (process.env.RELEASE_ARTIFACT_SHA256 !== "packed-sha256") process.exitCode = 1;',
         "if (!existsSync(process.env.RELEASE_ARTIFACT_PATH)) process.exitCode = 1;",
         'if (readFileSync(process.env.RELEASE_ARTIFACT_PATH, "utf8") !== "the exact packed bytes\\n") process.exitCode = 1;'
@@ -131,7 +142,8 @@ test("release certification gate is optional and receives only the generic exact
       RELEASE_SOURCE_SHA: "0123456789abcdef",
       RELEASE_TAG: "v1.0.0",
       RELEASE_ARTIFACT_PATH: tarballPath,
-      RELEASE_ARTIFACT_SHA256: "packed-sha256"
+      RELEASE_ARTIFACT_SHA256: "packed-sha256",
+      GITHUB_TOKEN: "job-token"
     });
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -206,4 +218,16 @@ test("certification-verification-script input defaults to empty (gate disabled)"
       .default,
     ""
   );
+});
+
+test("the shared workflow keeps the certification token scoped to its verifier", () => {
+  const verifyStep = stepNamed("Verify release certification");
+  assert.equal(verifyStep.env.GITHUB_TOKEN, "${{ github.token }}");
+  for (const job of Object.values(workflow.jobs)) {
+    for (const step of job.steps ?? []) {
+      if (step === verifyStep) continue;
+      assert.notEqual(step.env?.GITHUB_TOKEN, "${{ github.token }}");
+    }
+  }
+  assert.doesNotMatch(workflowSource, /\b(?:gh-inari|Inari)\b|evidence schema/);
 });

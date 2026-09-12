@@ -29,7 +29,14 @@ jobs:
       smoke-test-node-versions: "24" # optional, default "24"
       npm-cli-version: "12.0.2" # optional, default "12.0.2"
       certification-verification-script: "" # optional, default "" (gate disabled)
+    permissions:
+      contents: read
+      id-token: write
 ```
+
+When `certification-verification-script` is enabled, also add
+`actions: read` to the caller job's permissions. The reusable workflow narrows
+that capability to its certification build job.
 
 ## Required package.json scripts and files
 
@@ -78,6 +85,7 @@ environment variables:
 
 | Variable                  | Value                                                                                                |
 | ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `GITHUB_TOKEN`            | Ephemeral job token with `actions: read`, available only to the verifier step.                       |
 | `RELEASE_SOURCE_SHA`      | Full SHA of the exact release-tag commit checked out by the workflow.                                |
 | `RELEASE_TAG`             | Exact tag from the triggering Release.                                                               |
 | `RELEASE_ARTIFACT_PATH`   | Absolute path to the one packed `.tgz` file; this is the file uploaded, smoke-tested, and published. |

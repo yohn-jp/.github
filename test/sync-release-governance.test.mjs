@@ -54,6 +54,32 @@ test("every synchronized consumer receives the canonical release snapshot", () =
   }
 });
 
+test("gh-inari receives the canonical certification-enabled publish wrapper", () => {
+  const wrapper = yaml.load(
+    readFileSync("templates/workflows/publish.yml", "utf8")
+  );
+  const publishJob = wrapper.jobs.publish;
+
+  assert.deepEqual(wrapper.permissions, { contents: "read" });
+  assert.equal(
+    mappingsFor("yohn-jp/gh-inari").get(".github/workflows/publish.yml"),
+    "templates/workflows/publish.yml"
+  );
+  assert.equal(
+    publishJob.uses,
+    "yohn-jp/.github/.github/workflows/npm-publish.yml@main"
+  );
+  assert.deepEqual(publishJob.with, {
+    "certification-verification-script":
+      "scripts/verify-release-certification.mjs"
+  });
+  assert.deepEqual(publishJob.permissions, {
+    actions: "read",
+    contents: "read",
+    "id-token": "write"
+  });
+});
+
 test("release governance rollout has one canonical path per consumer class", () => {
   for (const repository of ["yohn-jp/gh-makami", "yohn-jp/suzukuri"]) {
     assert.equal(
