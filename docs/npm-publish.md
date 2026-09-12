@@ -76,19 +76,22 @@ there is no second pack operation.
 The verifier receives this bounded, product-neutral context through
 environment variables:
 
-| Variable                | Value                                                                                                |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `RELEASE_SOURCE_SHA`    | Full SHA of the exact release-tag commit checked out by the workflow.                                |
-| `RELEASE_TAG`           | Exact tag from the triggering Release.                                                               |
-| `RELEASE_ARTIFACT_PATH` | Absolute path to the one packed `.tgz` file; this is the file uploaded, smoke-tested, and published. |
+| Variable                  | Value                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `RELEASE_SOURCE_SHA`      | Full SHA of the exact release-tag commit checked out by the workflow.                                |
+| `RELEASE_TAG`             | Exact tag from the triggering Release.                                                               |
+| `RELEASE_ARTIFACT_PATH`   | Absolute path to the one packed `.tgz` file; this is the file uploaded, smoke-tested, and published. |
+| `RELEASE_ARTIFACT_SHA256` | SHA-256 of `RELEASE_ARTIFACT_PATH` immediately after packing.                                        |
 
 The consumer script may read the tarball and its metadata, but must treat
-`RELEASE_ARTIFACT_PATH` as the immutable release artifact. The script remains
-entirely consumer-owned: it decides what "certified" means and where its own
-evidence lives. This workflow knows nothing about evidence shape, location,
-schema, or product-specific contract versions. Leaving the input empty (the
-default) skips the gate entirely, so existing consumers without a
-certification contract are unaffected.
+`RELEASE_ARTIFACT_PATH` as the immutable release artifact and must not modify
+it. The workflow checks the path digest after the verifier and again after
+artifact download; any byte change fails closed. The script remains entirely
+consumer-owned: it decides what "certified" means and where its own evidence
+lives. This workflow knows nothing about evidence shape, location, schema, or
+product-specific contract versions. Leaving the input empty (the default)
+skips the gate entirely, so existing consumers without a certification
+contract are unaffected.
 
 ## Idempotent publish
 

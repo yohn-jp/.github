@@ -67,7 +67,8 @@ test("release certification gate is optional and receives only the generic exact
       "${{ inputs.certification-verification-script }}",
     RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
     RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
-    RELEASE_ARTIFACT_PATH: "${{ steps.pack.outputs.path }}"
+    RELEASE_ARTIFACT_PATH: "${{ steps.pack.outputs.path }}",
+    RELEASE_ARTIFACT_SHA256: "${{ steps.pack.outputs.sha256 }}"
   });
   assert.match(verifyStep.run, /node --import tsx/);
   assert.match(stepNamed("Resolve release context").run, /git rev-parse HEAD/);
@@ -105,7 +106,8 @@ test("release certification gate is optional and receives only the generic exact
           "scripts/verify-release-certification.mjs",
         RELEASE_SOURCE_SHA: "0123456789abcdef",
         RELEASE_TAG: "v1.0.0",
-        RELEASE_ARTIFACT_PATH: failingScript
+        RELEASE_ARTIFACT_PATH: failingScript,
+        RELEASE_ARTIFACT_SHA256: "packed-sha256"
       },
       /certification failed/
     );
@@ -118,6 +120,7 @@ test("release certification gate is optional and receives only the generic exact
         'import { existsSync, readFileSync } from "node:fs";',
         'if (process.env.RELEASE_SOURCE_SHA !== "0123456789abcdef") process.exitCode = 1;',
         'if (process.env.RELEASE_TAG !== "v1.0.0") process.exitCode = 1;',
+        'if (process.env.RELEASE_ARTIFACT_SHA256 !== "packed-sha256") process.exitCode = 1;',
         "if (!existsSync(process.env.RELEASE_ARTIFACT_PATH)) process.exitCode = 1;",
         'if (readFileSync(process.env.RELEASE_ARTIFACT_PATH, "utf8") !== "the exact packed bytes\\n") process.exitCode = 1;'
       ].join("\n") + "\n"
@@ -127,7 +130,8 @@ test("release certification gate is optional and receives only the generic exact
         "scripts/verify-release-certification.mjs",
       RELEASE_SOURCE_SHA: "0123456789abcdef",
       RELEASE_TAG: "v1.0.0",
-      RELEASE_ARTIFACT_PATH: tarballPath
+      RELEASE_ARTIFACT_PATH: tarballPath,
+      RELEASE_ARTIFACT_SHA256: "packed-sha256"
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -83,8 +83,10 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          {
+            echo "source_sha=$(git rev-parse HEAD)"
+            echo "tag=$RELEASE_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout release tooling (yohn-jp/.github)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -147,9 +149,11 @@ jobs:
             exit 1
           fi
           tarball="${tarballs[0]}"
-          echo "name=$(basename "$tarball")" >> "$GITHUB_OUTPUT"
-          echo "path=$PWD/${tarball#./}" >> "$GITHUB_OUTPUT"
-          echo "sha256=$(sha256sum "$tarball" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          {
+            echo "name=$(basename "$tarball")"
+            echo "path=$PWD/${tarball#./}"
+            echo "sha256=$(sha256sum "$tarball" | cut -d ' ' -f 1)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Verify release certification
         if: inputs.certification-verification-script != ''
@@ -160,6 +164,7 @@ jobs:
           RELEASE_SOURCE_SHA: ${{ steps.release-context.outputs.source_sha }}
           RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
           RELEASE_ARTIFACT_PATH: ${{ steps.pack.outputs.path }}
+          RELEASE_ARTIFACT_SHA256: ${{ steps.pack.outputs.sha256 }}
         run: |
           set -euo pipefail
           if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then

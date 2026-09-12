@@ -137,20 +137,23 @@ artifact verification, or upload steps.
 The verifier receives this bounded, product-neutral context through
 environment variables:
 
-| Variable               | Value                                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------------------- |
-| `RELEASE_SOURCE_SHA`   | Full SHA of the exact commit checked out from `refs/tags/<release-tag>`.                     |
-| `RELEASE_TAG`          | Exact `release-tag` input used for checkout and the target GitHub Release.                   |
-| `RELEASE_ARTIFACT_DIR` | Absolute `$RUNNER_TEMP/gh-extension-artifacts` directory after generic presence/name checks. |
+| Variable                           | Value                                                                                        |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| `RELEASE_SOURCE_SHA`               | Full SHA of the exact commit checked out from `refs/tags/<release-tag>`.                     |
+| `RELEASE_TAG`                      | Exact `release-tag` input used for checkout and the target GitHub Release.                   |
+| `RELEASE_ARTIFACT_DIR`             | Absolute `$RUNNER_TEMP/gh-extension-artifacts` directory after generic presence/name checks. |
+| `RELEASE_ARTIFACT_MANIFEST_SHA256` | SHA-256 of the deterministic path-and-content manifest captured before the verifier.         |
 
 `RELEASE_ARTIFACT_DIR` is the same dedicated directory used by the consumer
 build, generic verification, and `gh release upload`; every file in it is an
-exact upload candidate. The script remains entirely consumer-owned: it
-decides what "certified" means and where its own evidence lives. This
-workflow knows nothing about evidence shape, location, schema, or
-product-specific contract versions. Leaving the input empty (the default)
-skips the gate and the Node/pnpm setup it requires entirely, so non-Node
-consumers and consumers without a certification contract are unaffected.
+exact upload candidate. The workflow compares the manifest after the verifier
+and immediately before upload, so changed, added, removed, or renamed files
+fail closed. The script remains entirely consumer-owned: it decides what
+"certified" means and where its own evidence lives. This workflow knows
+nothing about evidence shape, location, schema, or product-specific contract
+versions. Leaving the input empty (the default) skips the gate and the
+Node/pnpm setup it requires entirely, so non-Node consumers and consumers
+without a certification contract are unaffected.
 
 ## Existing Release required
 

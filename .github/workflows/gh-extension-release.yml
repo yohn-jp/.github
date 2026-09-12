@@ -81,8 +81,10 @@ jobs:
           RELEASE_TAG: ${{ inputs.release-tag }}
         run: |
           set -euo pipefail
-          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          {
+            echo "source_sha=$(git rev-parse HEAD)"
+            echo "tag=$RELEASE_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Resolve extension name
         id: extension
@@ -154,6 +156,35 @@ jobs:
             echo "verified $base"
           done
 
+      - name: Record verified artifact manifest
+        id: artifact-manifest
+        shell: bash
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
+          MANIFEST_PATH: ${{ runner.temp }}/gh-extension-artifact-manifest
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=("$ARTIFACT_DIR"/*)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "::error::no artifacts available for manifest in $ARTIFACT_DIR" >&2
+            exit 1
+          fi
+          {
+            for artifact in "${assets[@]}"; do
+              if [ ! -f "$artifact" ]; then
+                echo "::error::artifact '$artifact' is not a regular file" >&2
+                exit 1
+              fi
+              printf '%s  %s\n' \
+                "$(sha256sum -- "$artifact" | cut -d ' ' -f 1)" \
+                "${artifact#"$ARTIFACT_DIR"/}"
+            done
+          } > "$MANIFEST_PATH"
+          LC_ALL=C sort -o "$MANIFEST_PATH" "$MANIFEST_PATH"
+          manifest_sha256="$(sha256sum -- "$MANIFEST_PATH" | cut -d ' ' -f 1)"
+          echo "sha256=$manifest_sha256" >> "$GITHUB_OUTPUT"
+
       - name: Checkout release tooling (yohn-jp/.github)
         if: inputs.certification-verification-script != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -183,6 +214,7 @@ jobs:
           RELEASE_SOURCE_SHA: ${{ steps.release-context.outputs.source_sha }}
           RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
           RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
+          RELEASE_ARTIFACT_MANIFEST_SHA256: ${{ steps.artifact-manifest.outputs.sha256 }}
         run: |
           set -euo pipefail
           if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
@@ -194,6 +226,38 @@ jobs:
             exit 1
           fi
           node --import tsx "$CERTIFICATION_VERIFICATION_SCRIPT"
+
+      - name: Verify release artifact manifest unchanged
+        shell: bash
+        env:
+          ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
+          EXPECTED_MANIFEST_SHA256: ${{ steps.artifact-manifest.outputs.sha256 }}
+          MANIFEST_PATH: ${{ runner.temp }}/gh-extension-artifact-manifest-after-certification
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=("$ARTIFACT_DIR"/*)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "::error::no artifacts available after certification in $ARTIFACT_DIR" >&2
+            exit 1
+          fi
+          {
+            for artifact in "${assets[@]}"; do
+              if [ ! -f "$artifact" ]; then
+                echo "::error::artifact '$artifact' is not a regular file after certification" >&2
+                exit 1
+              fi
+              printf '%s  %s\n' \
+                "$(sha256sum -- "$artifact" | cut -d ' ' -f 1)" \
+                "${artifact#"$ARTIFACT_DIR"/}"
+            done
+          } > "$MANIFEST_PATH"
+          LC_ALL=C sort -o "$MANIFEST_PATH" "$MANIFEST_PATH"
+          actual_manifest_sha256="$(sha256sum -- "$MANIFEST_PATH" | cut -d ' ' -f 1)"
+          if [ "$actual_manifest_sha256" != "$EXPECTED_MANIFEST_SHA256" ]; then
+            echo "::error::release certification changed the verified artifact set or bytes" >&2
+            exit 1
+          fi
 
       - name: Upload assets to release ${{ inputs.release-tag }}
         shell: bash

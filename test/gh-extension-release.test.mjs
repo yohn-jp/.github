@@ -57,6 +57,8 @@ test("release artifacts are isolated from consumer build output", () => {
 
   const buildStep = stepNamed("Run consumer build entrypoint");
   const verifyStep = stepNamed("Verify artifacts");
+  const manifestStep = stepNamed("Record verified artifact manifest");
+  const unchangedStep = stepNamed("Verify release artifact manifest unchanged");
   const uploadStep = releaseJob.steps.find((candidate) =>
     candidate.name.startsWith("Upload assets to release")
   );
@@ -66,6 +68,8 @@ test("release artifacts are isolated from consumer build output", () => {
   const artifactExpressions = [
     buildStep.env?.ARTIFACT_DIR,
     verifyStep.env?.ARTIFACT_DIR,
+    manifestStep.env?.ARTIFACT_DIR,
+    unchangedStep.env?.ARTIFACT_DIR,
     uploadStep.env?.ARTIFACT_DIR
   ];
   assert.deepEqual(
@@ -135,6 +139,38 @@ test("release artifacts are isolated from consumer build output", () => {
     );
     rmSync(unexpectedFile);
 
+    const manifestOutput = join(root, "manifest-output");
+    const manifestPath = join(runnerTemp, "manifest-before-certification");
+    runStep(manifestStep.run, workspace, {
+      ARTIFACT_DIR: artifactDir,
+      GITHUB_OUTPUT: manifestOutput,
+      MANIFEST_PATH: manifestPath
+    });
+    const expectedManifestSha256 = readFileSync(manifestOutput, "utf8")
+      .trim()
+      .replace(/^sha256=/, "");
+    runStep(unchangedStep.run, workspace, {
+      ARTIFACT_DIR: artifactDir,
+      EXPECTED_MANIFEST_SHA256: expectedManifestSha256,
+      MANIFEST_PATH: join(runnerTemp, "manifest-after-certification")
+    });
+
+    writeFileSync(join(artifactDir, "fixture-linux-amd64"), "changed bytes");
+    assertStepFails(
+      unchangedStep.run,
+      workspace,
+      {
+        ARTIFACT_DIR: artifactDir,
+        EXPECTED_MANIFEST_SHA256: expectedManifestSha256,
+        MANIFEST_PATH: join(runnerTemp, "manifest-after-mutation")
+      },
+      /changed the verified artifact set or bytes/
+    );
+    writeFileSync(
+      join(artifactDir, "fixture-linux-amd64"),
+      "precompiled release binary"
+    );
+
     const fakeBin = join(root, "bin");
     const argsFile = join(root, "gh-args");
     mkdirSync(fakeBin);
@@ -181,7 +217,9 @@ test("release certification gate is optional, fails closed, and runs after verif
       "${{ inputs.certification-verification-script }}",
     RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
     RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
-    RELEASE_ARTIFACT_DIR: "${{ runner.temp }}/gh-extension-artifacts"
+    RELEASE_ARTIFACT_DIR: "${{ runner.temp }}/gh-extension-artifacts",
+    RELEASE_ARTIFACT_MANIFEST_SHA256:
+      "${{ steps.artifact-manifest.outputs.sha256 }}"
   });
 
   const gatedStepNames = [
@@ -224,6 +262,12 @@ test("release certification gate is optional, fails closed, and runs after verif
   const artifactIndex = releaseJob.steps.findIndex(
     (step) => step.name === "Verify artifacts"
   );
+  const manifestIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Record verified artifact manifest"
+  );
+  const unchangedIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Verify release artifact manifest unchanged"
+  );
   const uploadIndex = releaseJob.steps.findIndex((step) =>
     step.name.startsWith("Upload assets to release")
   );
@@ -231,11 +275,16 @@ test("release certification gate is optional, fails closed, and runs after verif
     verifyIndex !== -1 &&
       buildIndex !== -1 &&
       artifactIndex !== -1 &&
+      manifestIndex !== -1 &&
+      unchangedIndex !== -1 &&
       uploadIndex !== -1
   );
   assert.ok(buildIndex < artifactIndex);
-  assert.ok(artifactIndex < verifyIndex);
-  assert.ok(verifyIndex < uploadIndex);
+  assert.ok(artifactIndex < manifestIndex);
+  assert.ok(manifestIndex < verifyIndex);
+  assert.ok(verifyIndex < unchangedIndex);
+  assert.ok(unchangedIndex < uploadIndex);
+  assert.equal(unchangedIndex + 1, uploadIndex);
 
   const contextStep = stepNamed("Resolve release context");
   assert.match(contextStep.run, /git rev-parse HEAD/);
@@ -295,6 +344,7 @@ test("release certification gate is optional, fails closed, and runs after verif
         'import { readdirSync, readFileSync } from "node:fs";',
         'if (process.env.RELEASE_SOURCE_SHA !== "0123456789abcdef") process.exitCode = 1;',
         'if (process.env.RELEASE_TAG !== "v0.1.0") process.exitCode = 1;',
+        'if (process.env.RELEASE_ARTIFACT_MANIFEST_SHA256 !== "manifest-sha256") process.exitCode = 1;',
         'if (readdirSync(process.env.RELEASE_ARTIFACT_DIR).join() !== "fixture-linux-amd64") process.exitCode = 1;',
         'if (readFileSync(`${process.env.RELEASE_ARTIFACT_DIR}/fixture-linux-amd64`, "utf8") !== "artifact bytes\\n") process.exitCode = 1;'
       ].join("\n") + "\n"
@@ -304,7 +354,8 @@ test("release certification gate is optional, fails closed, and runs after verif
         "scripts/verify-release-certification.mjs",
       RELEASE_SOURCE_SHA: "0123456789abcdef",
       RELEASE_TAG: "v0.1.0",
-      RELEASE_ARTIFACT_DIR: artifactDir
+      RELEASE_ARTIFACT_DIR: artifactDir,
+      RELEASE_ARTIFACT_MANIFEST_SHA256: "manifest-sha256"
     });
   } finally {
     rmSync(root, { recursive: true, force: true });
