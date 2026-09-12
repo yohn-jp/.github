@@ -27,6 +27,7 @@ jobs:
       node-version: "24" # optional, default "24"
       smoke-test-node-versions: "24" # optional, default "24"
       npm-cli-version: "12.0.2" # optional, default "12.0.2"
+      certification-verification-script: "" # optional, default "" (gate disabled)
 ```
 
 ## Required package.json scripts and files
@@ -60,6 +61,19 @@ other reusable workflows in this repository fetch their tooling — via a
 checkout of `yohn-jp/.github` at `job.workflow_repository`/`job.workflow_sha`,
 so it always matches the exact provider revision selected by the caller's
 `@main` reference.
+
+## Optional release-certification gate
+
+If `certification-verification-script` is set, the `build` job runs it
+(`node --import tsx <script>`, relative to `working-directory`) with no
+workflow-controlled arguments right before packing the tarball, and fails
+the release if it exits non-zero. The script is entirely consumer-owned: it
+is responsible for locating or producing whatever evidence it needs and for
+deciding what "certified" means for that repository — this workflow knows
+nothing about evidence shape, location, or schema and never will, to avoid
+this repository becoming a second certification authority. Leaving the
+input empty (the default) skips the gate entirely, so existing consumers
+without a certification contract are unaffected.
 
 ## Idempotent publish
 

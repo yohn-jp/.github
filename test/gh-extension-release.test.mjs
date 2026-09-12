@@ -167,3 +167,96 @@ test("release artifacts are isolated from consumer build output", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("release certification gate is optional, fails closed, and runs before the build entrypoint", () => {
+  const verifyStep = stepNamed("Verify release certification");
+  assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
+  assert.equal(
+    workflow.on.workflow_call.inputs["certification-verification-script"]
+      .default,
+    ""
+  );
+
+  const gatedStepNames = [
+    "Checkout release tooling (yohn-jp/.github)",
+    "Setup Node.js and pnpm for release certification",
+    "Isolate release tooling",
+    "Verify release certification"
+  ];
+  for (const name of gatedStepNames) {
+    const step = stepNamed(name);
+    assert.equal(
+      step.if,
+      "inputs.certification-verification-script != ''",
+      name + " must be gated by the same input"
+    );
+  }
+
+  const isolateStep = stepNamed("Isolate release tooling");
+  assert.match(
+    isolateStep.run,
+    /mv \.release-tools "\$RUNNER_TEMP\/release-tools"/
+  );
+
+  const restoreStep = stepNamed("Restore release tooling for action cleanup");
+  assert.equal(
+    restoreStep.if,
+    "always() && inputs.certification-verification-script != ''"
+  );
+  assert.match(
+    restoreStep.run,
+    /mv "\$RUNNER_TEMP\/release-tools" \.release-tools/
+  );
+
+  const verifyIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Verify release certification"
+  );
+  const buildIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Run consumer build entrypoint"
+  );
+  assert.ok(verifyIndex !== -1 && buildIndex !== -1);
+  assert.ok(verifyIndex < buildIndex);
+
+  const root = mkdtempSync(join(tmpdir(), "gh-extension-certification-"));
+  try {
+    assertStepFails(
+      verifyStep.run,
+      root,
+      {
+        CERTIFICATION_VERIFICATION_SCRIPT:
+          "scripts/verify-release-certification.mjs"
+      },
+      /not found/
+    );
+
+    const tsxDir = join(root, "node_modules", "tsx");
+    mkdirSync(tsxDir, { recursive: true });
+    writeFileSync(
+      join(tsxDir, "package.json"),
+      JSON.stringify({ name: "tsx", version: "0.0.0", exports: "./index.mjs" })
+    );
+    writeFileSync(join(tsxDir, "index.mjs"), "");
+
+    const scripts = join(root, "scripts");
+    mkdirSync(scripts, { recursive: true });
+    const script = join(scripts, "verify-release-certification.mjs");
+    writeFileSync(script, "process.exitCode = 1;\n");
+    assertStepFails(
+      verifyStep.run,
+      root,
+      {
+        CERTIFICATION_VERIFICATION_SCRIPT:
+          "scripts/verify-release-certification.mjs"
+      },
+      /.*/
+    );
+
+    writeFileSync(script, "process.exitCode = 0;\n");
+    runStep(verifyStep.run, root, {
+      CERTIFICATION_VERIFICATION_SCRIPT:
+        "scripts/verify-release-certification.mjs"
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -67,11 +67,12 @@ same Release — this workflow never merges with, or depends on, that one.
 
 ## Inputs
 
-| Input               | Required | Default         | Purpose                                                                                                                        |
-| ------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `release-tag`       | yes      | —               | Exact Release/tag to check out, build from, and upload assets to.                                                              |
-| `working-directory` | no       | `.`             | Directory containing the extension source, `scripts/build-gh-extension-release.sh`, and the working directory it runs in.      |
-| `extension-name`    | no       | repository name | Required artifact filename prefix. The repository name is correct as-is for a conventionally named `gh-<name>` extension repo. |
+| Input                               | Required | Default         | Purpose                                                                                                                                                |
+| ----------------------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `release-tag`                       | yes      | —               | Exact Release/tag to check out, build from, and upload assets to.                                                                                      |
+| `working-directory`                 | no       | `.`             | Directory containing the extension source, `scripts/build-gh-extension-release.sh`, and the working directory it runs in.                              |
+| `extension-name`                    | no       | repository name | Required artifact filename prefix. The repository name is correct as-is for a conventionally named `gh-<name>` extension repo.                         |
+| `certification-verification-script` | no       | `""`            | Optional path to a consumer-owned Node script that gates the release; see [Optional release-certification gate](#optional-release-certification-gate). |
 
 ## Build entrypoint contract
 
@@ -116,6 +117,29 @@ The workflow's top-level default is `contents: read`; only the single
 must grant `contents: write` on the calling job (see the example above) —
 GitHub permissions only ever narrow across a reusable workflow call, never
 widen, so this is the minimum a consumer needs to grant.
+
+## Optional release-certification gate
+
+If `certification-verification-script` is set, the workflow checks out
+`yohn-jp/.github` at the exact provider revision selected by the caller's
+`@main` reference, uses its `setup-node-pnpm` composite action to install
+Node/pnpm and the consumer's `devDependencies` (the consumer's
+`package.json` must declare an exact pnpm `packageManager` version, same
+requirement as `npm-publish.yml`), then runs
+`node --import tsx <certification-verification-script>` with no
+workflow-controlled arguments before the build entrypoint. A non-zero exit
+fails the release. The release-tooling checkout is removed immediately
+after use so it can't be mistaken for consumer source by the build
+entrypoint or artifact verification steps that follow.
+
+The script is entirely consumer-owned: it is responsible for locating or
+producing whatever evidence it needs and for deciding what "certified"
+means for that repository. This workflow knows nothing about evidence
+shape, location, or schema and never will, to avoid this repository
+becoming a second certification authority. Leaving the input empty (the
+default) skips the gate and the Node/pnpm setup it requires entirely, so
+non-Node consumers and consumers without a certification contract are
+unaffected.
 
 ## Existing Release required
 

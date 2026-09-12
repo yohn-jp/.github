@@ -26,6 +26,17 @@ on:
           installed globally before `npm publish`.
         type: string
         default: "12.0.2"
+      certification-verification-script:
+        description: >-
+          Optional path (relative to working-directory) to a consumer-owned,
+          version-controlled script that fails closed unless the consumer's
+          own release-certification evidence is complete and valid. Run with
+          no workflow-controlled arguments — the script owns locating or
+          producing its own evidence and exits non-zero to block the release.
+          Empty (default) skips this gate entirely for consumers that don't
+          define one.
+        type: string
+        default: ""
     secrets: {}
 
 permissions:
@@ -101,6 +112,20 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: node "$RUNNER_TEMP/release-tools/scripts/check-release-version.mjs" --package-version "$PACKAGE_VERSION" --tag "$RELEASE_TAG"
+
+      - name: Verify release certification
+        if: inputs.certification-verification-script != ''
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
+            echo "::error::certification-verification-script '$CERTIFICATION_VERIFICATION_SCRIPT' not found" >&2
+            exit 1
+          fi
+          node --import tsx "$CERTIFICATION_VERIFICATION_SCRIPT"
 
       - name: Pack tarball
         shell: bash
