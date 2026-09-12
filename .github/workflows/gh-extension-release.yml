@@ -66,6 +66,7 @@ jobs:
     name: Build, verify, and publish
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: write
     steps:
       - name: Checkout ${{ inputs.release-tag }}
@@ -211,6 +212,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+          GITHUB_TOKEN: ${{ github.token }}
           RELEASE_SOURCE_SHA: ${{ steps.release-context.outputs.source_sha }}
           RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
           RELEASE_ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts

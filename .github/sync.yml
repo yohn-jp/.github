@@ -72,6 +72,8 @@ yohn-jp/gh-inari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/gh-extension-release.yml
+    dest: .github/workflows/gh-extension-release.yml
   - source: scripts/validate-action-pins.mjs
     dest: scripts/validate-action-pins.mjs
 

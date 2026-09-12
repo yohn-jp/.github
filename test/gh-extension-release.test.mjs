@@ -207,6 +207,11 @@ test("release artifacts are isolated from consumer build output", () => {
 test("release certification gate is optional, fails closed, and runs after verified artifacts", () => {
   const verifyStep = stepNamed("Verify release certification");
   assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
+  assert.deepEqual(workflow.permissions, { contents: "read" });
+  assert.deepEqual(releaseJob.permissions, {
+    actions: "read",
+    contents: "write"
+  });
   assert.equal(
     workflow.on.workflow_call.inputs["certification-verification-script"]
       .default,
@@ -215,6 +220,7 @@ test("release certification gate is optional, fails closed, and runs after verif
   assert.deepEqual(verifyStep.env, {
     CERTIFICATION_VERIFICATION_SCRIPT:
       "${{ inputs.certification-verification-script }}",
+    GITHUB_TOKEN: "${{ github.token }}",
     RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
     RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
     RELEASE_ARTIFACT_DIR: "${{ runner.temp }}/gh-extension-artifacts",
@@ -360,4 +366,16 @@ test("release certification gate is optional, fails closed, and runs after verif
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("the shared workflow keeps the certification token scoped to its verifier", () => {
+  const verifyStep = stepNamed("Verify release certification");
+  assert.equal(verifyStep.env.GITHUB_TOKEN, "${{ github.token }}");
+  for (const job of Object.values(workflow.jobs)) {
+    for (const step of job.steps ?? []) {
+      if (step === verifyStep) continue;
+      assert.notEqual(step.env?.GITHUB_TOKEN, "${{ github.token }}");
+    }
+  }
+  assert.doesNotMatch(workflowSource, /\b(?:gh-inari|Inari)\b|evidence schema/);
 });
