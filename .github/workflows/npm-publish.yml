@@ -64,6 +64,9 @@ jobs:
   build:
     name: Build and pack
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     outputs:
       package-name: ${{ steps.package.outputs.name }}
       package-version: ${{ steps.package.outputs.version }}
@@ -161,6 +164,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+          GITHUB_TOKEN: ${{ github.token }}
           RELEASE_SOURCE_SHA: ${{ steps.release-context.outputs.source_sha }}
           RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
           RELEASE_ARTIFACT_PATH: ${{ steps.pack.outputs.path }}
