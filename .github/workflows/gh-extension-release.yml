@@ -72,11 +72,12 @@ jobs:
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         env:
-          ARTIFACT_DIR: ${{ github.workspace }}/dist
+          ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
         run: |
           set -euo pipefail
-          mkdir -p "$ARTIFACT_DIR"
+          rm -rf -- "$ARTIFACT_DIR"
+          mkdir -p -- "$ARTIFACT_DIR"
           entrypoint="./scripts/build-gh-extension-release.sh"
           if [ ! -f "$entrypoint" ]; then
             echo "::error::$entrypoint not found in $WORKING_DIRECTORY (required, version-controlled build entrypoint)" >&2
@@ -87,8 +88,8 @@ jobs:
       - name: Verify artifacts
         shell: bash
         env:
+          ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
           EXTENSION_NAME: ${{ steps.extension.outputs.name }}
-          ARTIFACT_DIR: ${{ github.workspace }}/dist
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -127,7 +128,7 @@ jobs:
       - name: Upload assets to release ${{ inputs.release-tag }}
         shell: bash
         env:
+          ARTIFACT_DIR: ${{ runner.temp }}/gh-extension-artifacts
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release-tag }}
-          ARTIFACT_DIR: ${{ github.workspace }}/dist
         run: gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber -- "$ARTIFACT_DIR"/*

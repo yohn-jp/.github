@@ -54,6 +54,13 @@ exactly once via `bash`, with no per-platform invocation and no
 build-toolchain variables (no `GOOS`/`GOARCH`) injected into it. Everything
 about how many platforms it targets and how is entirely up to this script.
 
+The workflow sets `ARTIFACT_DIR` to a dedicated directory under the runner's
+temporary storage, removes and recreates that directory before the build, and
+uses the same directory for verification and upload. It is intentionally
+separate from the repository workspace, so a consumer may use a local
+`dist/` directory for normal build output without affecting release artifact
+discovery.
+
 npm publishing (if the same repository also ships an npm package) is a
 separate job/workflow calling `npm-publish.yml`, run independently from the
 same Release — this workflow never merges with, or depends on, that one.
