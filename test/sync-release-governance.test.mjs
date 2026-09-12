@@ -80,6 +80,38 @@ test("gh-inari receives the canonical certification-enabled publish wrapper", ()
   });
 });
 
+test("gh-inari receives the canonical certification-enabled gh-extension wrapper", () => {
+  const wrapper = yaml.load(
+    readFileSync("templates/workflows/gh-extension-release.yml", "utf8")
+  );
+  const releaseJob = wrapper.jobs.release;
+
+  assert.deepEqual(wrapper.permissions, { contents: "read" });
+  assert.equal(
+    mappingsFor("yohn-jp/gh-inari").get(
+      ".github/workflows/gh-extension-release.yml"
+    ),
+    "templates/workflows/gh-extension-release.yml"
+  );
+  assert.equal(
+    releaseJob.uses,
+    "yohn-jp/.github/.github/workflows/gh-extension-release.yml@main"
+  );
+  assert.deepEqual(releaseJob.with, {
+    "release-tag": "${{ github.event.release.tag_name }}",
+    "certification-verification-script":
+      "scripts/verify-gh-extension-release-certification.mjs"
+  });
+  assert.deepEqual(releaseJob.permissions, {
+    actions: "read",
+    contents: "write"
+  });
+  assert.doesNotMatch(
+    readFileSync("templates/workflows/gh-extension-release.yml", "utf8"),
+    /\b(?:evidence|schema|gh-inari|Inari)\b/
+  );
+});
+
 test("release governance rollout has one canonical path per consumer class", () => {
   for (const repository of ["yohn-jp/gh-makami", "yohn-jp/suzukuri"]) {
     assert.equal(
