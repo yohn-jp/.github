@@ -57,6 +57,8 @@ test("release artifacts are isolated from consumer build output", () => {
 
   const buildStep = stepNamed("Run consumer build entrypoint");
   const verifyStep = stepNamed("Verify artifacts");
+  const manifestStep = stepNamed("Record verified artifact manifest");
+  const unchangedStep = stepNamed("Verify release artifact manifest unchanged");
   const uploadStep = releaseJob.steps.find((candidate) =>
     candidate.name.startsWith("Upload assets to release")
   );
@@ -66,6 +68,8 @@ test("release artifacts are isolated from consumer build output", () => {
   const artifactExpressions = [
     buildStep.env?.ARTIFACT_DIR,
     verifyStep.env?.ARTIFACT_DIR,
+    manifestStep.env?.ARTIFACT_DIR,
+    unchangedStep.env?.ARTIFACT_DIR,
     uploadStep.env?.ARTIFACT_DIR
   ];
   assert.deepEqual(
@@ -135,6 +139,38 @@ test("release artifacts are isolated from consumer build output", () => {
     );
     rmSync(unexpectedFile);
 
+    const manifestOutput = join(root, "manifest-output");
+    const manifestPath = join(runnerTemp, "manifest-before-certification");
+    runStep(manifestStep.run, workspace, {
+      ARTIFACT_DIR: artifactDir,
+      GITHUB_OUTPUT: manifestOutput,
+      MANIFEST_PATH: manifestPath
+    });
+    const expectedManifestSha256 = readFileSync(manifestOutput, "utf8")
+      .trim()
+      .replace(/^sha256=/, "");
+    runStep(unchangedStep.run, workspace, {
+      ARTIFACT_DIR: artifactDir,
+      EXPECTED_MANIFEST_SHA256: expectedManifestSha256,
+      MANIFEST_PATH: join(runnerTemp, "manifest-after-certification")
+    });
+
+    writeFileSync(join(artifactDir, "fixture-linux-amd64"), "changed bytes");
+    assertStepFails(
+      unchangedStep.run,
+      workspace,
+      {
+        ARTIFACT_DIR: artifactDir,
+        EXPECTED_MANIFEST_SHA256: expectedManifestSha256,
+        MANIFEST_PATH: join(runnerTemp, "manifest-after-mutation")
+      },
+      /changed the verified artifact set or bytes/
+    );
+    writeFileSync(
+      join(artifactDir, "fixture-linux-amd64"),
+      "precompiled release binary"
+    );
+
     const fakeBin = join(root, "bin");
     const argsFile = join(root, "gh-args");
     mkdirSync(fakeBin);
@@ -163,6 +199,164 @@ test("release artifacts are isolated from consumer build output", () => {
     assert.deepEqual(uploadArgs.slice(separator + 1), [
       join(artifactDir, "fixture-linux-amd64")
     ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("release certification gate is optional, fails closed, and runs after verified artifacts", () => {
+  const verifyStep = stepNamed("Verify release certification");
+  assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
+  assert.equal(
+    workflow.on.workflow_call.inputs["certification-verification-script"]
+      .default,
+    ""
+  );
+  assert.deepEqual(verifyStep.env, {
+    CERTIFICATION_VERIFICATION_SCRIPT:
+      "${{ inputs.certification-verification-script }}",
+    RELEASE_SOURCE_SHA: "${{ steps.release-context.outputs.source_sha }}",
+    RELEASE_TAG: "${{ steps.release-context.outputs.tag }}",
+    RELEASE_ARTIFACT_DIR: "${{ runner.temp }}/gh-extension-artifacts",
+    RELEASE_ARTIFACT_MANIFEST_SHA256:
+      "${{ steps.artifact-manifest.outputs.sha256 }}"
+  });
+
+  const gatedStepNames = [
+    "Checkout release tooling (yohn-jp/.github)",
+    "Setup Node.js and pnpm for release certification",
+    "Isolate release tooling",
+    "Verify release certification"
+  ];
+  for (const name of gatedStepNames) {
+    const step = stepNamed(name);
+    assert.equal(
+      step.if,
+      "inputs.certification-verification-script != ''",
+      name + " must be gated by the same input"
+    );
+  }
+
+  const isolateStep = stepNamed("Isolate release tooling");
+  assert.match(
+    isolateStep.run,
+    /mv \.release-tools "\$RUNNER_TEMP\/release-tools"/
+  );
+
+  const restoreStep = stepNamed("Restore release tooling for action cleanup");
+  assert.equal(
+    restoreStep.if,
+    "always() && inputs.certification-verification-script != ''"
+  );
+  assert.match(
+    restoreStep.run,
+    /mv "\$RUNNER_TEMP\/release-tools" \.release-tools/
+  );
+
+  const verifyIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Verify release certification"
+  );
+  const buildIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Run consumer build entrypoint"
+  );
+  const artifactIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Verify artifacts"
+  );
+  const manifestIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Record verified artifact manifest"
+  );
+  const unchangedIndex = releaseJob.steps.findIndex(
+    (step) => step.name === "Verify release artifact manifest unchanged"
+  );
+  const uploadIndex = releaseJob.steps.findIndex((step) =>
+    step.name.startsWith("Upload assets to release")
+  );
+  assert.ok(
+    verifyIndex !== -1 &&
+      buildIndex !== -1 &&
+      artifactIndex !== -1 &&
+      manifestIndex !== -1 &&
+      unchangedIndex !== -1 &&
+      uploadIndex !== -1
+  );
+  assert.ok(buildIndex < artifactIndex);
+  assert.ok(artifactIndex < manifestIndex);
+  assert.ok(manifestIndex < verifyIndex);
+  assert.ok(verifyIndex < unchangedIndex);
+  assert.ok(unchangedIndex < uploadIndex);
+  assert.equal(unchangedIndex + 1, uploadIndex);
+
+  const contextStep = stepNamed("Resolve release context");
+  assert.match(contextStep.run, /git rev-parse HEAD/);
+  assert.equal(
+    releaseJob.steps.findIndex(
+      (step) => step.name === "Checkout release tooling (yohn-jp/.github)"
+    ) > artifactIndex,
+    true
+  );
+
+  const root = mkdtempSync(join(tmpdir(), "gh-extension-certification-"));
+  try {
+    assertStepFails(
+      verifyStep.run,
+      root,
+      {
+        CERTIFICATION_VERIFICATION_SCRIPT:
+          "scripts/verify-release-certification.mjs"
+      },
+      /not found/
+    );
+
+    const tsxDir = join(root, "node_modules", "tsx");
+    mkdirSync(tsxDir, { recursive: true });
+    writeFileSync(
+      join(tsxDir, "package.json"),
+      JSON.stringify({ name: "tsx", version: "0.0.0", exports: "./index.mjs" })
+    );
+    writeFileSync(join(tsxDir, "index.mjs"), "");
+
+    const scripts = join(root, "scripts");
+    mkdirSync(scripts, { recursive: true });
+    const artifactDir = join(root, "release-artifacts");
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(join(artifactDir, "fixture-linux-amd64"), "artifact bytes\n");
+    const script = join(scripts, "verify-release-certification.mjs");
+    writeFileSync(
+      script,
+      'console.error("certification failed"); process.exitCode = 1;\n'
+    );
+    assertStepFails(
+      verifyStep.run,
+      root,
+      {
+        CERTIFICATION_VERIFICATION_SCRIPT:
+          "scripts/verify-release-certification.mjs",
+        RELEASE_SOURCE_SHA: "0123456789abcdef",
+        RELEASE_TAG: "v0.1.0",
+        RELEASE_ARTIFACT_DIR: root
+      },
+      /certification failed/
+    );
+
+    writeFileSync(
+      script,
+      [
+        'import { readdirSync, readFileSync } from "node:fs";',
+        'if (process.env.RELEASE_SOURCE_SHA !== "0123456789abcdef") process.exitCode = 1;',
+        'if (process.env.RELEASE_TAG !== "v0.1.0") process.exitCode = 1;',
+        'if (process.env.RELEASE_ARTIFACT_MANIFEST_SHA256 !== "manifest-sha256") process.exitCode = 1;',
+        'if (readdirSync(process.env.RELEASE_ARTIFACT_DIR).join() !== "fixture-linux-amd64") process.exitCode = 1;',
+        'if (readFileSync(`${process.env.RELEASE_ARTIFACT_DIR}/fixture-linux-amd64`, "utf8") !== "artifact bytes\\n") process.exitCode = 1;'
+      ].join("\n") + "\n"
+    );
+    runStep(verifyStep.run, root, {
+      CERTIFICATION_VERIFICATION_SCRIPT:
+        "scripts/verify-release-certification.mjs",
+      RELEASE_SOURCE_SHA: "0123456789abcdef",
+      RELEASE_TAG: "v0.1.0",
+      RELEASE_ARTIFACT_DIR: artifactDir,
+      RELEASE_ARTIFACT_MANIFEST_SHA256: "manifest-sha256"
+    });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
