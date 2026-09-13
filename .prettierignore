@@ -12,3 +12,9 @@ test/fixtures/ts-cli/pnpm-lock.yaml
 test/fixtures/inari-format/badly-formatted.json
 test/fixtures/issue-forms/invalid-flow-mapping.yml
 test/fixtures/workflows/workflow-security-invalid.yml
+
+# Minified, no-trailing-newline Runtime Authority fixture: mirrors the JCS
+# canonical serialization the Runtime Authority Governance validator expects.
+# This is what validate-inari-format.mjs's authorities/ exclusion is tested
+# against; formatting it with Prettier would defeat the fixture's purpose.
+test/fixtures/inari-format/authorities/canonical-authority.json

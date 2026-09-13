@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Prettier formatting gate for canonical Inari JSON templates
-// (.github/inari/**/*.json).
+// (.github/inari/**/*.json), excluding Runtime Authority trust artifacts
+// (.github/inari/authorities/*.json — see below).
 //
 // These files are distributed byte-for-byte to consumer repositories
 // (see .github/sync.yml). A consumer's repository-wide `prettier --check`
@@ -15,6 +16,24 @@ import { fileURLToPath } from "node:url";
 import prettier from "prettier";
 
 const INARI_ROOT = join(process.cwd(), ".github", "inari");
+
+// Runtime Authority trust artifacts (.github/inari/authorities/*.json) carry
+// their own canonical serialization contract (JCS/minified JSON, no trailing
+// newline), enforced by the product-owned Runtime Authority Governance
+// validator. That contract conflicts with this generic Prettier-based pass,
+// so those artifacts are a distinct governed class and are excluded from it
+// here. Only direct children of authorities/ are excluded; nothing else
+// under .github/inari/** is affected.
+const AUTHORITIES_DIR = join(INARI_ROOT, "authorities");
+
+/**
+ * @param {string} filePath absolute path to a JSON file under INARI_ROOT
+ * @returns {boolean} true when filePath is a Runtime Authority trust
+ *   artifact excluded from generic Prettier validation
+ */
+export function isRuntimeAuthorityArtifact(filePath) {
+  return dirname(filePath) === AUTHORITIES_DIR;
+}
 
 // Always the config this repo ships next to this script, regardless of
 // which repository's checkout the script runs against (this validator is
@@ -77,7 +96,9 @@ function isMain() {
 }
 
 async function main() {
-  const targets = listJsonFilesRecursive(INARI_ROOT);
+  const targets = listJsonFilesRecursive(INARI_ROOT).filter(
+    (target) => !isRuntimeAuthorityArtifact(target)
+  );
 
   if (targets.length === 0) {
     console.log(
