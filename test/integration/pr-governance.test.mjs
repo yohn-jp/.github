@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { readFile } from "node:fs/promises";
 import { validatePullRequest } from "../../scripts/validate-pr.mjs";
 import { validateBranchName } from "../../scripts/validate-branch-name.mjs";
 
@@ -15,6 +13,14 @@ const defaultBody = await readFile(
   "test/fixtures/pr-governance/default.md",
   "utf8"
 );
+
+function withMarker(body, path) {
+  return `${body}\n<!-- inari:template {"version":"1","kind":"pull_request","path":"${path}"} -->\n`;
+}
+
+function stripTrailingMarker(body) {
+  return body.replace(/\n<!-- inari:template.*-->\s*$/u, "\n");
+}
 
 function pullRequest(
   branch,
@@ -30,8 +36,17 @@ function pullRequest(
   };
 }
 
-test("release/0.5.1 passes the release contract without an Issue", async () => {
-  assert.deepEqual(validateBranchName("release/0.5.1"), []);
+test("a PR body with the default template's marker resolves the default contract", async () => {
+  assert.equal(validateBranchName("fix/123-slug").length, 0);
+  const result = await validatePullRequest(
+    pullRequest("fix/123-slug", defaultBody)
+  );
+  assert.equal(result.valid, true);
+  assert.equal(result.branchClassification, "ordinary");
+  assert.equal(result.contract.templateIdentity.id, "default");
+});
+
+test("a PR body with the release template's marker resolves the release contract, independent of branch", async () => {
   const result = await validatePullRequest(
     pullRequest("release/0.5.1", releaseBody)
   );
@@ -40,45 +55,15 @@ test("release/0.5.1 passes the release contract without an Issue", async () => {
   assert.equal(result.contract.templateIdentity.id, "release");
 });
 
-test("release/1.0.0 uses the same release contract", async () => {
-  assert.deepEqual(validateBranchName("release/1.0.0"), []);
+test("marker resolution does not depend on the release branch shape", async () => {
+  // The marker alone selects the contract; an ordinary branch carrying a
+  // release-templated body still resolves the release contract (Issue #211:
+  // no branch/path/body-shape inference participates in template selection).
   const result = await validatePullRequest(
-    pullRequest("release/1.0.0", releaseBody)
+    pullRequest("fix/999-slug", releaseBody)
   );
   assert.equal(result.valid, true);
-  assert.equal(result.contract.templateIdentity.id, "release");
-});
-
-test("release contract ignores an ordinary default-template policy", async (t) => {
-  const fixtureRoot = await mkdtemp(
-    path.join(tmpdir(), "pr-governance-release-")
-  );
-  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
-
-  await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });
-  await cp(
-    path.join(root, ".github", "PULL_REQUEST_TEMPLATE"),
-    path.join(fixtureRoot, ".github", "PULL_REQUEST_TEMPLATE"),
-    { recursive: true }
-  );
-  await writeFile(
-    path.join(fixtureRoot, ".github", "inari", "pr-policy.yml"),
-    [
-      "version: 1",
-      "template: default",
-      "sections:",
-      "  - section: summary",
-      "    required: true",
-      ""
-    ].join("\n"),
-    "utf8"
-  );
-
-  const result = await validatePullRequest(
-    pullRequest("release/0.8.0", releaseBody, fixtureRoot)
-  );
-  assert.equal(result.valid, true);
-  assert.equal(result.branchClassification, "release");
+  assert.equal(result.branchClassification, "ordinary");
   assert.equal(result.contract.templateIdentity.id, "release");
 });
 
@@ -103,7 +88,7 @@ test("epic/890-runtime-certification passes branch-name validation as an integra
   // #177 is deliberately narrow: an epic branch is a new, protected
   // integration branch class, but it does not introduce a new PR *content*
   // contract or automatic child-Issue routing. PR content for an epic head
-  // branch keeps the same ordinary auto-detection path as any other branch.
+  // branch is resolved from its own marker like any other branch.
   assert.equal(result.valid, true);
   assert.equal(result.branchClassification, "ordinary");
   assert.equal(result.contract.templateIdentity.id, "default");
@@ -158,36 +143,9 @@ test("an ordinary PR title that merely mentions epic is unaffected", async () =>
   assert.equal(result.branchClassification, "ordinary");
 });
 
-test("ordinary Issue-bound PRs keep default contract auto-detection", async () => {
-  assert.equal(validateBranchName("fix/123-slug").length, 0);
+test("a synchronized consumer accepts an Inari-generated ordinary PR body without repair", async () => {
   const result = await validatePullRequest(
-    pullRequest("fix/123-slug", defaultBody)
-  );
-  assert.equal(result.valid, true);
-  assert.equal(result.branchClassification, "ordinary");
-  assert.equal(result.contract.templateIdentity.id, "default");
-});
-
-test("a synchronized consumer accepts an Inari-generated ordinary PR body without repair", async (t) => {
-  const fixtureRoot = await mkdtemp(
-    path.join(tmpdir(), "pr-governance-consumer-")
-  );
-  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
-
-  await mkdir(path.join(fixtureRoot, ".github"), { recursive: true });
-  await cp(
-    path.join(root, ".github", "PULL_REQUEST_TEMPLATE"),
-    path.join(fixtureRoot, ".github", "PULL_REQUEST_TEMPLATE"),
-    { recursive: true }
-  );
-  await cp(
-    path.join(root, ".github", "inari"),
-    path.join(fixtureRoot, ".github", "inari"),
-    { recursive: true }
-  );
-
-  const result = await validatePullRequest(
-    pullRequest("fix/125-inari-governance", defaultBody, fixtureRoot)
+    pullRequest("fix/125-inari-governance", defaultBody)
   );
   assert.equal(result.valid, true);
   assert.equal(result.contract.templateIdentity.id, "default");
@@ -198,80 +156,51 @@ test("a synchronized consumer accepts an Inari-generated ordinary PR body withou
   ]);
 });
 
-test("auto-detected ordinary PR is not aborted by an unrelated release candidate's default-only policy", async (t) => {
-  const fixtureRoot = await mkdtemp(
-    path.join(tmpdir(), "pr-governance-ordinary-")
-  );
-  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
-
-  await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });
-  await cp(
-    path.join(root, ".github", "PULL_REQUEST_TEMPLATE"),
-    path.join(fixtureRoot, ".github", "PULL_REQUEST_TEMPLATE"),
-    { recursive: true }
-  );
-  await cp(
-    path.join(root, ".github", "inari", "pull-requests"),
-    path.join(fixtureRoot, ".github", "inari", "pull-requests"),
-    { recursive: true }
-  );
-  await writeFile(
-    path.join(fixtureRoot, ".github", "inari", "pr-policy.yml"),
-    [
-      "version: 1",
-      "template: default",
-      "sections:",
-      "  - section: summary",
-      "    required: true",
-      ""
-    ].join("\n"),
-    "utf8"
-  );
-
-  assert.equal(validateBranchName("fix/123-slug").length, 0);
+test("missing marker fails deterministically", async () => {
   const result = await validatePullRequest(
-    pullRequest("fix/123-slug", defaultBody, fixtureRoot)
-  );
-  assert.equal(result.valid, true);
-  assert.equal(result.branchClassification, "ordinary");
-  assert.equal(result.contract.templateIdentity.id, "default");
-});
-
-test("auto-detected ordinary PR still fails closed when the applicable default template itself violates policy", async (t) => {
-  const fixtureRoot = await mkdtemp(
-    path.join(tmpdir(), "pr-governance-ordinary-failclosed-")
-  );
-  t.after(() => rm(fixtureRoot, { recursive: true, force: true }));
-
-  await mkdir(path.join(fixtureRoot, ".github", "inari"), { recursive: true });
-  await cp(
-    path.join(root, ".github", "PULL_REQUEST_TEMPLATE"),
-    path.join(fixtureRoot, ".github", "PULL_REQUEST_TEMPLATE"),
-    { recursive: true }
-  );
-  await cp(
-    path.join(root, ".github", "inari", "pull-requests"),
-    path.join(fixtureRoot, ".github", "inari", "pull-requests"),
-    { recursive: true }
-  );
-  await writeFile(
-    path.join(fixtureRoot, ".github", "inari", "pr-policy.yml"),
-    [
-      "version: 1",
-      "template: default",
-      "sections:",
-      "  - section: review_focus",
-      "    minLength: 10000",
-      ""
-    ].join("\n"),
-    "utf8"
-  );
-
-  assert.equal(validateBranchName("fix/123-slug").length, 0);
-  const result = await validatePullRequest(
-    pullRequest("fix/123-slug", defaultBody, fixtureRoot)
+    pullRequest("fix/123-slug", stripTrailingMarker(defaultBody))
   );
   assert.equal(result.valid, false);
-  assert.equal(result.branchClassification, "ordinary");
-  assert.equal(result.contract.templateIdentity.id, "default");
+  assert.equal(result.violations[0].code, "GOVERNANCE_TEMPLATE_MARKER_MISSING");
+});
+
+test("malformed marker fails deterministically", async () => {
+  const body = `${stripTrailingMarker(defaultBody)}\n<!-- inari:template {not-json} -->\n`;
+  const result = await validatePullRequest(pullRequest("fix/123-slug", body));
+  assert.equal(result.valid, false);
+  assert.equal(result.violations[0].code, "GOVERNANCE_TEMPLATE_MARKER_INVALID");
+});
+
+test("multiple markers fail deterministically as ambiguous", async () => {
+  const once = withMarker(
+    stripTrailingMarker(defaultBody),
+    ".github/PULL_REQUEST_TEMPLATE/default.md"
+  );
+  const twice = withMarker(once, ".github/PULL_REQUEST_TEMPLATE/release.md");
+  const result = await validatePullRequest(pullRequest("fix/123-slug", twice));
+  assert.equal(result.valid, false);
+  assert.equal(
+    result.violations[0].code,
+    "GOVERNANCE_TEMPLATE_MARKER_AMBIGUOUS"
+  );
+});
+
+test("a marker referencing an unavailable template fails deterministically", async () => {
+  const body = withMarker(
+    stripTrailingMarker(defaultBody),
+    ".github/PULL_REQUEST_TEMPLATE/does-not-exist.md"
+  );
+  const result = await validatePullRequest(pullRequest("fix/123-slug", body));
+  assert.equal(result.valid, false);
+  assert.equal(result.violations[0].code, "GOVERNANCE_TEMPLATE_UNAVAILABLE");
+});
+
+test("a marker with kind other than pull_request is rejected", async () => {
+  const body = `${stripTrailingMarker(defaultBody)}\n<!-- inari:template {"version":"1","kind":"issue","path":".github/ISSUE_TEMPLATE/bug.yml"} -->\n`;
+  const result = await validatePullRequest(pullRequest("fix/123-slug", body));
+  assert.equal(result.valid, false);
+  assert.equal(
+    result.violations[0].code,
+    "GOVERNANCE_TEMPLATE_MARKER_WRONG_KIND"
+  );
 });

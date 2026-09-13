@@ -26,14 +26,6 @@ on:
       skip-branch-name-check:
         type: boolean
         default: false
-      pr-template:
-        description: >-
-          Repository-native PR template id, path, or unique name to
-          validate against for ordinary PRs. Empty (default) lets gh-inari
-          deterministically auto-detect the ordinary template; release PRs
-          always select the canonical release contract from their head branch.
-        type: string
-        default: ""
       skip-pr-contract-check:
         type: boolean
         default: false
@@ -115,13 +107,7 @@ jobs:
 
       - name: Validate PR contract
         env:
-          PR_TEMPLATE: ${{ inputs.pr-template }}
           PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
-          args=("$RUNNER_TEMP/governance-tools/scripts/validate-pr.mjs" --event "$GITHUB_EVENT_PATH")
-          args+=(--branch "$PR_BRANCH")
-          if [ -n "$PR_TEMPLATE" ]; then
-            args+=(--template "$PR_TEMPLATE")
-          fi
-          node "${args[@]}"
+          node "$RUNNER_TEMP/governance-tools/scripts/validate-pr.mjs" --event "$GITHUB_EVENT_PATH" --branch "$PR_BRANCH"

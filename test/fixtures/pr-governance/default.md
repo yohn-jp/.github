@@ -19,3 +19,5 @@ Implement the requested behavior.
 ## Review focus
 
 Confirm the ordinary Issue-bound contract remains unchanged.
+
+<!-- inari:template {"version":"1","kind":"pull_request","path":".github/PULL_REQUEST_TEMPLATE/default.md"} -->

@@ -13,6 +13,7 @@ const SYNC_MAPPING_CONFIG_RELATIVE_PATH = ".github/sync.yml";
 export const SYNCED_SCRIPT_PATHS = Object.freeze([
   "scripts/epic-branch.mjs",
   "scripts/pr-contract-routing.mjs",
+  "scripts/pr-template-marker.mjs",
   "scripts/release-branch.mjs",
   "scripts/validate-issue.mjs",
   "scripts/validate-pr.mjs"

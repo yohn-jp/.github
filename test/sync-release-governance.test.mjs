@@ -10,7 +10,11 @@ const sync = yaml.load(readFileSync(".github/sync.yml", "utf8"));
 const targets = Object.entries(sync);
 const requiredSnapshot = [
   ".github/PULL_REQUEST_TEMPLATE/release.md",
+  ".github/PULL_REQUEST_TEMPLATE/authority.md",
+  ".github/PULL_REQUEST_TEMPLATE/epic.md",
   ".github/inari/pull-requests/release.json",
+  ".github/inari/pull-requests/authority.json",
+  ".github/inari/pull-requests/epic.json",
   ".github/inari/pr-policy.yml",
   ".github/inari/manifest.json"
 ];
@@ -179,4 +183,39 @@ test("the canonical sync snapshot does not make Mottainai's main fail its own re
     "test/fixtures/mottainai-consumer/governance.yml"
   );
   assert.deepEqual(errors, []);
+});
+
+// #211 review: a consumer that receives a script must also receive every
+// relative script it imports, or the synced copy has an unresolved import
+// the moment it runs. This closes that dependency set for every currently
+// synced script, not just scripts/validate-pr.mjs, so a future script
+// gaining a new local dependency fails this test instead of silently
+// shipping a broken sync target.
+function relativeScriptImportsOf(scriptPath) {
+  const source = readFileSync(scriptPath, "utf8");
+  const importPattern = /from\s+["']\.\/([^"']+\.mjs)["']/g;
+  const imports = [];
+  for (const match of source.matchAll(importPattern)) {
+    imports.push(`scripts/${match[1]}`);
+  }
+  return imports;
+}
+
+test("every synced script's relative imports are synced to the same consumer", () => {
+  for (const [repository, entries] of targets) {
+    const mappings = mappingsFor(repository);
+    const syncedScripts = entries
+      .map(({ dest }) => dest)
+      .filter((dest) => dest.startsWith("scripts/") && dest.endsWith(".mjs"));
+    for (const dest of syncedScripts) {
+      const source = mappings.get(dest);
+      for (const dependency of relativeScriptImportsOf(source)) {
+        assert.equal(
+          mappings.get(dependency),
+          dependency,
+          `${repository}: ${dest} imports ${dependency}, which must be synced too`
+        );
+      }
+    }
+  }
 });

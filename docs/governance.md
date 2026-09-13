@@ -149,15 +149,17 @@ jobs:
     uses: yohn-jp/.github/.github/workflows/issue-governance.yml@main
 ```
 
-Both accept `pr-template` / `issue-template` when a repository needs to
-pin a specific template rather than rely on gh-inari's deterministic
-auto-detection (required for repositories using gh-inari's multi-template
-PR policy). See the `on: workflow_call: inputs:` block in each workflow
-file for the full, current input list — this document intentionally does
-not duplicate it, to avoid the two drifting out of sync. For PRs, branch
-classification takes precedence: a `release/<semver>` head ref explicitly
-selects the `release` contract, so it does not depend on generic
-multi-template matching.
+`issue-governance.yml` accepts `issue-template` when a repository needs to
+pin a specific Issue Form template rather than rely on gh-inari's
+deterministic auto-detection. `pr-governance.yml` has no equivalent input
+(Issue #211): PR template selection is resolved directly from the PR body's
+own hidden `inari:template` marker, never from branch name, changed paths,
+repository conditions, or body-shape matching. A `release/<semver>` head
+branch is still validated as its own independent branch-name contract, but
+which PR contract the body must satisfy is determined solely by that body's
+marker. See the `on: workflow_call: inputs:` block in each workflow file for
+the full, current input list — this document intentionally does not
+duplicate it, to avoid the two drifting out of sync.
 
 ## Release PR path
 
@@ -169,8 +171,9 @@ release/<semver> -> release PR contract -> merge
   -> immutable v<semver> GitHub Release -> publish workflow
 ```
 
-For a release head branch, the shared adapter deterministically selects the
-canonical `release` contract before validating the body. `Tracking` remains
+The release contract itself is selected the same way as every other PR
+contract: from the body's own `inari:template` marker, rendered by gh-inari
+when the release PR is created. `Tracking` remains
 optional and is informational; it is never an authorization prerequisite. The
 release path contains no linked-Issue fetch or linked-Issue contract
 validation. Ordinary `feat|fix|docs|refactor|test|chore/<issue>-<slug>` PRs
