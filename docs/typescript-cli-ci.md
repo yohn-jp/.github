@@ -120,6 +120,16 @@ Action-pin governance script are hand-copied once at bootstrap and, absent
 this mechanism, silently drift from the organization's canonical version —
 see Issue #36 for the incident that motivated this.
 
+This does not apply to a consumer invoking this reusable
+`typescript-cli-ci.yml` workflow with `run-governance` at its default
+(`true`): its nested governance job already runs
+`.github/workflows/metadata-validation.yml`, which checks out this
+repository's exact revision and runs the provider-owned
+`scripts/validate-action-pins.mjs` directly against the consumer checkout.
+Such a consumer needs no synchronized local copy of the validator; the
+sync entry below is for a repository that invokes the Action-pin validator
+on its own, outside that reusable-workflow path.
+
 A repository can opt in to having some of these files kept in sync by
 adding entries to its block in `yohn-jp/.github`'s `.github/sync.yml`,
 pointing at the canonical source under `templates/workflows/` and

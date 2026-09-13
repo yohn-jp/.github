@@ -21,14 +21,17 @@
 # generator input) at the same path — this sync overwrites it with this
 # repo's canonical JSON, by decision.
 #
-# gh-inari is also the first consumer opted into workflow-wrapper and
-# governance-script sync (Issue #36): templates/workflows/*.yml replace its
-# hand-copied ci wrappers, and scripts/validate-action-pins.mjs replaces its
-# own scripts/validate-actions.mjs. gh-inari's package.json
-# (governance:actions script) and scripts/validate-actions.test.mjs must be
-# updated in gh-inari's own repository to reference the synced file — that
-# migration is out of band from this sync mechanism. See
-# docs/typescript-cli-ci.md for the opt-in contract.
+# gh-inari is also the first consumer opted into workflow-wrapper sync
+# (Issue #36): templates/workflows/*.yml replace its hand-copied ci
+# wrappers. Action-pin validation is not part of this sync surface:
+# gh-inari consumes that governance through reusable workflows instead —
+# .github/workflows/metadata-validation.yml checks out this repository's
+# exact revision and runs the provider-owned scripts/validate-action-pins.mjs
+# (and the other provider-owned metadata validators) directly against the
+# consumer checkout, and typescript-cli-ci.yml invokes that workflow when
+# run-governance is enabled. gh-inari does not need a synchronized local
+# copy of the validator for this path. See docs/typescript-cli-ci.md for
+# the opt-in contract.
 yohn-jp/gh-inari:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
@@ -74,8 +77,6 @@ yohn-jp/gh-inari:
     dest: .github/workflows/publish.yml
   - source: templates/workflows/gh-extension-release.yml
     dest: .github/workflows/gh-extension-release.yml
-  - source: scripts/validate-action-pins.mjs
-    dest: scripts/validate-action-pins.mjs
 
 yohn-jp/gh-makami:
   - source: .github/ISSUE_TEMPLATE/config.yml
