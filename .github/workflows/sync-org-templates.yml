@@ -26,6 +26,7 @@ on:
       - "scripts/generate-inari-manifest.mjs"
       - "scripts/validate-pr.mjs"
       - "scripts/pr-contract-routing.mjs"
+      - "scripts/pr-template-marker.mjs"
       - "scripts/release-branch.mjs"
       - "scripts/validate-issue.mjs"
       - "scripts/epic-branch.mjs"

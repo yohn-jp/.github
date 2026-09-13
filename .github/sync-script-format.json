@@ -12,6 +12,7 @@
   "files": [
     "scripts/epic-branch.mjs",
     "scripts/pr-contract-routing.mjs",
+    "scripts/pr-template-marker.mjs",
     "scripts/release-branch.mjs",
     "scripts/validate-issue.mjs",
     "scripts/validate-pr.mjs"

@@ -26,3 +26,5 @@ Verify the GitHub Release tag, commit, package version, and tarball.
 ## Tracking
 
 <!-- Optional. Linked Issue or release tracking reference. -->
+
+<!-- inari:template {"version":"1","kind":"pull_request","path":".github/PULL_REQUEST_TEMPLATE/release.md"} -->

@@ -207,6 +207,11 @@ yohn-jp/nawabari:
     dest: scripts/validate-pr.mjs
   - source: scripts/pr-contract-routing.mjs
     dest: scripts/pr-contract-routing.mjs
+  # #211: validate-pr.mjs imports countTemplateIdentityMarkerAttempts from
+  # this module — omitting it leaves the synced validate-pr.mjs with an
+  # unresolved relative import, exactly like the epic-branch.mjs case below.
+  - source: scripts/pr-template-marker.mjs
+    dest: scripts/pr-template-marker.mjs
   - source: scripts/release-branch.mjs
     dest: scripts/release-branch.mjs
   # #180: validate-pr.mjs imports classifyEpicPrTitle from this module (see
