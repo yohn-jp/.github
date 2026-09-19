@@ -256,19 +256,13 @@ yohn-jp/nawabari:
   - source: scripts/validate-issue.mjs
     dest: scripts/validate-issue.mjs
 
-# yohn-jp/wabachi: newly created repo (2026-08-16), still scaffolding
-# (README/TEMPLATE.md placeholders unfilled) — no divergent content to
-# protect. Already has its own workflow wrappers
-# (codeql/governance/issue-governance/publish.yml) hand-copied from an
-# older canonical revision; governance.yml/issue-governance.yml still pass
-# a `gh-inari-version` input that no longer exists on the reusable workflow
-# side, so every PR's Governance job currently fails with startup_failure
-# (same root cause fixed for gh-inari in Issue #36). Opted into the same
-# full set gh-inari gets — ISSUE_TEMPLATE, inari JSON, PR templates,
-# canonical workflow wrappers, and validate-action-pins.mjs — since it has
-# no existing scripts/validate-action-pins.mjs to replace. wabachi's own
-# .github/inari/pr-policy.yml is synchronized as part of the canonical Inari
-# snapshot so every consumer uses the same PR presentation policy.
+# yohn-jp/wabachi: Wabachi is a first-class consumer of the same organization-
+# managed metadata, Inari contracts, and canonical workflow wrappers as
+# gh-inari. Keep this mapping destination-for-destination identical to the
+# gh-inari block above; test/sync-wabachi-parity.test.mjs enforces that
+# contract. Provider-owned validators stay in yohn-jp/.github and are reached
+# through the reusable metadata/governance workflows rather than copied into
+# Wabachi.
 yohn-jp/wabachi:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
@@ -282,6 +276,8 @@ yohn-jp/wabachi:
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -300,6 +296,8 @@ yohn-jp/wabachi:
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -320,8 +318,6 @@ yohn-jp/wabachi:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
-  - source: scripts/validate-action-pins.mjs
-    dest: scripts/validate-action-pins.mjs
 
 # yohn-jp/mottainai: architecture.yml/maintenance.yml/research.yml/config.yml
 # are already byte-identical here (this repo's templates originated from
