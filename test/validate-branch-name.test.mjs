@@ -4,6 +4,7 @@ import {
   classifyBranchName,
   validateBranchName
 } from "../scripts/validate-branch-name.mjs";
+import * as canonicalBranchNaming from "gh-inari/branch-naming";
 
 test("default pattern accepts a conventional branch name", () => {
   assert.deepEqual(validateBranchName("feat/42-add-init-command"), []);
@@ -211,4 +212,39 @@ test("epic branches are never accepted by an unrelated ordinary pattern override
     pattern: "^release/\\d+\\.\\d+\\.\\d+$"
   });
   assert.deepEqual(errors, []);
+});
+
+test("canonical source-Issue branches bypass legacy ordinary regex configuration", () => {
+  const errors = validateBranchName("issue/680-source-routing", {
+    pattern: ".*",
+    exempt: ["issue/680-source-routing"]
+  });
+  if (
+    typeof canonicalBranchNaming.recognizeIntegrationBranchName === "function"
+  ) {
+    assert.deepEqual(errors, []);
+    assert.deepEqual(classifyBranchName("issue/680-source-routing"), {
+      kind: "issue",
+      valid: true,
+      issueNumber: "680",
+      slug: "source-routing",
+      errors: []
+    });
+    return;
+  }
+  // The published package in a pre-#925 consumer has no source-Issue
+  // grammar; absence of the canonical surface fails closed.
+  assert.equal(errors.length, 1);
+});
+
+test("malformed source-Issue branches fail closed despite broad legacy configuration", () => {
+  for (const branch of ["issue/foo", "issue/680", "issue/-source-routing"]) {
+    const result = classifyBranchName(branch, {
+      pattern: ".*",
+      exempt: [branch]
+    });
+    assert.equal(result.kind, "invalid-issue");
+    assert.equal(result.valid, false);
+    assert.equal(result.errors.length, 1);
+  }
 });

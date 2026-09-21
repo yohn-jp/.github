@@ -21,7 +21,8 @@ const REPOSITORY_ROOT = path.resolve(
 /**
  * Validate a pull-request event against the checked-out repository's local
  * Inari snapshot. The workflow owns event plumbing; gh-inari owns contract
- * compilation, Markdown parsing, and semantic validation.
+ * compilation, Markdown parsing, semantic validation, and (when route
+ * evidence is supplied) Integration Routing projection.
  *
  * Template selection (Issue #211) is resolved directly from the PR body's
  * own gh-inari template-identity marker: `default`, `release`, `epic`, and
@@ -40,7 +41,8 @@ export async function validatePullRequest({
   title,
   body,
   root = REPOSITORY_ROOT,
-  branch
+  branch,
+  routing: routingEvidence
 }) {
   const routing = classifyPullRequestBranch({ branch });
   if (routing.errors.length > 0) {
@@ -55,6 +57,28 @@ export async function validatePullRequest({
       violations,
       errors: violations.map((violation) => violation.message)
     };
+  }
+
+  if (routingEvidence !== undefined) {
+    if (routingEvidence.invalid !== undefined) {
+      const violation = routingEvidence.invalid;
+      return {
+        valid: false,
+        branchClassification: routing.classification,
+        violations: [violation],
+        errors: [violation.message]
+      };
+    }
+    const routeResult = await validateIntegrationRouting(routingEvidence);
+    if (!routeResult.valid) {
+      return {
+        valid: false,
+        branchClassification: routing.classification,
+        routing: routeResult.projection,
+        violations: routeResult.diagnostics,
+        errors: routeResult.diagnostics.map((violation) => violation.message)
+      };
+    }
   }
 
   const resolution = await resolveTemplateContract(root, body);
@@ -76,6 +100,77 @@ export async function validatePullRequest({
     title,
     routing.classification
   );
+}
+
+/**
+ * Validate explicit route evidence through the published Inari adapter. The
+ * adapter is loaded at runtime so old consumers can preserve standalone and
+ * release behavior during rollout; supplied route evidence always fails
+ * closed when the canonical surface is unavailable.
+ */
+async function validateIntegrationRouting(input) {
+  let inari;
+  try {
+    inari = await import("gh-inari");
+  } catch (cause) {
+    return {
+      valid: false,
+      diagnostics: [
+        {
+          code: "GOVERNANCE_INARI_ROUTING_UNAVAILABLE",
+          path: "$.routing",
+          message: `Canonical Inari routing could not be loaded: ${cause instanceof Error ? cause.message : String(cause)}`
+        }
+      ]
+    };
+  }
+
+  const adapter =
+    inari.tryAdaptIntegrationRouting ??
+    inari.tryValidateIntegrationRouting ??
+    inari.tryProjectIntegrationRouting;
+  if (typeof adapter !== "function") {
+    return {
+      valid: false,
+      diagnostics: [
+        {
+          code: "GOVERNANCE_INARI_ROUTING_UNAVAILABLE",
+          path: "$.routing",
+          message:
+            "Canonical Inari routing is unavailable; route evidence cannot be validated."
+        }
+      ]
+    };
+  }
+
+  try {
+    const result = adapter(input);
+    return {
+      valid: result?.valid === true,
+      projection: result?.projection,
+      diagnostics: Array.isArray(result?.diagnostics)
+        ? result.diagnostics
+        : [
+            {
+              code: "GOVERNANCE_INARI_ROUTING_INVALID",
+              path: "$.routing",
+              message:
+                "Canonical Inari routing returned no structured diagnostics."
+            }
+          ]
+    };
+  } catch (cause) {
+    return {
+      valid: false,
+      diagnostics: [
+        {
+          code: "GOVERNANCE_INARI_ROUTING_INVALID",
+          path: "$.routing",
+          message: `Canonical Inari routing failed closed: ${cause instanceof Error ? cause.message : String(cause)}`
+        }
+      ]
+    };
+  }
 }
 
 /**
@@ -191,6 +286,64 @@ function report(outcome, title, branchClassification) {
   };
 }
 
+function readRoutingEvidence(event) {
+  const pullRequest = event.pull_request;
+  const configured = process.env.INARI_ROUTING;
+  let input;
+  if (configured !== undefined && configured.trim() !== "") {
+    try {
+      const source = configured.trim();
+      input = fs.existsSync(source)
+        ? JSON.parse(fs.readFileSync(source, "utf8"))
+        : JSON.parse(source);
+    } catch (cause) {
+      return {
+        invalid: {
+          code: "GOVERNANCE_INARI_ROUTING_INVALID",
+          path: "$.routing",
+          message: `Configured Inari routing evidence is not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`
+        }
+      };
+    }
+  } else {
+    input =
+      pullRequest?.routing ??
+      pullRequest?.integration_routing ??
+      pullRequest?.inari?.routing;
+  }
+  if (input === undefined) return undefined;
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return {
+      invalid: {
+        code: "GOVERNANCE_INARI_ROUTING_INVALID",
+        path: "$.routing",
+        message: "Inari routing evidence must be an object."
+      }
+    };
+  }
+
+  const observed = {
+    ...(pullRequest?.head?.ref === undefined
+      ? {}
+      : { head: pullRequest.head.ref }),
+    ...(pullRequest?.base?.ref === undefined
+      ? {}
+      : { base: pullRequest.base.ref })
+  };
+  if (Object.prototype.hasOwnProperty.call(input, "routing")) {
+    return {
+      ...input,
+      routing:
+        typeof input.routing === "object" &&
+        input.routing !== null &&
+        !Array.isArray(input.routing)
+          ? { ...input.routing, ...observed }
+          : input.routing
+    };
+  }
+  return { ...input, ...observed };
+}
+
 async function main() {
   const eventPathArgIndex = process.argv.indexOf("--event");
   if (eventPathArgIndex === -1)
@@ -204,11 +357,13 @@ async function main() {
   const pullRequest = event.pull_request;
   const branch =
     branchIndex === -1 ? pullRequest.head?.ref : process.argv[branchIndex + 1];
+  const routingEvidence = readRoutingEvidence(event);
   const result = await validatePullRequest({
     title: pullRequest.title ?? "",
     body: pullRequest.body ?? "",
     root: process.cwd(),
-    branch
+    branch,
+    routing: routingEvidence
   });
   console.log(
     JSON.stringify({
@@ -222,6 +377,7 @@ async function main() {
       ...(result.result === undefined
         ? {}
         : { classification: result.result.classification }),
+      ...(result.routing === undefined ? {} : { routing: result.routing }),
       violations: result.violations
     })
   );
