@@ -137,6 +137,10 @@ yohn-jp/gh-makami:
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
 
+# yohn-jp/suzukuri: Suzukuri is a first-class CLI consumer of the same
+# organization-managed metadata, Inari contracts, and canonical workflow
+# wrappers as gh-inari and Wabachi. Keep this mapping destination-for-
+# destination identical to the yohn-jp/wabachi block above; see Issue #231.
 yohn-jp/suzukuri:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
@@ -150,6 +154,8 @@ yohn-jp/suzukuri:
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -168,6 +174,8 @@ yohn-jp/suzukuri:
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -180,10 +188,14 @@ yohn-jp/suzukuri:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
-  # Same explicit rollout as gh-makami: the release governance caller must not
-  # remain on the stale pinned provider revision.
+  - source: templates/workflows/codeql.yml
+    dest: .github/workflows/codeql.yml
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
+  - source: templates/workflows/issue-governance.yml
+    dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/publish.yml
+    dest: .github/workflows/publish.yml
 
 # yohn-jp/nawabari: bug.yml/feature.yml there use an older, differently
 # structured field set (e.g. "reproduction"/"proposal" instead of this
