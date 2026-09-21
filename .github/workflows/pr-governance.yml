@@ -48,7 +48,7 @@ permissions:
 jobs:
   validate-branch-name:
     name: Validate branch name
-    if: github.event_name == 'pull_request' && !inputs.skip-branch-name-check
+    if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened') && !inputs.skip-branch-name-check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout governance tooling (yohn-jp/.github)
