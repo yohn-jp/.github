@@ -125,11 +125,8 @@ async function validateIntegrationRouting(input) {
     };
   }
 
-  const adapter =
-    inari.tryAdaptIntegrationRouting ??
-    inari.tryValidateIntegrationRouting ??
-    inari.tryProjectIntegrationRouting;
-  if (typeof adapter !== "function") {
+  const projector = inari.tryProjectIntegrationRouting;
+  if (typeof projector !== "function") {
     return {
       valid: false,
       diagnostics: [
@@ -144,7 +141,7 @@ async function validateIntegrationRouting(input) {
   }
 
   try {
-    const result = adapter(input);
+    const result = projector(input);
     return {
       valid: result?.valid === true,
       projection: result?.projection,

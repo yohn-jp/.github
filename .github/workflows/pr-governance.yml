@@ -28,9 +28,9 @@ on:
         default: false
       integration-routing:
         description: >-
-          Optional JSON route evidence accepted by Inari's canonical
-          integration-routing projector. Observed PR head/base refs are added
-          by the adapter before validation.
+          JSON route evidence accepted by Inari's canonical integration-routing
+          projector. Observed PR head/base refs are added by the adapter before
+          validation; parentage is never inferred from the event or branch.
         type: string
         default: ""
 

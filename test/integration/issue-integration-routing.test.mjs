@@ -18,12 +18,15 @@ const epic = { ...repository, number: 640 };
 
 const inari = await import("gh-inari");
 const branchNaming = await import("gh-inari/branch-naming");
-const canonicalRoutingAvailable =
-  typeof inari.tryAdaptIntegrationRouting === "function" ||
-  typeof inari.tryValidateIntegrationRouting === "function" ||
-  typeof inari.tryProjectIntegrationRouting === "function";
-const canonicalIntegrationBranchesAvailable =
-  branchNaming.validateBranchName("issue/680-source-routing").length === 0;
+assert.equal(
+  typeof inari.tryProjectIntegrationRouting,
+  "function",
+  "gh-inari #925 canonical tryProjectIntegrationRouting is required"
+);
+assert.deepEqual(
+  branchNaming.validateBranchName("issue/680-source-routing"),
+  []
+);
 
 function route(overrides = {}) {
   return {
@@ -58,22 +61,9 @@ async function validate(branch, routing) {
   });
 }
 
-function assertCanonicalPositive(result) {
-  if (!canonicalRoutingAvailable || !canonicalIntegrationBranchesAvailable) {
-    assert.equal(result.valid, false);
-    assert.ok(
-      result.violations.length > 0,
-      "unavailable canonical routing must fail closed"
-    );
-    return false;
-  }
-  assert.equal(result.valid, true);
-  return true;
-}
-
 test("Implementation -> Issue route is accepted by canonical Inari routing", async () => {
   const result = await validate("feat/700-source-routing", route());
-  if (!assertCanonicalPositive(result)) return;
+  assert.equal(result.valid, true);
   assert.equal(result.routing.pullRequest.role, "implementation");
   assert.equal(result.routing.expectedBase, "issue/680-source-routing");
 });
@@ -95,14 +85,12 @@ test("Issue -> Epic and Epic -> default routes are selected canonically", async 
       base: "main"
     })
   );
-  if (!assertCanonicalPositive(issueResult)) return;
+  assert.equal(issueResult.valid, true);
   assert.equal(issueResult.routing.pullRequest.role, "issue-integration");
   assert.equal(issueResult.routing.expectedBase, "epic/640-governance");
-  assertCanonicalPositive(epicResult);
-  if (epicResult.valid) {
-    assert.equal(epicResult.routing.pullRequest.role, "epic-integration");
-    assert.equal(epicResult.routing.expectedBase, "main");
-  }
+  assert.equal(epicResult.valid, true);
+  assert.equal(epicResult.routing.pullRequest.role, "epic-integration");
+  assert.equal(epicResult.routing.expectedBase, "main");
 });
 
 test("standalone and explicit legacy routes remain compatible", async () => {
@@ -128,11 +116,10 @@ test("standalone and explicit legacy routes remain compatible", async () => {
     head: "feat/700-legacy",
     base: "epic/640-governance"
   });
-  if (!assertCanonicalPositive(standalone)) return;
+  assert.equal(standalone.valid, true);
   assert.equal(standalone.routing.expectedBase, "main");
-  assertCanonicalPositive(legacy);
-  if (legacy.valid)
-    assert.equal(legacy.routing.expectedBase, "epic/640-governance");
+  assert.equal(legacy.valid, true);
+  assert.equal(legacy.routing.expectedBase, "epic/640-governance");
 });
 
 test("cross-Issue, cross-Epic, and layer-skipping routes fail closed", async () => {
@@ -166,13 +153,11 @@ test("cross-Issue, cross-Epic, and layer-skipping routes fail closed", async () 
   for (const result of [wrongSource, wrongEpic, layerSkip]) {
     assert.equal(result.valid, false);
     assert.ok(result.violations.length > 0);
-    if (canonicalRoutingAvailable && canonicalIntegrationBranchesAvailable) {
-      assert.ok(
-        result.violations.some((entry) =>
-          String(entry.code).startsWith("INTEGRATION_ROUTING_")
-        )
-      );
-    }
+    assert.ok(
+      result.violations.some((entry) =>
+        String(entry.code).startsWith("INTEGRATION_ROUTING_")
+      )
+    );
   }
 });
 

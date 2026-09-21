@@ -65,6 +65,13 @@ branch. Standalone and explicit legacy routes remain compatible according to
 the canonical result. Missing or unavailable canonical route validation fails
 closed whenever route evidence is supplied.
 
+The ordinary GitHub pull-request event does not carry the complete Issue
+parent graph. Therefore the reusable workflow cannot manufacture route input
+without becoming a competing parentage authority. Route evidence must be
+provided by the canonical Inari consumption path once the #925 surface is
+published; until then, supplied evidence fails closed with an explicit
+unavailable diagnostic and no route enforcement is claimed.
+
 The `epic/<issue-number>-<slug>` class is an integration branch for one
 tracking/Epic Issue and its independently implemented child Issues — not an
 implementation leaf branch. Canonical Inari branch validation accepts it and

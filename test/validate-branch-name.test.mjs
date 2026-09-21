@@ -219,22 +219,19 @@ test("canonical source-Issue branches bypass legacy ordinary regex configuration
     pattern: ".*",
     exempt: ["issue/680-source-routing"]
   });
-  if (
-    typeof canonicalBranchNaming.recognizeIntegrationBranchName === "function"
-  ) {
-    assert.deepEqual(errors, []);
-    assert.deepEqual(classifyBranchName("issue/680-source-routing"), {
-      kind: "issue",
-      valid: true,
-      issueNumber: "680",
-      slug: "source-routing",
-      errors: []
-    });
-    return;
-  }
-  // The published package in a pre-#925 consumer has no source-Issue
-  // grammar; absence of the canonical surface fails closed.
-  assert.equal(errors.length, 1);
+  assert.equal(
+    typeof canonicalBranchNaming.recognizeIntegrationBranchName,
+    "function",
+    "gh-inari #925 canonical integration branch recognition is required"
+  );
+  assert.deepEqual(errors, []);
+  assert.deepEqual(classifyBranchName("issue/680-source-routing"), {
+    kind: "issue",
+    valid: true,
+    issueNumber: "680",
+    slug: "source-routing",
+    errors: []
+  });
 });
 
 test("malformed source-Issue branches fail closed despite broad legacy configuration", () => {
