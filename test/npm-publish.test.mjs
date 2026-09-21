@@ -191,9 +191,16 @@ test("smoke and publish consume the packed artifact without repacking", () => {
   const smokeStep = workflow.jobs["smoke-test"].steps.find(
     (step) => step.name === "Smoke test packed tarball"
   );
+  const smokeCheckoutStep = workflow.jobs["smoke-test"].steps.find(
+    (step) => step.name === "Checkout"
+  );
   const publishJob = workflow.jobs.publish;
   const publishStep = publishJob.steps.find((step) => step.name === "Publish");
-  assert.ok(smokeStep && publishStep);
+  assert.ok(smokeCheckoutStep && smokeStep && publishStep);
+  assert.equal(
+    smokeCheckoutStep.with.ref,
+    "refs/tags/${{ github.event.release.tag_name }}"
+  );
   assert.equal(
     smokeStep.env.TARBALL_NAME,
     "${{ needs.build.outputs.tarball-name }}"
@@ -205,6 +212,11 @@ test("smoke and publish consume the packed artifact without repacking", () => {
   assert.match(
     smokeStep.run,
     /node scripts\/smoke-test\.mjs --tarball "\$TARBALL_NAME"/
+  );
+  assert.match(smokeStep.run, /sha256sum "\$TARBALL_NAME"/);
+  assert.match(
+    smokeStep.run,
+    /"\$actual_sha256" != "\$EXPECTED_TARBALL_SHA256"/
   );
   assert.match(publishStep.run, /npm publish "\$TARBALL_NAME"/);
   assert.doesNotMatch(smokeStep.run, /\b(?:pnpm|npm) pack\b/);
