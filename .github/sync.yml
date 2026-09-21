@@ -55,6 +55,8 @@ yohn-jp/gh-inari:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -75,6 +77,8 @@ yohn-jp/gh-inari:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -109,6 +113,8 @@ yohn-jp/gh-makami:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -127,6 +133,8 @@ yohn-jp/gh-makami:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -164,6 +172,8 @@ yohn-jp/suzukuri:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -184,6 +194,8 @@ yohn-jp/suzukuri:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -224,6 +236,8 @@ yohn-jp/shikitari:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -244,6 +258,8 @@ yohn-jp/shikitari:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -285,6 +301,8 @@ yohn-jp/nawabari:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -305,6 +323,8 @@ yohn-jp/nawabari:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -362,6 +382,8 @@ yohn-jp/wabachi:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -382,6 +404,8 @@ yohn-jp/wabachi:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -422,6 +446,8 @@ yohn-jp/mottainai:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -444,6 +470,8 @@ yohn-jp/mottainai:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
@@ -485,6 +513,8 @@ yohn-jp/majiwari:
     dest: .github/PULL_REQUEST_TEMPLATE/authority.md
   - source: .github/PULL_REQUEST_TEMPLATE/epic.md
     dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
   - source: .github/inari/issues/bug.json
     dest: .github/inari/issues/bug.json
   - source: .github/inari/issues/feature.json
@@ -503,6 +533,8 @@ yohn-jp/majiwari:
     dest: .github/inari/pull-requests/authority.json
   - source: .github/inari/pull-requests/epic.json
     dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
   - source: .github/inari/pr-policy.yml
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
