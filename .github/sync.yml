@@ -432,8 +432,12 @@ yohn-jp/mottainai:
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/release.json
     dest: .github/inari/pull-requests/release.json
   - source: .github/inari/pull-requests/authority.json
