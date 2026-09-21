@@ -49,6 +49,20 @@ yohn-jp/suzukuri:
   - source: .github/agents/runtime-profiles.schema.json
     dest: .github/agent-governance/runtime-profiles.schema.json
 
+yohn-jp/shikitari:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
+
 yohn-jp/nawabari:
   - source: AGENTS.md
     dest: AGENTS.md
