@@ -34,6 +34,7 @@ test("every synchronized consumer receives the canonical release snapshot", () =
       "yohn-jp/majiwari",
       "yohn-jp/mottainai",
       "yohn-jp/nawabari",
+      "yohn-jp/shikitari",
       "yohn-jp/suzukuri",
       "yohn-jp/wabachi"
     ].sort()
