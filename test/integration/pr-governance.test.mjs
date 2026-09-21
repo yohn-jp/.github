@@ -13,6 +13,20 @@ const defaultBody = await readFile(
   "test/fixtures/pr-governance/default.md",
   "utf8"
 );
+const prGovernanceWorkflow = await readFile(
+  ".github/workflows/pr-governance.yml",
+  "utf8"
+);
+
+function branchNameJobCondition() {
+  const job = prGovernanceWorkflow.match(
+    /(?:^|\n)  validate-branch-name:\n([\s\S]*?)(?=\n  validate-pr-contract:)/u
+  )?.[1];
+  assert.ok(job, "validate-branch-name job must exist");
+  const condition = job.match(/^    if: (.+)$/mu)?.[1];
+  assert.ok(condition, "validate-branch-name job must have an if condition");
+  return condition;
+}
 
 function withMarker(body, path) {
   return `${body}\n<!-- inari:template {"version":"1","kind":"pull_request","path":"${path}"} -->\n`;
@@ -35,6 +49,25 @@ function pullRequest(
     branch
   };
 }
+
+test("branch-name validation is limited to first-introduction PR actions", () => {
+  const condition = branchNameJobCondition();
+  assert.match(condition, /github\.event_name == 'pull_request'/u);
+  assert.match(condition, /!inputs\.skip-branch-name-check/u);
+
+  const allowedActions = [
+    ...condition.matchAll(/github\.event\.action == '([^']+)'/gu)
+  ].map(([, action]) => action);
+  for (const action of ["opened", "reopened"]) {
+    assert.ok(allowedActions.includes(action), `${action} must run validation`);
+  }
+  for (const action of ["synchronize", "edited", "ready_for_review"]) {
+    assert.ok(
+      !allowedActions.includes(action),
+      `${action} must not run validation`
+    );
+  }
+});
 
 test("a PR body with the default template's marker resolves the default contract", async () => {
   assert.equal(validateBranchName("fix/123-slug").length, 0);
