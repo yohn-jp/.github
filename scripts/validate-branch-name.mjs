@@ -9,18 +9,20 @@
 // class (see epic-branch.mjs) — not an implementation leaf branch, so it is
 // likewise classified independently of the ordinary pattern.
 //
-// Branch naming is not part of gh-inari's semantic authority (it governs
-// Issue/PR *content* contracts, not branch names), so owning this check
-// here does not create a second authority over anything gh-inari already
-// owns.
+// Branch naming is delegated to gh-inari. Release branches remain a narrow
+// compatibility class because they are intentionally Issue-less and are not
+// part of gh-inari's canonical Change branch grammar.
 import { execFileSync } from "node:child_process";
+import * as canonicalBranchNaming from "gh-inari/branch-naming";
 import { classifyReleaseBranch } from "./release-branch.mjs";
 import { classifyEpicBranch } from "./epic-branch.mjs";
+
+const { recognizeBranchName, validateBranchName: validateCanonicalBranchName } =
+  canonicalBranchNaming;
 
 const DEFAULT_PATTERN = "^(feat|fix|docs|refactor|test|chore)/\\d+-[a-z0-9-]+$";
 const DEFAULT_EXEMPT = ["main"];
 export { RELEASE_BRANCH_PATTERN } from "./release-branch.mjs";
-export { EPIC_BRANCH_PATTERN } from "./epic-branch.mjs";
 
 // `pattern` is caller-supplied config (the pr-governance.yml workflow_call
 // `branch-name-pattern` input, set in a consumer repository's own committed
@@ -45,14 +47,14 @@ export function validateBranchName(branch, options = {}) {
 /**
  * Classify a branch before any PR-template detection occurs.
  *
- * `release/` and `epic/` are intentionally handled before the configurable
- * ordinary branch pattern. This makes malformed release/epic branches fail
+ * Release and integration branches are handled before the configurable
+ * ordinary branch pattern. This makes malformed reserved branches fail
  * closed even if a consumer supplies a broad custom pattern or exempts the
  * branch name.
  *
  * @param {string} branch
  * @param {{pattern?: string, exempt?: string[]}} [options]
- * @returns {{kind: "release"|"invalid-release"|"epic"|"invalid-epic"|"ordinary"|"exempt", valid: boolean, version?: string, issueNumber?: string, slug?: string, errors: string[]}}
+ * @returns {{kind: "release"|"invalid-release"|"epic"|"invalid-epic"|"issue"|"invalid-issue"|"ordinary"|"exempt", valid: boolean, version?: string, issueNumber?: number, slug?: string, errors: string[]}}
  */
 export function classifyBranchName(branch, options = {}) {
   const pattern = options.pattern ?? DEFAULT_PATTERN;
@@ -70,7 +72,9 @@ export function classifyBranchName(branch, options = {}) {
         ? "invalid-release"
         : branch.startsWith("epic/")
           ? "invalid-epic"
-          : "ordinary",
+          : branch.startsWith("issue/")
+            ? "invalid-issue"
+            : "ordinary",
       valid: false,
       errors: [
         `branch name exceeds the maximum supported length of ${MAX_BRANCH_LENGTH} characters`
@@ -78,19 +82,67 @@ export function classifyBranchName(branch, options = {}) {
     };
   }
 
-  // release/<semver> and epic/<issue-number>-<slug> are canonical branch
-  // classes independent from the consumer-configured ordinary
-  // branch-name-pattern. Each must be classified before that pattern is
-  // length-checked or compiled, so a malformed or overlong ordinary pattern
-  // can never reject a valid release/epic branch, and a broad/exempting
-  // ordinary pattern can never authorize a malformed one. This fail-closed
-  // precedence is intentional: neither class is overridable via
-  // branch-name-exempt or branch-name-pattern.
+  // Release and integration classes are independent from the consumer-
+  // configured ordinary branch-name-pattern. Each is classified before that
+  // pattern is compiled, so a broad/exempting pattern can never authorize a
+  // malformed reserved branch.
   if (branch.startsWith("release/")) {
     return classifyReleaseBranch(branch);
   }
-  if (branch.startsWith("epic/")) {
-    return classifyEpicBranch(branch);
+  if (branch.startsWith("epic/") || branch.startsWith("issue/")) {
+    const parts = recognizeBranchName(branch);
+    const errors = validateCanonicalBranchName(branch);
+    // gh-inari versions predating #925 did not expose integration branch
+    // grammar. Keep the existing Epic classifier as a bounded migration
+    // compatibility path until every consumer has the canonical surface;
+    // malformed reserved branches still fail closed and no local pattern can
+    // override this result.
+    if (
+      branch.startsWith("epic/") &&
+      typeof canonicalBranchNaming.recognizeIntegrationBranchName !== "function"
+    ) {
+      const legacyEpic = classifyEpicBranch(branch);
+      return legacyEpic.valid
+        ? legacyEpic
+        : { kind: "invalid-epic", valid: false, errors: legacyEpic.errors };
+    }
+    if (errors.length > 0 || parts === undefined) {
+      return {
+        kind: branch.startsWith("epic/") ? "invalid-epic" : "invalid-issue",
+        valid: false,
+        errors:
+          errors.length > 0
+            ? [...errors]
+            : [
+                `branch name "${branch}" is not recognized by canonical Inari branch naming`
+              ]
+      };
+    }
+    return {
+      kind: parts.type,
+      valid: true,
+      issueNumber: String(parts.issueNumber),
+      slug: parts.slug,
+      errors: []
+    };
+  }
+
+  if (exempt.includes(branch)) {
+    return { kind: "exempt", valid: true, errors: [] };
+  }
+
+  const canonicalErrors = validateCanonicalBranchName(branch);
+  // Explicit exemptions and a consumer's narrower legacy pattern remain
+  // bounded transport compatibility, but cannot authorize a branch that
+  // Inari rejects. Semantic branch grammar therefore remains canonical.
+  if (canonicalErrors.length > 0) {
+    return {
+      kind: "ordinary",
+      valid: false,
+      errors: [
+        `branch name "${branch}" does not match required pattern ${pattern}; ${canonicalErrors[0]}`
+      ]
+    };
   }
 
   if (pattern.length > MAX_PATTERN_LENGTH) {
@@ -117,9 +169,6 @@ export function classifyBranchName(branch, options = {}) {
     };
   }
 
-  if (exempt.includes(branch)) {
-    return { kind: "exempt", valid: true, errors: [] };
-  }
   if (regex.test(branch)) return { kind: "ordinary", valid: true, errors: [] };
   return {
     kind: "ordinary",
