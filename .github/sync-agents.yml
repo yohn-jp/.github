@@ -1,4 +1,5 @@
-# Shared coding-agent instructions distributed by sync-org-templates.yml.
+# Repository-specific agent-governance artifacts distributed by sync-org-templates.yml.
+# Organization-wide AGENTS and Skills are declared once in .github/sync-common.yml.
 # Keep this target list aligned with the GitHub App token repository scope in
 # .github/workflows/sync-org-templates.yml.
 #
@@ -8,8 +9,6 @@
 # and are intentionally not managed here.
 
 yohn-jp/gh-inari:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -22,8 +21,6 @@ yohn-jp/gh-inari:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/gh-makami:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -36,8 +33,6 @@ yohn-jp/gh-makami:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/suzukuri:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -50,8 +45,6 @@ yohn-jp/suzukuri:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/shikitari:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -64,8 +57,6 @@ yohn-jp/shikitari:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/nawabari:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -78,8 +69,6 @@ yohn-jp/nawabari:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/mottainai:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -92,8 +81,6 @@ yohn-jp/mottainai:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/wabachi:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -106,8 +93,6 @@ yohn-jp/wabachi:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/majiwari:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md
@@ -120,8 +105,6 @@ yohn-jp/majiwari:
     dest: .github/agent-governance/runtime-profiles.schema.json
 
 yohn-jp/cli-canon:
-  - source: AGENTS.md
-    dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: docs/agent-change-workflow.md

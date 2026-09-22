@@ -1,0 +1,22 @@
+# Organization-wide files shared by every repository currently managed by the
+# agent-governance sync. Keep repository-specific mappings in sync.yml or
+# sync-agents.yml; add universally owned files here once instead of repeating
+# them under every repository key.
+
+group:
+  repos: |
+    yohn-jp/gh-inari
+    yohn-jp/gh-makami
+    yohn-jp/suzukuri
+    yohn-jp/shikitari
+    yohn-jp/nawabari
+    yohn-jp/mottainai
+    yohn-jp/wabachi
+    yohn-jp/majiwari
+    yohn-jp/cli-canon
+  files:
+    - source: AGENTS.md
+      dest: .github/agent-governance/AGENTS.md
+    - source: .github/agent-governance/skills/
+      dest: .github/agent-governance/skills/
+      deleteOrphaned: true
