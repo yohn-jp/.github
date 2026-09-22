@@ -118,3 +118,17 @@ yohn-jp/majiwari:
     dest: .github/agent-governance/runtime-profiles.json
   - source: .github/agents/runtime-profiles.schema.json
     dest: .github/agent-governance/runtime-profiles.schema.json
+
+yohn-jp/cli-canon:
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
