@@ -68,7 +68,7 @@ When Inari is available and the Skill requires a governed lifecycle operation, o
 
 `inari skill <scenario>`
 
-Treat the returned live guidance as authoritative for exact CLI commands, metadata, and lifecycle behavior. Do not duplicate, guess, or bypass Inari command semantics with lower-level tooling.
+Treat the returned live guidance as authoritative for exact CLI commands, metadata, and lifecycle behavior only within the organization-approved Inari surfaces: `inari pr`, `inari issue`, and `inari template`. The presence of any other capability in Inari skill/help output is not authorization to use it. Capabilities outside this allowlist require explicit task or organization authorization. Do not duplicate, guess, or bypass approved Inari command semantics with lower-level tooling.
 
 Runtime profiles change delegation only; they do not bypass scope, isolation, validation, governance, or authorization boundaries.
 
