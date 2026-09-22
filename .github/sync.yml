@@ -489,13 +489,6 @@ yohn-jp/cli-canon:
 # `labels:` block (additive). PULL_REQUEST_TEMPLATE/release.md above was
 # rewritten to match mottainai's existing, more detailed release template
 # instead of overwriting it.
-
-# yohn-jp/mottainai: architecture.yml/maintenance.yml/research.yml/config.yml
-# are already byte-identical here (this repo's templates originated from
-# mottainai's). bug.yml/feature.yml differ only by this repo's added
-# `labels:` block (additive). PULL_REQUEST_TEMPLATE/release.md above was
-# rewritten to match mottainai's existing, more detailed release template
-# instead of overwriting it.
 yohn-jp/mottainai:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
