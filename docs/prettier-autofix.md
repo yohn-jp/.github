@@ -3,7 +3,7 @@
 The organization-owned wrapper is synchronized only to the current TypeScript
 CLI consumers whose default-branch package provides the shared pnpm setup
 contract and a `format` script: `gh-inari`, `gh-makami`, `suzukuri`,
-`shikitari`, `nawabari`, and `wabachi`. The wrapper calls
+`shikitari`, `nawabari`, `wabachi`, `cli-canon`, and `majiwari`. The wrapper calls
 `yohn-jp/.github/.github/workflows/prettier-autofix.yml@main`; its consumer
 copy is controlled by `.github/sync.yml`.
 
