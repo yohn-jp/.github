@@ -179,7 +179,7 @@ jobs:
             echo "::error::release artifact '$RELEASE_ARTIFACT_PATH' not found" >&2
             exit 1
           fi
-          node --import tsx "$CERTIFICATION_VERIFICATION_SCRIPT"
+          node "$CERTIFICATION_VERIFICATION_SCRIPT"
 
       - name: Verify packed tarball unchanged
         if: inputs.certification-verification-script != ''
