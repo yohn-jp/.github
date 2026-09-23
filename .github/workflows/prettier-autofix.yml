@@ -54,7 +54,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      authority-available: ${{ steps.authority.outputs.available }}
+      authority_available: ${{ steps.authority.outputs.available }}
       changed: ${{ steps.capture.outputs.changed }}
       artifact-directory: ${{ steps.capture.outputs.directory }}
     steps:
@@ -152,7 +152,7 @@ jobs:
   writer:
     name: Validate patch and create stacked autofix PR
     needs: [eligibility, format]
-    if: needs.eligibility.outputs.eligible == 'true' && needs.format.outputs.authority-available == 'true' && needs.format.outputs.changed == 'true'
+    if: needs.eligibility.outputs.eligible == 'true' && needs.format.outputs.authority_available == 'true' && needs.format.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
