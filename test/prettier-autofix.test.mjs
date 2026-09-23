@@ -611,6 +611,56 @@ test("text patch paths and provenance are validated against exact PR provenance"
   );
 });
 
+test("final-newline repair patches accept only old-side no-newline metadata", () => {
+  const repaired = Buffer.from(
+    [
+      "diff --git a/src/example.js b/src/example.js",
+      "index 1111111..2222222 100644",
+      "--- a/src/example.js",
+      "+++ b/src/example.js",
+      "@@ -1 +1 @@",
+      "-const value = 'x'",
+      "\\ No newline at end of file",
+      '+const value = "x";',
+      ""
+    ].join("\n")
+  );
+
+  assert.deepEqual(validatePatch(repaired), {
+    files: ["src/example.js"],
+    changedLines: 2,
+    bytes: repaired.byteLength
+  });
+
+  for (const invalid of [
+    [
+      "diff --git a/src/example.js b/src/example.js",
+      "--- a/src/example.js",
+      "+++ b/src/example.js",
+      "@@ -1 +1 @@",
+      "\\ No newline at end of file",
+      "-const value = 'x'",
+      '+const value = "x";',
+      ""
+    ].join("\n"),
+    [
+      "diff --git a/src/example.js b/src/example.js",
+      "--- a/src/example.js",
+      "+++ b/src/example.js",
+      "@@ -1 +1 @@",
+      "-const value = 'x'",
+      '+const value = "x";',
+      "\\ No newline at end of file",
+      ""
+    ].join("\n")
+  ]) {
+    assert.throws(
+      () => validatePatch(invalid),
+      /patch without final newlines is not permitted/u
+    );
+  }
+});
+
 test("provenance rejects PR-controlled formatter commands and authority identities", () => {
   const manifest = provenance();
   const alteredCommand = {
