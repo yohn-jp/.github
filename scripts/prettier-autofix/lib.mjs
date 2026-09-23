@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { lstatSync } from "node:fs";
+import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 export const MAX_PATCH_BYTES = 5 * 1024 * 1024;
@@ -6,6 +8,39 @@ export const FORMATTER_ID = "trusted-default-branch-prettier-v1";
 const MAX_PATCH_FILES = 200;
 const SHA256 = /^[a-f0-9]{64}$/u;
 const HEAD_SHA = /^[a-f0-9]{40}$/u;
+
+export const FORMATTER_AUTHORITY_FILES = Object.freeze([
+  "package.json",
+  "pnpm-lock.yaml",
+  "prettier.config.mjs",
+  ".prettierignore"
+]);
+
+export function inspectFormatterAuthority(root) {
+  const missing = [];
+  for (const relativePath of FORMATTER_AUTHORITY_FILES) {
+    const path = join(root, relativePath);
+    let stat;
+    try {
+      stat = lstatSync(path);
+    } catch (error) {
+      if (error?.code === "ENOENT") {
+        missing.push(relativePath);
+        continue;
+      }
+      throw error;
+    }
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw new Error(
+        `formatter authority input is not a regular file: ${relativePath}`
+      );
+    }
+  }
+  return Object.freeze({
+    available: missing.length === 0,
+    missing: Object.freeze(missing)
+  });
+}
 
 export function evaluateEligibility({ repository, headRepository, headRef }) {
   if (
