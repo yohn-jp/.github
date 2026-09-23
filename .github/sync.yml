@@ -494,6 +494,8 @@ yohn-jp/cli-canon:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 # yohn-jp/mottainai: architecture.yml/maintenance.yml/research.yml/config.yml
 # are already byte-identical here (this repo's templates originated from
@@ -625,5 +627,7 @@ yohn-jp/majiwari:
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
     dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
   - source: scripts/validate-action-pins.mjs
     dest: scripts/validate-action-pins.mjs
