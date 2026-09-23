@@ -29,6 +29,7 @@ test("every synchronized consumer receives the canonical release snapshot", () =
   assert.deepEqual(
     targets.map(([repository]) => repository).sort(),
     [
+      "yohn-jp/cli-canon",
       "yohn-jp/gh-inari",
       "yohn-jp/gh-makami",
       "yohn-jp/majiwari",
