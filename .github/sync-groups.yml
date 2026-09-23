@@ -1,0 +1,151 @@
+version: 1
+
+file-groups:
+  issue-forms:
+    - .github/ISSUE_TEMPLATE/config.yml
+    - .github/ISSUE_TEMPLATE/bug.yml
+    - .github/ISSUE_TEMPLATE/feature.yml
+    - .github/ISSUE_TEMPLATE/architecture.yml
+    - .github/ISSUE_TEMPLATE/epic.yml
+    - .github/ISSUE_TEMPLATE/maintenance.yml
+    - .github/ISSUE_TEMPLATE/research.yml
+  implementation-issue:
+    - .github/ISSUE_TEMPLATE/implementation.yml
+  pr-templates:
+    - .github/PULL_REQUEST_TEMPLATE/default.md
+    - .github/PULL_REQUEST_TEMPLATE/release.md
+    - .github/PULL_REQUEST_TEMPLATE/authority.md
+    - .github/PULL_REQUEST_TEMPLATE/epic.md
+    - .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+  issue-contracts:
+    - .github/inari/issues/bug.json
+    - .github/inari/issues/feature.json
+    - .github/inari/issues/architecture.json
+    - .github/inari/issues/epic.json
+    - .github/inari/issues/maintenance.json
+    - .github/inari/issues/research.json
+  implementation-contract:
+    - .github/inari/issues/implementation.json
+  pr-contracts:
+    - .github/inari/pull-requests/default.json
+    - .github/inari/pull-requests/release.json
+    - .github/inari/pull-requests/authority.json
+    - .github/inari/pull-requests/epic.json
+    - .github/inari/pull-requests/issue-integration.json
+  inari-governance:
+    - .github/inari/pr-policy.yml
+    - .github/inari/manifest.json
+  standard-workflows:
+    - source: templates/workflows/codeql.yml
+      dest: .github/workflows/codeql.yml
+    - source: templates/workflows/governance.yml
+      dest: .github/workflows/governance.yml
+    - source: templates/workflows/issue-governance.yml
+      dest: .github/workflows/issue-governance.yml
+    - source: templates/workflows/publish.yml
+      dest: .github/workflows/publish.yml
+    - source: templates/workflows/prettier-autofix.yml
+      dest: .github/workflows/prettier-autofix.yml
+  limited-workflows:
+    - source: templates/workflows/governance.yml
+      dest: .github/workflows/governance.yml
+    - source: templates/workflows/prettier-autofix.yml
+      dest: .github/workflows/prettier-autofix.yml
+  nawabari-workflows:
+    - source: templates/workflows/governance.yml
+      dest: .github/workflows/governance.yml
+    - source: templates/workflows/issue-governance.yml
+      dest: .github/workflows/issue-governance.yml
+    - source: templates/workflows/prettier-autofix.yml
+      dest: .github/workflows/prettier-autofix.yml
+  nawabari-validators:
+    - scripts/validate-pr.mjs
+    - scripts/pr-contract-routing.mjs
+    - scripts/pr-template-marker.mjs
+    - scripts/release-branch.mjs
+    - scripts/epic-branch.mjs
+    - scripts/validate-issue.mjs
+  majiwari-extra:
+    - AGENTS.md
+    - CLAUDE.md
+    - source: templates/workflows/majiwari-ci.yml
+      dest: .github/workflows/ci.yml
+    - source: .github/codeql/codeql-config.yml
+      dest: .github/codeql/codeql-config.yml
+    - scripts/validate-action-pins.mjs
+  majiwari-workflows:
+    - source: templates/workflows/codeql.yml
+      dest: .github/workflows/codeql.yml
+    - source: templates/workflows/governance.yml
+      dest: .github/workflows/governance.yml
+    - source: templates/workflows/issue-governance.yml
+      dest: .github/workflows/issue-governance.yml
+    - source: templates/workflows/prettier-autofix.yml
+      dest: .github/workflows/prettier-autofix.yml
+
+sync-groups:
+  standard:
+    repositories:
+      - yohn-jp/gh-inari
+      - yohn-jp/suzukuri
+      - yohn-jp/shikitari
+      - yohn-jp/wabachi
+      - yohn-jp/cli-canon
+    include:
+      - issue-forms
+      - implementation-issue
+      - pr-templates
+      - issue-contracts
+      - implementation-contract
+      - pr-contracts
+      - inari-governance
+      - standard-workflows
+
+  limited:
+    repositories:
+      - yohn-jp/gh-makami
+    include:
+      - issue-forms
+      - pr-templates
+      - issue-contracts
+      - pr-contracts
+      - inari-governance
+      - limited-workflows
+
+  nawabari:
+    repositories:
+      - yohn-jp/nawabari
+    include:
+      - issue-forms
+      - implementation-issue
+      - pr-templates
+      - issue-contracts
+      - implementation-contract
+      - pr-contracts
+      - inari-governance
+      - nawabari-workflows
+      - nawabari-validators
+
+  mottainai:
+    repositories:
+      - yohn-jp/mottainai
+    include:
+      - issue-forms
+      - implementation-issue
+      - pr-templates
+      - issue-contracts
+      - implementation-contract
+      - pr-contracts
+      - inari-governance
+
+  majiwari:
+    repositories:
+      - yohn-jp/majiwari
+    include:
+      - majiwari-extra
+      - issue-forms
+      - pr-templates
+      - issue-contracts
+      - pr-contracts
+      - inari-governance
+      - majiwari-workflows
