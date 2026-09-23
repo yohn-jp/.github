@@ -251,9 +251,10 @@ test("PR scripts, formatter config, dependencies, plugins, and ignore files cann
       ].join("\n") + "\n"
     );
     writeFileSync(path.join(authority, ".gitignore"), "node_modules/\n");
+    mkdirSync(path.join(authority, "node_modules"));
     symlinkSync(
-      path.resolve("node_modules"),
-      path.join(authority, "node_modules"),
+      path.resolve("node_modules/prettier"),
+      path.join(authority, "node_modules/prettier"),
       "dir"
     );
     git(authority, ["init", "-b", "main"]);
