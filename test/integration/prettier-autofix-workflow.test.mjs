@@ -46,8 +46,8 @@ test("default-branch pull_request_target wrapper excludes external forks before 
     remediation.uses,
     "yohn-jp/.github/.github/workflows/prettier-autofix.yml@main"
   );
+  assert.equal(remediation.with["autofix-app-id"], "${{ vars.AUTOFIX_APP_ID }}");
   assert.deepEqual(Object.keys(remediation.secrets).sort(), [
-    "AUTOFIX_APP_ID",
     "AUTOFIX_APP_PRIVATE_KEY"
   ]);
 
@@ -188,6 +188,8 @@ test("trusted default-branch Prettier authority is separate from source data and
   );
   assert.equal(writer.permissions.contents, "read");
   assert.equal(writer.permissions["pull-requests"], "read");
+  assert.equal(reusable.on.workflow_call.inputs["autofix-app-id"].type, "string");
+  assert.equal(writer.steps[tokenIndex].with["app-id"], "${{ inputs.autofix-app-id }}");
   assert.equal(writer.steps[tokenIndex].with["permission-contents"], "write");
   assert.equal(writer.steps[tokenIndex].with["permission-metadata"], "read");
   assert.equal(
