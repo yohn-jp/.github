@@ -46,51 +46,18 @@ file-groups:
       dest: .github/workflows/publish.yml
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
-  limited-workflows:
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  nawabari-workflows:
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  nawabari-validators:
-    - scripts/validate-pr.mjs
-    - scripts/pr-contract-routing.mjs
-    - scripts/pr-template-marker.mjs
-    - scripts/release-branch.mjs
-    - scripts/epic-branch.mjs
-    - scripts/validate-issue.mjs
-  majiwari-extra:
-    - AGENTS.md
-    - CLAUDE.md
-    - source: templates/workflows/majiwari-ci.yml
-      dest: .github/workflows/ci.yml
-    - source: .github/codeql/codeql-config.yml
-      dest: .github/codeql/codeql-config.yml
-    - scripts/validate-action-pins.mjs
-  majiwari-workflows:
-    - source: templates/workflows/codeql.yml
-      dest: .github/workflows/codeql.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
 
 sync-groups:
   standard:
     repositories:
       - yohn-jp/gh-inari
+      - yohn-jp/gh-makami
       - yohn-jp/suzukuri
       - yohn-jp/shikitari
+      - yohn-jp/nawabari
       - yohn-jp/wabachi
       - yohn-jp/cli-canon
+      - yohn-jp/majiwari
     include:
       - issue-forms
       - implementation-issue
@@ -100,31 +67,6 @@ sync-groups:
       - pr-contracts
       - inari-governance
       - standard-workflows
-
-  limited:
-    repositories:
-      - yohn-jp/gh-makami
-    include:
-      - issue-forms
-      - pr-templates
-      - issue-contracts
-      - pr-contracts
-      - inari-governance
-      - limited-workflows
-
-  nawabari:
-    repositories:
-      - yohn-jp/nawabari
-    include:
-      - issue-forms
-      - implementation-issue
-      - pr-templates
-      - issue-contracts
-      - implementation-contract
-      - pr-contracts
-      - inari-governance
-      - nawabari-workflows
-      - nawabari-validators
 
   mottainai:
     repositories:
@@ -137,15 +79,3 @@ sync-groups:
       - implementation-contract
       - pr-contracts
       - inari-governance
-
-  majiwari:
-    repositories:
-      - yohn-jp/majiwari
-    include:
-      - majiwari-extra
-      - issue-forms
-      - pr-templates
-      - issue-contracts
-      - pr-contracts
-      - inari-governance
-      - majiwari-workflows
