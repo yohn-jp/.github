@@ -86,9 +86,7 @@ const prettierCli = trustedFile(
   "node_modules/prettier/bin/prettier.cjs"
 );
 const resolvedCli = realpathSync(prettierCli);
-if (!resolvedCli.startsWith(`${prettierPackageRoot}${sep}`)) {
-  throw new Error("Prettier CLI resolves outside the validated Prettier package");
-}
+assertCliBelongsToPackage(resolvedCli, prettierPackageRoot);
 
 const formatterAuthority = {
   providerRepository: process.env.PROVIDER_REPOSITORY,
@@ -134,6 +132,12 @@ mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(formatterAuthority, null, 2)}\n`, {
   flag: "wx"
 });
+
+export function assertCliBelongsToPackage(resolvedCli, packageRoot) {
+  if (!resolvedCli.startsWith(`${packageRoot}${sep}`)) {
+    throw new Error("Prettier CLI resolves outside the validated Prettier package");
+  }
+}
 
 function trustedFile(root, relativePath) {
   const path = join(root, relativePath);
