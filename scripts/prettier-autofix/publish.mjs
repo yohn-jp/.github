@@ -161,6 +161,7 @@ async function main() {
   });
   const result = await runPublish({
     ...expected,
+    pullRequestNumber: expected.pullRequest,
     manifest,
     patch,
     gitDirectory: process.env.AUTOFIX_GIT_DIRECTORY,
