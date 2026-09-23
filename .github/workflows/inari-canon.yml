@@ -1,0 +1,57 @@
+name: Inari Canon conformance
+
+on:
+  pull_request:
+    paths:
+      - ".github/inari/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE/**"
+      - "scripts/validate-inari-canon.mjs"
+      - ".github/workflows/inari-canon.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/inari/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/PULL_REQUEST_TEMPLATE/**"
+      - "scripts/validate-inari-canon.mjs"
+      - ".github/workflows/inari-canon.yml"
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inari-canon-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    name: Validate current Inari Canon
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Install current published Inari
+        shell: bash
+        run: |
+          npm install \
+            --prefix "$RUNNER_TEMP/inari-canon" \
+            --ignore-scripts \
+            --no-audit \
+            --no-fund \
+            --package-lock=false \
+            gh-inari@latest
+
+      - name: Validate organization templates against Inari Canon
+        env:
+          INARI_CANON_PACKAGE_ROOT: ${{ runner.temp }}/inari-canon/node_modules/gh-inari
+        run: node scripts/validate-inari-canon.mjs
