@@ -25,14 +25,13 @@ copy is controlled by `.github/sync.yml`.
    install it on contributor forks. The reusable workflow discovers the
    installation from the repository owner and scopes each token to the current
    repository; no installation ID is configured.
-4. Configure these Actions secrets for each consumer, or as organization
-   secrets restricted to those repositories:
-   - `AUTOFIX_APP_ID` — the App's numeric ID;
-   - `AUTOFIX_APP_PRIVATE_KEY` — the App's PEM private key.
+4. Configure the App ID as an Actions variable and the private key as an Actions secret for each consumer, or at organization scope restricted to those repositories:
+   - variable `AUTOFIX_APP_ID` — the App's numeric ID;
+   - secret `AUTOFIX_APP_PRIVATE_KEY` — the App's PEM private key.
 
 No PAT or token fallback is used for writes. The formatter job receives no App
 secret; its job-scoped `GITHUB_TOKEN` is read-only and is not persisted by either
-checkout. If a dirty same-repository PR runs before both App secrets are
+checkout. If a dirty same-repository PR runs before the App ID variable and private-key secret are
 present, the writer fails with an explicit setup diagnostic.
 Clean PRs do not invoke the writer and do not need App credentials.
 
