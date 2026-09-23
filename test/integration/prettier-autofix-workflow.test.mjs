@@ -22,7 +22,9 @@ const compatibleConsumers = [
   "yohn-jp/wabachi"
 ];
 
-test("default-branch pull_request_target wrapper excludes external forks before reusable remediation", () => {
+test(
+  "default-branch pull_request_target wrapper excludes external forks before reusable remediation",
+  () => {
   assert.ok(wrapper.on.pull_request_target);
   assert.ok(wrapper.on.pull_request_target.types.includes("opened"));
   assert.ok(wrapper.on.pull_request_target.types.includes("synchronize"));
@@ -46,7 +48,10 @@ test("default-branch pull_request_target wrapper excludes external forks before 
     remediation.uses,
     "yohn-jp/.github/.github/workflows/prettier-autofix.yml@main"
   );
-  assert.equal(remediation.with["autofix-app-id"], "${{ vars.AUTOFIX_APP_ID }}");
+  assert.equal(
+    remediation.with["autofix-app-id"],
+    "${{ vars.AUTOFIX_APP_ID }}"
+  );
   assert.deepEqual(Object.keys(remediation.secrets).sort(), [
     "AUTOFIX_APP_PRIVATE_KEY"
   ]);
@@ -55,9 +60,12 @@ test("default-branch pull_request_target wrapper excludes external forks before 
     forkJob.if.includes("!= github.repository") &&
     !remediation.if.includes("head.repo.full_name != github.repository");
   assert.equal(forkRuntimeRoute, true);
-});
+  }
+);
 
-test("reusable workflow skips forks and recursion before formatter or writer jobs", () => {
+test(
+  "reusable workflow skips forks and recursion before formatter or writer jobs",
+  () => {
   const eligibility = reusable.jobs.eligibility;
   const check = eligibility.steps.find((step) => step.id === "check");
   assert.match(check.run, /HEAD_REPOSITORY.*BASE_REPOSITORY/su);
@@ -82,9 +90,12 @@ test("reusable workflow skips forks and recursion before formatter or writer job
     ),
     true
   );
-});
+  }
+);
 
-test("trusted default-branch Prettier authority is separate from source data and App writes", () => {
+test(
+  "trusted default-branch Prettier authority is separate from source data and App writes",
+  () => {
   const formatter = reusable.jobs.format;
   const sourceCheckout = formatter.steps.find(
     (step) => step.name === "Checkout exact source PR head as data"
@@ -188,8 +199,14 @@ test("trusted default-branch Prettier authority is separate from source data and
   );
   assert.equal(writer.permissions.contents, "read");
   assert.equal(writer.permissions["pull-requests"], "read");
-  assert.equal(reusable.on.workflow_call.inputs["autofix-app-id"].type, "string");
-  assert.equal(writer.steps[tokenIndex].with["app-id"], "${{ inputs.autofix-app-id }}");
+  assert.equal(
+    reusable.on.workflow_call.inputs["autofix-app-id"].type,
+    "string"
+  );
+  assert.equal(
+    writer.steps[tokenIndex].with["app-id"],
+    "${{ inputs.autofix-app-id }}"
+  );
   assert.equal(writer.steps[tokenIndex].with["permission-contents"], "write");
   assert.equal(writer.steps[tokenIndex].with["permission-metadata"], "read");
   assert.equal(
@@ -198,9 +215,12 @@ test("trusted default-branch Prettier authority is separate from source data and
   );
   assert.equal(writer.steps[tokenIndex].with["permission-workflows"], "write");
   assert.equal(writer.steps[tokenIndex].with["installation-id"], undefined);
-});
+  }
+);
 
-test("workflow-file formatting remains in scope and requires App Workflows write", () => {
+test(
+  "workflow-file formatting remains in scope and requires App Workflows write",
+  () => {
   const workflowPatch = Buffer.from(
     [
       "diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml",
@@ -220,9 +240,12 @@ test("workflow-file formatting remains in scope and requires App Workflows write
     step.uses?.includes("create-github-app-token")
   );
   assert.equal(token.with["permission-workflows"], "write");
-});
+  }
+);
 
-test("clean output gates off writer work and reruns replace the run-scoped artifact", () => {
+test(
+  "clean output gates off writer work and reruns replace the run-scoped artifact",
+  () => {
   const formatter = reusable.jobs.format;
   const upload = formatter.steps.find(
     (step) => step.name === "Upload patch and provenance handoff"
@@ -242,9 +265,12 @@ test("clean output gates off writer work and reruns replace the run-scoped artif
   assert.equal(upload.with.name, "prettier-autofix-${{ github.run_id }}");
   assert.equal(download.with.name, upload.with.name);
   assert.equal(upload.with.overwrite, true);
-});
+  }
+);
 
-test("recursion is reported and excluded by both the wrapper and provider eligibility guard", () => {
+test(
+  "recursion is reported and excluded by both the wrapper and provider eligibility guard",
+  () => {
   const recursionJob = wrapper.jobs["skip-recursion"];
   assert.match(
     recursionJob.if,
@@ -258,9 +284,12 @@ test("recursion is reported and excluded by both the wrapper and provider eligib
     reusable.jobs.eligibility.steps[0].run,
     /autofix\/prettier\/pr-/u
   );
-});
+  }
+);
 
-test("organization sync opts in only current TypeScript CLI format-compatible consumers", () => {
+test(
+  "organization sync opts in only current TypeScript CLI format-compatible consumers",
+  () => {
   const actual = Object.entries(sync)
     .filter(([, entries]) =>
       entries.some(
@@ -280,13 +309,17 @@ test("organization sync opts in only current TypeScript CLI format-compatible co
       `${repository} must receive the canonical wrapper`
     );
   }
-});
+  }
+);
 
-test("all remote Actions in the reusable workflow follow organization pin policy", () => {
+test(
+  "all remote Actions in the reusable workflow follow organization pin policy",
+  () => {
   assert.deepEqual(validateActionPinsFile(reusablePath), []);
   assert.match(
     wrapperSource,
     /uses: yohn-jp\/\.github\/\.github\/workflows\/prettier-autofix\.yml@main/u
   );
   assert.match(wrapperSource, /pull_request_target:/u);
-});
+  }
+);
