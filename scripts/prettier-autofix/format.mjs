@@ -74,6 +74,7 @@ const prettierPackagePath = trustedFile(
   authorityDirectory,
   "node_modules/prettier/package.json"
 );
+const prettierPackageRoot = dirname(realpathSync(prettierPackagePath));
 const prettierPackage = JSON.parse(readFileSync(prettierPackagePath, "utf8"));
 if (prettierPackage.version !== expectedVersion) {
   throw new Error(
@@ -84,12 +85,9 @@ const prettierCli = trustedFile(
   authorityDirectory,
   "node_modules/prettier/bin/prettier.cjs"
 );
-const trustedNodeModules = realpathSync(
-  join(authorityDirectory, "node_modules")
-);
 const resolvedCli = realpathSync(prettierCli);
-if (!resolvedCli.startsWith(`${trustedNodeModules}${sep}`)) {
-  throw new Error("Prettier CLI resolves outside the trusted dependency tree");
+if (!resolvedCli.startsWith(`${prettierPackageRoot}${sep}`)) {
+  throw new Error("Prettier CLI resolves outside the validated Prettier package");
 }
 
 const formatterAuthority = {
