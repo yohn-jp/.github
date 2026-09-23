@@ -302,3 +302,15 @@ test("all remote Actions in the reusable workflow follow organization pin policy
     assert.match(wrapperSource, /pull_request_target:/u);
 }
 );
+
+
+test("publisher maps trusted pullRequest provenance to runPublish pullRequestNumber", () => {
+    const publisherSource = readFileSync(
+      "scripts/prettier-autofix/publish.mjs",
+      "utf8"
+    );
+    assert.match(
+      publisherSource,
+      /runPublish\(\{[\s\S]*?\.\.\.expected,[\s\S]*?pullRequestNumber: expected\.pullRequest,/u
+    );
+});
