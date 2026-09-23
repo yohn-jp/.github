@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
-import { lstatSync } from "node:fs";
-import { join } from "node:path";
 import { TextDecoder } from "node:util";
 
 export const MAX_PATCH_BYTES = 5 * 1024 * 1024;
+export const FORMATTER_ID = "trusted-default-branch-prettier-v1";
 const MAX_PATCH_FILES = 200;
 const SHA256 = /^[a-f0-9]{64}$/u;
 const HEAD_SHA = /^[a-f0-9]{40}$/u;
@@ -31,6 +30,7 @@ export function preparePatchHandoff({
   headRepository,
   headRef,
   headSha,
+  formatterAuthority,
   patch
 }) {
   const patchBuffer = Buffer.isBuffer(patch) ? patch : Buffer.from(patch);
@@ -45,6 +45,7 @@ export function preparePatchHandoff({
       headRepository,
       headRef,
       headSha,
+      formatterAuthority,
       patch: patchBuffer
     })
   };
@@ -56,17 +57,19 @@ export function createProvenance({
   headRepository,
   headRef,
   headSha,
+  formatterAuthority,
   patch
 }) {
   const patchBuffer = Buffer.isBuffer(patch) ? patch : Buffer.from(patch);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     repository,
     pullRequest,
     headRepository,
     headRef,
     headSha,
-    formatter: "pnpm run format",
+    formatter: FORMATTER_ID,
+    formatterAuthority,
     patchBytes: patchBuffer.byteLength,
     patchSha256: createHash("sha256").update(patchBuffer).digest("hex")
   };
@@ -83,6 +86,7 @@ export function validateProvenance({ manifest, patch, expected }) {
     "headRef",
     "headSha",
     "formatter",
+    "formatterAuthority",
     "patchBytes",
     "patchSha256"
   ].sort();
@@ -97,13 +101,16 @@ export function validateProvenance({ manifest, patch, expected }) {
   if (JSON.stringify(Object.keys(manifest).sort()) !== JSON.stringify(keys)) {
     errors.push("provenance has missing or unexpected fields");
   }
-  if (manifest.schemaVersion !== 1)
+  if (manifest.schemaVersion !== 2)
     errors.push("unsupported provenance schema");
-  if (manifest.formatter !== "pnpm run format") {
+  if (manifest.formatter !== FORMATTER_ID) {
     errors.push(
-      "provenance formatter identity is not the canonical format command"
+      "provenance formatter identity is not the trusted Prettier CLI"
     );
   }
+  errors.push(
+    ...validateFormatterAuthority(manifest.formatterAuthority, expected)
+  );
   if (!Number.isSafeInteger(manifest.pullRequest) || manifest.pullRequest < 1) {
     errors.push("provenance pull request number is invalid");
   }
@@ -177,6 +184,108 @@ export function validateProvenance({ manifest, patch, expected }) {
   return errors;
 }
 
+function validateFormatterAuthority(authority, expected) {
+  const errors = [];
+  const keys = [
+    "providerRepository",
+    "providerWorkflowSha",
+    "consumerRepository",
+    "defaultBranch",
+    "defaultSha",
+    "packageJsonSha256",
+    "lockfileSha256",
+    "configSha256",
+    "ignoreSha256",
+    "packageManager",
+    "prettierVersion"
+  ].sort();
+  if (
+    authority === null ||
+    typeof authority !== "object" ||
+    Array.isArray(authority)
+  ) {
+    return ["formatter authority must be a JSON object"];
+  }
+  if (JSON.stringify(Object.keys(authority).sort()) !== JSON.stringify(keys)) {
+    errors.push("formatter authority has missing or unexpected fields");
+  }
+  if (authority.consumerRepository !== expected.repository) {
+    errors.push(
+      "formatter consumer repository does not match the trusted event"
+    );
+  }
+  if (authority.defaultBranch !== expected.defaultBranch) {
+    errors.push("formatter default branch does not match the trusted event");
+  }
+  if (authority.providerRepository !== expected.providerRepository) {
+    errors.push(
+      "formatter provider repository does not match the trusted workflow"
+    );
+  }
+  if (authority.providerWorkflowSha !== expected.providerWorkflowSha) {
+    errors.push("formatter provider SHA does not match the trusted workflow");
+  }
+  for (const field of ["providerRepository", "consumerRepository"]) {
+    const parts =
+      typeof authority[field] === "string" ? authority[field].split("/") : [];
+    if (
+      parts.length !== 2 ||
+      parts.some(
+        (part) =>
+          part.length === 0 ||
+          /\s/u.test(part) ||
+          /[\u0000-\u001f\u007f]/u.test(part)
+      )
+    ) {
+      errors.push(`formatter ${field} is invalid`);
+    }
+  }
+  if (
+    typeof authority.defaultBranch !== "string" ||
+    authority.defaultBranch.length === 0 ||
+    authority.defaultBranch.length > 255 ||
+    /[\u0000-\u001f\u007f]/u.test(authority.defaultBranch)
+  ) {
+    errors.push("formatter default branch is invalid");
+  }
+  for (const field of ["providerWorkflowSha", "defaultSha"]) {
+    if (
+      typeof authority[field] !== "string" ||
+      !HEAD_SHA.test(authority[field])
+    ) {
+      errors.push(`formatter ${field} is invalid`);
+    }
+  }
+  for (const field of [
+    "packageJsonSha256",
+    "lockfileSha256",
+    "configSha256",
+    "ignoreSha256"
+  ]) {
+    if (
+      typeof authority[field] !== "string" ||
+      !SHA256.test(authority[field])
+    ) {
+      errors.push(`formatter ${field} is invalid`);
+    }
+  }
+  if (
+    typeof authority.packageManager !== "string" ||
+    !/^pnpm@\d+\.\d+\.\d+(?:\+sha512\.[a-f0-9]+)?$/u.test(
+      authority.packageManager
+    )
+  ) {
+    errors.push("formatter package manager is not an exact pnpm version");
+  }
+  if (
+    typeof authority.prettierVersion !== "string" ||
+    !/^\d+\.\d+\.\d+$/u.test(authority.prettierVersion)
+  ) {
+    errors.push("formatter Prettier version is not exact");
+  }
+  return errors;
+}
+
 export function assertCurrentPullRequest({
   pullRequest,
   repository,
@@ -230,33 +339,6 @@ export function assertCurrentPullRequest({
       "source pull request head SHA changed; refusing stale autofix"
     );
   }
-}
-
-export function assertRegularPatchTargets(directory, input) {
-  const { files } = validatePatch(input);
-  for (const file of files) {
-    const parts = file.split("/");
-    let current = directory;
-    for (let index = 0; index < parts.length; index += 1) {
-      current = join(current, parts[index]);
-      let stat;
-      try {
-        stat = lstatSync(current);
-      } catch {
-        throw new Error(
-          `patch target does not exist in the source checkout: ${file}`
-        );
-      }
-      const finalComponent = index === parts.length - 1;
-      if (stat.isSymbolicLink()) {
-        throw new Error(`symlink patch targets are not permitted: ${file}`);
-      }
-      if (finalComponent ? !stat.isFile() : !stat.isDirectory()) {
-        throw new Error(`patch target is not a regular source file: ${file}`);
-      }
-    }
-  }
-  return files;
 }
 
 export function validatePatch(input) {

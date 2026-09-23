@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -13,17 +14,20 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import {
-  assertRegularPatchTargets,
   createProvenance,
   evaluateEligibility,
   upsertAutofixPullRequest,
   validatePatch,
   validateProvenance
 } from "../scripts/prettier-autofix/lib.mjs";
+import { runPublish } from "../scripts/prettier-autofix/publish.mjs";
 import {
-  pushGeneratedBranch,
-  runPublish
-} from "../scripts/prettier-autofix/publish.mjs";
+  assertPatchTargetsInGitTree,
+  checkPatchAgainstBareRepository,
+  createAutofixCommit,
+  initializeBareRepository,
+  pushGeneratedBranch
+} from "../scripts/prettier-autofix/git-tree.mjs";
 
 const repository = "yohn-jp/example";
 const pullRequest = 42;
@@ -56,6 +60,40 @@ function currentPullRequest(overrides = {}) {
   };
 }
 
+const providerRepository = "yohn-jp/.github";
+const providerWorkflowSha = "b".repeat(40);
+
+function formatterAuthority(overrides = {}) {
+  return {
+    providerRepository,
+    providerWorkflowSha,
+    consumerRepository: repository,
+    defaultBranch: "main",
+    defaultSha: "c".repeat(40),
+    packageJsonSha256: "d".repeat(64),
+    lockfileSha256: "e".repeat(64),
+    configSha256: "f".repeat(64),
+    ignoreSha256: "1".repeat(64),
+    packageManager: "pnpm@11.25.0",
+    prettierVersion: "3.9.6",
+    ...overrides
+  };
+}
+
+function expectedProvenance(overrides = {}) {
+  return {
+    repository,
+    pullRequest,
+    headRepository: repository,
+    headRef,
+    headSha,
+    defaultBranch: "main",
+    providerRepository,
+    providerWorkflowSha,
+    ...overrides
+  };
+}
+
 function provenance(overrides = {}) {
   return createProvenance({
     repository,
@@ -63,6 +101,7 @@ function provenance(overrides = {}) {
     headRepository: repository,
     headRef,
     headSha,
+    formatterAuthority: formatterAuthority(),
     patch,
     ...overrides
   });
@@ -70,6 +109,35 @@ function provenance(overrides = {}) {
 
 function git(directory, args, options = {}) {
   return execFileSync("git", args, { cwd: directory, ...options });
+}
+
+function writeFormatterAuthority(directory, authority = formatterAuthority()) {
+  const output = path.join(directory, "formatter-authority.json");
+  writeFileSync(output, `${JSON.stringify(authority)}\n`);
+  return output;
+}
+
+function createBareRemote(fixture) {
+  const directory = mkdtempSync(
+    path.join(os.tmpdir(), "prettier-autofix-remote-")
+  );
+  execFileSync("git", ["init", "--bare", directory], { stdio: "ignore" });
+  git(fixture.directory, ["remote", "add", "origin", directory]);
+  git(fixture.directory, ["push", "origin", `HEAD:refs/heads/${headRef}`], {
+    stdio: "ignore"
+  });
+  execFileSync(
+    "git",
+    [
+      "--git-dir",
+      directory,
+      "update-ref",
+      `refs/pull/${pullRequest}/head`,
+      fixture.sha
+    ],
+    { stdio: "ignore" }
+  );
+  return { directory, url: `file://${directory}` };
 }
 
 function createSourceFixture() {
@@ -104,18 +172,181 @@ function createSourceFixture() {
   return { directory, sha, patch: formattedPatch };
 }
 
+test("PR scripts, formatter config, dependencies, plugins, and ignore files cannot choose published text", () => {
+  const workspace = mkdtempSync(
+    path.join(os.tmpdir(), "prettier-autofix-trust-boundary-")
+  );
+  const source = path.join(workspace, "source");
+  const authority = path.join(workspace, "formatter-authority");
+  const marker = path.join(workspace, "untrusted-code-ran");
+  const metadataPath = path.join(workspace, "formatter-authority.json");
+  mkdirSync(source);
+  mkdirSync(authority);
+  try {
+    writeFileSync(
+      path.join(authority, "package.json"),
+      JSON.stringify({
+        packageManager: "pnpm@11.25.0",
+        devDependencies: { prettier: "3.9.6" }
+      })
+    );
+    writeFileSync(
+      path.join(authority, "pnpm-lock.yaml"),
+      "lockfileVersion: '9.0'\n"
+    );
+    writeFileSync(
+      path.join(authority, "prettier.config.mjs"),
+      'export default { endOfLine: "lf", printWidth: 120, semi: true, singleQuote: false, trailingComma: "all" };\n'
+    );
+    writeFileSync(
+      path.join(authority, ".prettierignore"),
+      [
+        "node_modules/",
+        "package.json",
+        "pnpm-lock.yaml",
+        "prettier.config.mjs",
+        ".prettierignore",
+        ".editorconfig",
+        "src/arbitrary.txt"
+      ].join("\n") + "\n"
+    );
+    writeFileSync(path.join(authority, ".gitignore"), "node_modules/\n");
+    symlinkSync(
+      path.resolve("node_modules"),
+      path.join(authority, "node_modules"),
+      "dir"
+    );
+    git(authority, ["init", "-b", "main"]);
+    git(authority, ["config", "user.name", "Trusted Authority"]);
+    git(authority, ["config", "user.email", "trusted@example.invalid"]);
+    git(authority, ["add", "."]);
+    git(authority, ["commit", "-m", "trusted formatter authority"]);
+
+    mkdirSync(path.join(source, "src"), { recursive: true });
+    mkdirSync(path.join(source, "node_modules", "prettier", "bin"), {
+      recursive: true
+    });
+    mkdirSync(path.join(source, "node_modules", "prettier-plugin-arbitrary"), {
+      recursive: true
+    });
+    writeFileSync(
+      path.join(source, "package.json"),
+      JSON.stringify({
+        scripts: {
+          format: `node -e "require('fs').writeFileSync('src/arbitrary.txt', 'ARBITRARY FROM PR SCRIPT\\n')"`
+        },
+        devDependencies: {
+          prettier: "file:untrusted-prettier",
+          "prettier-plugin-arbitrary": "file:untrusted-plugin"
+        }
+      })
+    );
+    writeFileSync(
+      path.join(source, "prettier.config.mjs"),
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "config executed");\nexport default { plugins: ["prettier-plugin-arbitrary"] };\n`
+    );
+    writeFileSync(path.join(source, ".prettierignore"), "src/target.js\n");
+    writeFileSync(
+      path.join(source, ".editorconfig"),
+      "root = true\n[*]\nend_of_line = crlf\nindent_size = 8\nindent_style = tab\n"
+    );
+    writeFileSync(
+      path.join(source, ".gitignore"),
+      "node_modules/\nsrc/target.js\n"
+    );
+    writeFileSync(path.join(source, "src/target.js"), "const value='x'\n");
+    writeFileSync(
+      path.join(source, "src/arbitrary.txt"),
+      "keep this non-canonical payload\n"
+    );
+    writeFileSync(
+      path.join(source, "node_modules/prettier/bin/prettier.cjs"),
+      `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "PR formatter executed");\n`
+    );
+    writeFileSync(
+      path.join(source, "node_modules/prettier-plugin-arbitrary/index.mjs"),
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "PR plugin executed");\n`
+    );
+    git(source, ["init", "-b", headRef]);
+    git(source, ["config", "user.name", "PR Author"]);
+    git(source, ["config", "user.email", "pr@example.invalid"]);
+    git(source, ["add", "."]);
+    git(source, ["add", "-f", "src/target.js"]);
+    git(source, ["commit", "-m", "untrusted formatter configuration"]);
+    const sourceSha = git(source, ["rev-parse", "HEAD"], {
+      encoding: "utf8"
+    }).trim();
+
+    execFileSync(
+      process.execPath,
+      [path.resolve("scripts/prettier-autofix/format.mjs")],
+      {
+        env: {
+          ...process.env,
+          FORMATTER_AUTHORITY_DIRECTORY: authority,
+          FORMATTER_AUTHORITY_REF: "main",
+          FORMATTER_AUTHORITY_OUTPUT: metadataPath,
+          PROVIDER_REPOSITORY: providerRepository,
+          PROVIDER_WORKFLOW_SHA: providerWorkflowSha,
+          SOURCE_CHECKOUT: source,
+          SOURCE_HEAD_SHA: sourceSha,
+          GITHUB_REPOSITORY: repository,
+          GITHUB_WORKSPACE: workspace
+        }
+      }
+    );
+
+    assert.equal(
+      readFileSync(path.join(source, "src/target.js"), "utf8"),
+      'const value = "x";\n'
+    );
+    assert.equal(
+      readFileSync(path.join(source, "src/arbitrary.txt"), "utf8"),
+      "keep this non-canonical payload\n"
+    );
+    assert.equal(existsSync(marker), false);
+    const generatedPatch = git(
+      source,
+      [
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-renames",
+        "--no-color",
+        "--src-prefix=a/",
+        "--dst-prefix=b/",
+        "HEAD",
+        "--"
+      ],
+      { encoding: "buffer" }
+    );
+    assert.deepEqual(validatePatch(generatedPatch).files, ["src/target.js"]);
+    const authorityMetadata = JSON.parse(readFileSync(metadataPath, "utf8"));
+    assert.equal(authorityMetadata.consumerRepository, repository);
+    assert.equal(authorityMetadata.defaultBranch, "main");
+    assert.equal(
+      authorityMetadata.defaultSha,
+      git(authority, ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()
+    );
+    assert.equal(authorityMetadata.prettierVersion, "3.9.6");
+    assert.match(authorityMetadata.packageJsonSha256, /^[a-f0-9]{64}$/u);
+    assert.match(authorityMetadata.lockfileSha256, /^[a-f0-9]{64}$/u);
+    assert.match(authorityMetadata.configSha256, /^[a-f0-9]{64}$/u);
+    assert.match(authorityMetadata.ignoreSha256, /^[a-f0-9]{64}$/u);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test("same-repository dirty PR produces one bounded stacked autofix path", async () => {
   const fixture = createSourceFixture();
+  const runnerTemp = mkdtempSync(
+    path.join(os.tmpdir(), "prettier-autofix-runner-")
+  );
+  const remote = createBareRemote(fixture);
   try {
     const dirtyPatch = fixture.patch;
-    const manifest = createProvenance({
-      repository,
-      pullRequest,
-      headRepository: repository,
-      headRef,
-      headSha: fixture.sha,
-      patch: dirtyPatch
-    });
+    const manifest = provenance({ headSha: fixture.sha, patch: dirtyPatch });
     const calls = { push: [], create: [] };
     const result = await runPublish({
       repository,
@@ -123,9 +354,17 @@ test("same-repository dirty PR produces one bounded stacked autofix path", async
       headRepository: repository,
       headRef,
       headSha: fixture.sha,
+      defaultBranch: "main",
+      providerRepository,
+      providerWorkflowSha,
       manifest,
       patch: dirtyPatch,
-      sourceDirectory: fixture.directory,
+      gitDirectory: path.join(runnerTemp, "writer.git"),
+      indexPath: path.join(runnerTemp, "writer.index"),
+      remoteUrl: remote.url,
+      runnerTemp,
+      runId: "run-42",
+      readToken: "test-read-token",
       getCurrentPullRequest: async () =>
         currentPullRequest({
           head: {
@@ -134,7 +373,15 @@ test("same-repository dirty PR produces one bounded stacked autofix path", async
             sha: fixture.sha
           }
         }),
-      pushBranch: async (options) => calls.push.push(options),
+      pushBranch: async (options) => {
+        calls.push.push(options);
+        pushGeneratedBranch({
+          ...options,
+          appToken: "test-app-token",
+          runnerTemp,
+          runId: "push-42"
+        });
+      },
       api: {
         async listOpenPullRequests({ head }) {
           assert.equal(
@@ -166,14 +413,34 @@ test("same-repository dirty PR produces one bounded stacked autofix path", async
       fixture.sha,
       "the source branch is not committed or advanced"
     );
+    const sourceRemoteSha = execFileSync(
+      "git",
+      ["--git-dir", remote.directory, "rev-parse", `refs/heads/${headRef}`],
+      { encoding: "utf8" }
+    ).trim();
+    const autofixSha = execFileSync(
+      "git",
+      [
+        "--git-dir",
+        remote.directory,
+        "rev-parse",
+        "refs/heads/autofix/prettier/pr-42"
+      ],
+      { encoding: "utf8" }
+    ).trim();
+    assert.equal(sourceRemoteSha, fixture.sha);
     assert.equal(
-      git(fixture.directory, ["diff", "--cached", "--name-only"], {
-        encoding: "utf8"
-      }).trim(),
-      "src/example.js"
+      execFileSync(
+        "git",
+        ["--git-dir", remote.directory, "rev-parse", `${autofixSha}^`],
+        { encoding: "utf8" }
+      ).trim(),
+      fixture.sha
     );
   } finally {
     rmSync(fixture.directory, { recursive: true, force: true });
+    rmSync(remote.directory, { recursive: true, force: true });
+    rmSync(runnerTemp, { recursive: true, force: true });
   }
 });
 
@@ -183,6 +450,7 @@ test("capture emits a bounded patch and provenance handoff for dirty source", ()
     path.join(os.tmpdir(), "prettier-autofix-runner-")
   );
   const outputPath = path.join(runnerTemp, "github-output");
+  const authorityPath = writeFormatterAuthority(runnerTemp);
   try {
     writeFileSync(
       path.join(fixture.directory, "src/example.js"),
@@ -195,7 +463,8 @@ test("capture emits a bounded patch and provenance handoff for dirty source", ()
         cwd: fixture.directory,
         env: {
           ...process.env,
-          GITHUB_WORKSPACE: fixture.directory,
+          SOURCE_CHECKOUT: fixture.directory,
+          FORMATTER_AUTHORITY_OUTPUT: authorityPath,
           RUNNER_TEMP: runnerTemp,
           GITHUB_OUTPUT: outputPath,
           GITHUB_REPOSITORY: repository,
@@ -224,13 +493,7 @@ test("capture emits a bounded patch and provenance handoff for dirty source", ()
       validateProvenance({
         manifest: capturedProvenance,
         patch: capturedPatch,
-        expected: {
-          repository,
-          pullRequest,
-          headRepository: repository,
-          headRef,
-          headSha: fixture.sha
-        }
+        expected: expectedProvenance({ headSha: fixture.sha })
       }),
       []
     );
@@ -246,6 +509,7 @@ test("clean formatter output creates no artifact, provenance, or writer output",
     path.join(os.tmpdir(), "prettier-autofix-runner-")
   );
   const outputPath = path.join(runnerTemp, "github-output");
+  const authorityPath = writeFormatterAuthority(runnerTemp);
   try {
     execFileSync(
       process.execPath,
@@ -254,7 +518,8 @@ test("clean formatter output creates no artifact, provenance, or writer output",
         cwd: fixture.directory,
         env: {
           ...process.env,
-          GITHUB_WORKSPACE: fixture.directory,
+          SOURCE_CHECKOUT: fixture.directory,
+          FORMATTER_AUTHORITY_OUTPUT: authorityPath,
           RUNNER_TEMP: runnerTemp,
           GITHUB_OUTPUT: outputPath,
           GITHUB_REPOSITORY: repository,
@@ -268,7 +533,10 @@ test("clean formatter output creates no artifact, provenance, or writer output",
       }
     );
     assert.equal(readFileSync(outputPath, "utf8"), "changed=false\n");
-    assert.deepEqual(readdirSync(runnerTemp), ["github-output"]);
+    assert.deepEqual(readdirSync(runnerTemp).sort(), [
+      "formatter-authority.json",
+      "github-output"
+    ]);
   } finally {
     rmSync(fixture.directory, { recursive: true, force: true });
     rmSync(runnerTemp, { recursive: true, force: true });
@@ -329,13 +597,7 @@ test("text patch paths and provenance are validated against exact PR provenance"
     validateProvenance({
       manifest: provenance(),
       patch,
-      expected: {
-        repository,
-        pullRequest,
-        headRepository: repository,
-        headRef,
-        headSha
-      }
+      expected: expectedProvenance()
     }),
     []
   );
@@ -343,15 +605,57 @@ test("text patch paths and provenance are validated against exact PR provenance"
     validateProvenance({
       manifest: provenance(),
       patch: Buffer.from(patch.toString().replace("'x'", "'y'")),
-      expected: {
-        repository,
-        pullRequest,
-        headRepository: repository,
-        headRef,
-        headSha
-      }
+      expected: expectedProvenance()
     }).join(" "),
     /digest does not match/
+  );
+});
+
+test("provenance rejects PR-controlled formatter commands and authority identities", () => {
+  const manifest = provenance();
+  const alteredCommand = {
+    ...manifest,
+    formatter: "pnpm run format"
+  };
+  assert.match(
+    validateProvenance({
+      manifest: alteredCommand,
+      patch,
+      expected: expectedProvenance()
+    }).join(" "),
+    /trusted Prettier CLI/u
+  );
+
+  const alteredDefaultBranch = {
+    ...manifest,
+    formatterAuthority: {
+      ...manifest.formatterAuthority,
+      defaultBranch: "pull-request-controlled"
+    }
+  };
+  assert.match(
+    validateProvenance({
+      manifest: alteredDefaultBranch,
+      patch,
+      expected: expectedProvenance()
+    }).join(" "),
+    /default branch does not match/u
+  );
+
+  const alteredDependencies = {
+    ...manifest,
+    formatterAuthority: {
+      ...manifest.formatterAuthority,
+      lockfileSha256: "not-a-digest"
+    }
+  };
+  assert.match(
+    validateProvenance({
+      manifest: alteredDependencies,
+      patch,
+      expected: expectedProvenance()
+    }).join(" "),
+    /lockfileSha256 is invalid/u
   );
 });
 
@@ -369,13 +673,21 @@ test("malformed, binary, delete, rename, submodule, and outside-checkout patches
   }
 });
 
-test("symlink patch targets fail before git apply", () => {
+test("bare writer rejects symlink targets from the source Git tree", () => {
   const directory = mkdtempSync(
     path.join(os.tmpdir(), "prettier-autofix-symlink-")
   );
   try {
+    git(directory, ["init", "-b", "main"]);
+    git(directory, ["config", "user.name", "Test Author"]);
+    git(directory, ["config", "user.email", "test@example.invalid"]);
     writeFileSync(path.join(directory, "outside.txt"), "not a target\n");
     symlinkSync("outside.txt", path.join(directory, "src-link.js"));
+    git(directory, ["add", "."]);
+    git(directory, ["commit", "-m", "symlink source"]);
+    const sourceSha = git(directory, ["rev-parse", "HEAD"], {
+      encoding: "utf8"
+    }).trim();
     const symlinkPatch = Buffer.from(
       [
         "diff --git a/src-link.js b/src-link.js",
@@ -388,8 +700,13 @@ test("symlink patch targets fail before git apply", () => {
       ].join("\n")
     );
     assert.throws(
-      () => assertRegularPatchTargets(directory, symlinkPatch),
-      /symlink patch targets are not permitted/
+      () =>
+        assertPatchTargetsInGitTree(
+          path.join(directory, ".git"),
+          sourceSha,
+          symlinkPatch
+        ),
+      /patch target is not a regular source file/u
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -400,14 +717,7 @@ test("stale SHA, changed head ref, closed PR, and fork head fail before branch p
   const fixture = createSourceFixture();
   try {
     const dirtyPatch = fixture.patch;
-    const manifest = createProvenance({
-      repository,
-      pullRequest,
-      headRepository: repository,
-      headRef,
-      headSha: fixture.sha,
-      patch: dirtyPatch
-    });
+    const manifest = provenance({ headSha: fixture.sha, patch: dirtyPatch });
     for (const changed of [
       {
         head: {
@@ -447,9 +757,11 @@ test("stale SHA, changed head ref, closed PR, and fork head fail before branch p
           headRepository: repository,
           headRef,
           headSha: fixture.sha,
+          defaultBranch: "main",
+          providerRepository,
+          providerWorkflowSha,
           manifest,
           patch: dirtyPatch,
-          sourceDirectory: fixture.directory,
           getCurrentPullRequest: async () => currentPullRequest(changed),
           pushBranch: async () => {
             pushed = true;
@@ -468,53 +780,48 @@ test("stale SHA, changed head ref, closed PR, and fork head fail before branch p
   }
 });
 
-test("writer updates only the deterministic autofix branch using a lease", () => {
+test("writer publishes a deterministic commit without checking out or mutating PR files", () => {
   const fixture = createSourceFixture();
-  const remote = mkdtempSync(
-    path.join(os.tmpdir(), "prettier-autofix-remote-")
-  );
+  const remote = createBareRemote(fixture);
   const runnerTemp = mkdtempSync(
     path.join(os.tmpdir(), "prettier-autofix-runner-")
   );
   try {
-    execFileSync("git", ["init", "--bare", "--initial-branch=main", remote]);
-    git(fixture.directory, ["remote", "add", "origin", remote]);
-    git(fixture.directory, ["push", "origin", `HEAD:refs/heads/${headRef}`]);
-    git(fixture.directory, ["checkout", "--detach", fixture.sha]);
-    writeFileSync(
-      path.join(fixture.directory, "src/example.js"),
-      'const value = "x";\n'
+    const gitRepository = initializeBareRepository({
+      directory: path.join(runnerTemp, "writer.git"),
+      remoteUrl: remote.url,
+      readToken: "test-read-token",
+      pullRequestNumber: pullRequest,
+      headSha: fixture.sha,
+      runnerTemp,
+      runId: "fetch-42"
+    });
+    const indexPath = path.join(runnerTemp, "writer.index");
+    assert.deepEqual(
+      checkPatchAgainstBareRepository({
+        directory: gitRepository.directory,
+        headSha: fixture.sha,
+        patch: fixture.patch,
+        indexPath
+      }),
+      ["src/example.js"]
     );
-    const formattedPatch = git(
-      fixture.directory,
-      [
-        "diff",
-        "--no-ext-diff",
-        "--no-textconv",
-        "--no-renames",
-        "--no-color",
-        "--src-prefix=a/",
-        "--dst-prefix=b/",
-        "HEAD",
-        "--"
-      ],
-      { encoding: "buffer" }
-    );
-    git(fixture.directory, ["checkout", "--", "src/example.js"]);
 
+    const commits = [];
     for (const runId of ["first", "retry"]) {
-      execFileSync("git", ["reset", "--hard", fixture.sha], {
-        cwd: fixture.directory
+      const prepared = createAutofixCommit({
+        directory: gitRepository.directory,
+        headSha: fixture.sha,
+        patch: fixture.patch,
+        indexPath,
+        pullRequestNumber: pullRequest
       });
-      execFileSync("git", ["apply", "--index"], {
-        cwd: fixture.directory,
-        input: formattedPatch
-      });
+      commits.push(prepared.commit);
       pushGeneratedBranch({
-        sourceDirectory: fixture.directory,
+        directory: gitRepository.directory,
         branch: "autofix/prettier/pr-42",
+        commit: prepared.commit,
         appToken: "deterministic-test-token",
-        pullRequestNumber: String(pullRequest),
         runnerTemp,
         runId
       });
@@ -522,24 +829,37 @@ test("writer updates only the deterministic autofix branch using a lease", () =>
 
     const sourceRemoteSha = execFileSync(
       "git",
-      ["--git-dir", remote, "rev-parse", `refs/heads/${headRef}`],
+      ["--git-dir", remote.directory, "rev-parse", `refs/heads/${headRef}`],
       { encoding: "utf8" }
     ).trim();
     const autofixSha = execFileSync(
       "git",
-      ["--git-dir", remote, "rev-parse", "refs/heads/autofix/prettier/pr-42"],
+      [
+        "--git-dir",
+        remote.directory,
+        "rev-parse",
+        "refs/heads/autofix/prettier/pr-42"
+      ],
       { encoding: "utf8" }
     ).trim();
     const autofixParent = execFileSync(
       "git",
-      ["--git-dir", remote, "rev-parse", `${autofixSha}^`],
+      ["--git-dir", remote.directory, "rev-parse", `${autofixSha}^`],
       { encoding: "utf8" }
     ).trim();
     assert.equal(sourceRemoteSha, fixture.sha);
     assert.equal(autofixParent, fixture.sha);
+    assert.equal(commits[0], commits[1]);
+    assert.equal(autofixSha, commits[1]);
+    assert.equal(
+      git(fixture.directory, ["rev-parse", "HEAD"], {
+        encoding: "utf8"
+      }).trim(),
+      fixture.sha
+    );
   } finally {
     rmSync(fixture.directory, { recursive: true, force: true });
-    rmSync(remote, { recursive: true, force: true });
+    rmSync(remote.directory, { recursive: true, force: true });
     rmSync(runnerTemp, { recursive: true, force: true });
   }
 });

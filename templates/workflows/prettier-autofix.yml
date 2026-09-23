@@ -38,8 +38,6 @@ jobs:
     name: Create stacked Prettier autofix PR
     if: github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.event.pull_request.head.ref, 'autofix/prettier/pr-')
     uses: yohn-jp/.github/.github/workflows/prettier-autofix.yml@main
-    with:
-      working-directory: .
     secrets:
       AUTOFIX_APP_ID: ${{ secrets.AUTOFIX_APP_ID }}
       AUTOFIX_APP_PRIVATE_KEY: ${{ secrets.AUTOFIX_APP_PRIVATE_KEY }}

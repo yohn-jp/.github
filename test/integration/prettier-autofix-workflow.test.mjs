@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 import { validateActionPinsFile } from "../../scripts/validate-action-pins.mjs";
+import { validatePatch } from "../../scripts/prettier-autofix/lib.mjs";
 
 const wrapperPath = "templates/workflows/prettier-autofix.yml";
 const reusablePath = ".github/workflows/prettier-autofix.yml";
@@ -83,25 +84,61 @@ test("reusable workflow skips forks and recursion before formatter or writer job
   );
 });
 
-test("dirty same-repository formatting is isolated from the privileged writer", () => {
+test("trusted default-branch Prettier authority is separate from source data and App writes", () => {
   const formatter = reusable.jobs.format;
   const sourceCheckout = formatter.steps.find(
-    (step) => step.name === "Checkout exact source PR head"
+    (step) => step.name === "Checkout exact source PR head as data"
   );
   assert.equal(
     sourceCheckout.with.ref,
     "${{ github.event.pull_request.head.sha }}"
   );
+  assert.equal(sourceCheckout.with.path, "source");
   assert.equal(sourceCheckout.with["persist-credentials"], false);
   assert.equal(sourceCheckout.with.repository, undefined);
+
+  const authorityCheckout = formatter.steps.find(
+    (step) =>
+      step.name === "Checkout consumer default-branch formatter authority"
+  );
+  assert.equal(authorityCheckout.with.repository, "${{ github.repository }}");
+  assert.equal(
+    authorityCheckout.with.ref,
+    "${{ github.event.repository.default_branch }}"
+  );
+  assert.equal(authorityCheckout.with.path, "formatter-authority");
+  assert.equal(authorityCheckout.with["persist-credentials"], false);
+
+  const setup = formatter.steps.find((step) =>
+    step.uses?.endsWith("/.github/actions/setup-node-pnpm")
+  );
+  assert.equal(setup.with["working-directory"], "formatter-authority");
+  const trustedFormat = formatter.steps.find(
+    (step) => step.name === "Run trusted Prettier against PR source data"
+  );
+  assert.equal(
+    trustedFormat.run,
+    'node "$RUNNER_TEMP/prettier-autofix-tools/scripts/prettier-autofix/format.mjs"'
+  );
+  assert.equal(
+    trustedFormat.env.FORMATTER_AUTHORITY_DIRECTORY,
+    "${{ github.workspace }}/formatter-authority"
+  );
+  assert.equal(
+    trustedFormat.env.SOURCE_CHECKOUT,
+    "${{ github.workspace }}/source"
+  );
+  assert.equal(
+    formatter.steps.some((step) => /pnpm run format/u.test(step.run ?? "")),
+    false
+  );
   assert.ok(
-    formatter.steps.some(
-      (step) =>
-        step.uses ===
-        "./.prettier-autofix-tools/.github/actions/setup-node-pnpm"
+    formatter.steps.some((step) =>
+      step.run?.includes(
+        'mv .prettier-autofix-tools "$RUNNER_TEMP/prettier-autofix-tools"'
+      )
     )
   );
-  assert.ok(formatter.steps.some((step) => step.run === "pnpm run format"));
   assert.equal(
     formatter.steps.some((step) =>
       step.uses?.includes("create-github-app-token")
@@ -109,6 +146,17 @@ test("dirty same-repository formatting is isolated from the privileged writer", 
     false
   );
   assert.equal(formatter.permissions.contents, "read");
+
+  const formatterScript = readFileSync(
+    "scripts/prettier-autofix/format.mjs",
+    "utf8"
+  );
+  assert.match(formatterScript, /node_modules\/prettier\/bin\/prettier\.cjs/u);
+  assert.match(formatterScript, /"--config"/u);
+  assert.match(formatterScript, /"--ignore-path"/u);
+  assert.match(formatterScript, /"--no-editorconfig"/u);
+  assert.match(formatterScript, /FORMATTER_AUTHORITY_DIRECTORY/u);
+  assert.doesNotMatch(formatterScript, /pnpm run format/u);
 
   const writer = reusable.jobs.writer;
   const validationIndex = writer.steps.findIndex((step) =>
@@ -126,6 +174,15 @@ test("dirty same-repository formatting is isolated from the privileged writer", 
       tokenIndex < publishIndex
   );
   assert.equal(
+    writer.steps.some(
+      (step) =>
+        step.uses?.includes("actions/checkout") &&
+        step.with?.ref === "${{ github.event.pull_request.head.sha }}"
+    ),
+    false,
+    "the App writer does not check out PR-controlled files"
+  );
+  assert.equal(
     writer.steps.some((step) => step.run?.includes("pnpm run")),
     false
   );
@@ -139,6 +196,28 @@ test("dirty same-repository formatting is isolated from the privileged writer", 
   );
   assert.equal(writer.steps[tokenIndex].with["permission-workflows"], "write");
   assert.equal(writer.steps[tokenIndex].with["installation-id"], undefined);
+});
+
+test("workflow-file formatting remains in scope and requires App Workflows write", () => {
+  const workflowPatch = Buffer.from(
+    [
+      "diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml",
+      "index 1111111..2222222 100644",
+      "--- a/.github/workflows/ci.yml",
+      "+++ b/.github/workflows/ci.yml",
+      "@@ -1 +1 @@",
+      "-name:ci",
+      "+name: ci",
+      ""
+    ].join("\n")
+  );
+  assert.deepEqual(validatePatch(workflowPatch).files, [
+    ".github/workflows/ci.yml"
+  ]);
+  const token = reusable.jobs.writer.steps.find((step) =>
+    step.uses?.includes("create-github-app-token")
+  );
+  assert.equal(token.with["permission-workflows"], "write");
 });
 
 test("clean output gates off writer work and reruns replace the run-scoped artifact", () => {

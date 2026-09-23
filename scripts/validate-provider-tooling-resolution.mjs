@@ -19,7 +19,11 @@
 //      a caller pinned to). It must never resolve from `github.sha` (the
 //      caller's own commit) or from `github.job_workflow_ref` (not a real
 //      context field — see yohn-jp/.github#18).
-//   2. A `uses: ./...` local composite-action reference inside a reusable
+//   2. A reusable workflow may also check out its caller repository at the
+//      exact `github.event.repository.default_branch` ref when that trusted
+//      default-branch tree is explicitly used as data; this is not provider
+//      tooling and must not be treated as an arbitrary checkout exception.
+//   3. A `uses: ./...` local composite-action reference inside a reusable
 //      workflow's job STEPS resolves against the caller's checked-out
 //      workspace, not this provider repository, so it must point into a
 //      path that was populated by a checkout of this provider repository
@@ -85,6 +89,14 @@ export function validateProviderToolingResolution(doc, sourceLabel) {
 
       const where = `${sourceLabel}:jobs.${jobId}.steps[${i}]`;
       const refExpr = String(withBlock.ref ?? "");
+      // Only the event's base-repository default branch is a trusted
+      // formatter authority. PR head refs and other moving expressions
+      // still require the exact provider workflow revision below.
+      const isTrustedConsumerDefaultCheckout =
+        repository.trim() === "${{ github.repository }}" &&
+        refExpr.trim() === "${{ github.event.repository.default_branch }}";
+      if (isTrustedConsumerDefaultCheckout) continue;
+
       const isDirectSafeForm =
         SAFE_REF_EXPRESSION.test(refExpr) &&
         SAFE_REPOSITORY_EXPRESSION.test(repository);

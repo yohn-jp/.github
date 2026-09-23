@@ -1,36 +1,39 @@
 #!/usr/bin/env node
 import { lstatSync, readFileSync, readdirSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import {
   assertCurrentPullRequest,
-  assertRegularPatchTargets,
   evaluateEligibility,
   validateProvenance
 } from "./lib.mjs";
+import {
+  checkPatchAgainstBareRepository,
+  initializeBareRepository
+} from "./git-tree.mjs";
 
 const required = [
   "AUTOFIX_ARTIFACT_DIR",
+  "AUTOFIX_GIT_DIRECTORY",
+  "AUTOFIX_INDEX_PATH",
   "GITHUB_API_URL",
+  "GITHUB_SERVER_URL",
   "GITHUB_REPOSITORY",
   "GITHUB_TOKEN",
+  "GITHUB_RUN_ID",
+  "RUNNER_TEMP",
   "SOURCE_PR_NUMBER",
   "SOURCE_HEAD_REPOSITORY",
   "SOURCE_HEAD_REF",
   "SOURCE_HEAD_SHA",
-  "SOURCE_CHECKOUT"
+  "FORMATTER_DEFAULT_BRANCH",
+  "TRUSTED_PROVIDER_REPOSITORY",
+  "TRUSTED_PROVIDER_SHA"
 ];
 for (const name of required) {
   if (!process.env[name]) throw new Error(`${name} is required`);
 }
 
-const expected = {
-  repository: process.env.GITHUB_REPOSITORY,
-  pullRequest: Number(process.env.SOURCE_PR_NUMBER),
-  headRepository: process.env.SOURCE_HEAD_REPOSITORY,
-  headRef: process.env.SOURCE_HEAD_REF,
-  headSha: process.env.SOURCE_HEAD_SHA
-};
+const expected = expectedProvenance();
 const eligibility = evaluateEligibility({
   repository: expected.repository,
   headRepository: expected.headRepository,
@@ -82,22 +85,42 @@ assertCurrentPullRequest({
   headSha: expected.headSha
 });
 
-const checkoutSha = execFileSync("git", ["rev-parse", "HEAD"], {
-  cwd: process.env.SOURCE_CHECKOUT,
-  encoding: "utf8"
-}).trim();
-if (checkoutSha !== expected.headSha) {
-  throw new Error("source checkout does not match the provenance head SHA");
-}
-assertRegularPatchTargets(process.env.SOURCE_CHECKOUT, patch);
-execFileSync("git", ["apply", "--check", "--index"], {
-  cwd: process.env.SOURCE_CHECKOUT,
-  input: patch,
-  stdio: ["pipe", "ignore", "pipe"]
+const gitDirectory = initializeBareRepository({
+  directory: process.env.AUTOFIX_GIT_DIRECTORY,
+  remoteUrl: repositoryRemote(),
+  readToken: process.env.GITHUB_TOKEN,
+  pullRequestNumber: expected.pullRequest,
+  headSha: expected.headSha,
+  runnerTemp: process.env.RUNNER_TEMP,
+  runId: process.env.GITHUB_RUN_ID
+});
+const files = checkPatchAgainstBareRepository({
+  directory: gitDirectory.directory,
+  headSha: expected.headSha,
+  patch,
+  indexPath: process.env.AUTOFIX_INDEX_PATH
 });
 console.log(
-  "Patch provenance, source PR head, and non-writing apply check are valid."
+  `Trusted formatter provenance and ${files.length} text patch target(s) validated against the exact source Git tree; no PR checkout or code execution occurred.`
 );
+
+function expectedProvenance() {
+  return {
+    repository: process.env.GITHUB_REPOSITORY,
+    pullRequest: Number(process.env.SOURCE_PR_NUMBER),
+    headRepository: process.env.SOURCE_HEAD_REPOSITORY,
+    headRef: process.env.SOURCE_HEAD_REF,
+    headSha: process.env.SOURCE_HEAD_SHA,
+    defaultBranch: process.env.FORMATTER_DEFAULT_BRANCH,
+    providerRepository: process.env.TRUSTED_PROVIDER_REPOSITORY,
+    providerWorkflowSha: process.env.TRUSTED_PROVIDER_SHA
+  };
+}
+
+function repositoryRemote() {
+  const server = process.env.GITHUB_SERVER_URL.replace(/\/$/u, "");
+  return `${server}/${process.env.GITHUB_REPOSITORY}.git`;
+}
 
 async function getPullRequest({ apiUrl, repository, number, token }) {
   const response = await fetch(

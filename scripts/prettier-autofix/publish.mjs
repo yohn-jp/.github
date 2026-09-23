@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-import { chmodSync, readFileSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   assertCurrentPullRequest,
-  assertRegularPatchTargets,
   evaluateEligibility,
   upsertAutofixPullRequest,
-  validatePatch,
   validateProvenance
 } from "./lib.mjs";
+import {
+  createAutofixCommit,
+  initializeBareRepository,
+  pushGeneratedBranch
+} from "./git-tree.mjs";
 
 export async function runPublish({
   repository,
@@ -17,9 +19,17 @@ export async function runPublish({
   headRepository,
   headRef,
   headSha,
+  defaultBranch,
+  providerRepository,
+  providerWorkflowSha,
   manifest,
   patch,
-  sourceDirectory,
+  gitDirectory,
+  indexPath,
+  remoteUrl,
+  runnerTemp,
+  runId,
+  readToken,
   getCurrentPullRequest,
   pushBranch,
   api
@@ -38,7 +48,10 @@ export async function runPublish({
     pullRequest: pullRequestNumber,
     headRepository,
     headRef,
-    headSha
+    headSha,
+    defaultBranch,
+    providerRepository,
+    providerWorkflowSha
   };
   const provenanceErrors = validateProvenance({ manifest, patch, expected });
   if (provenanceErrors.length > 0) throw new Error(provenanceErrors.join("; "));
@@ -57,62 +70,29 @@ export async function runPublish({
   };
   await validateCurrent();
 
-  const checkoutSha = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: sourceDirectory,
-    encoding: "utf8"
-  }).trim();
-  if (checkoutSha !== headSha) {
-    throw new Error("source checkout does not match the provenance head SHA");
-  }
-  assertRegularPatchTargets(sourceDirectory, patch);
-  execFileSync("git", ["apply", "--check", "--index"], {
-    cwd: sourceDirectory,
-    input: patch
+  const gitRepository = initializeBareRepository({
+    directory: gitDirectory,
+    remoteUrl,
+    readToken,
+    pullRequestNumber,
+    headSha,
+    runnerTemp,
+    runId
   });
-  execFileSync("git", ["apply", "--index"], {
-    cwd: sourceDirectory,
-    input: patch
+  const prepared = createAutofixCommit({
+    directory: gitRepository.directory,
+    headSha,
+    patch,
+    indexPath,
+    pullRequestNumber
   });
-
-  const files = new Set(
-    execFileSync("git", ["diff", "--cached", "--name-only", "-z"], {
-      cwd: sourceDirectory,
-      encoding: "utf8"
-    })
-      .split("\0")
-      .filter(Boolean)
-  );
-  const validatedFiles = new Set(validatePatch(patch).files);
-  if (
-    files.size !== validatedFiles.size ||
-    [...files].some((file) => !validatedFiles.has(file))
-  ) {
-    throw new Error(
-      "applied patch changed files outside its validated text diff"
-    );
-  }
-  const status = execFileSync(
-    "git",
-    ["status", "--porcelain", "--untracked-files=all", "-z"],
-    {
-      cwd: sourceDirectory,
-      encoding: "utf8"
-    }
-  );
-  if (status.includes("?? ")) {
-    throw new Error(
-      "source checkout contains untracked files; refusing autofix write"
-    );
-  }
 
   const sourcePullRequest = await validateCurrent();
   const branch = `autofix/prettier/pr-${pullRequestNumber}`;
   await pushBranch({
-    sourceDirectory,
+    directory: gitRepository.directory,
     branch,
-    pullRequestNumber,
-    headSha,
-    headRef
+    commit: prepared.commit
   });
   const pullRequest = await upsertAutofixPullRequest({
     api,
@@ -120,7 +100,12 @@ export async function runPublish({
     sourcePullRequest,
     branch
   });
-  return { status: "published", branch, ...pullRequest };
+  return {
+    status: "published",
+    branch,
+    commit: prepared.commit,
+    ...pullRequest
+  };
 }
 
 if (process.argv[1]?.endsWith("publish.mjs")) {
@@ -131,14 +116,21 @@ async function main() {
   for (const name of [
     "GITHUB_REPOSITORY",
     "GITHUB_API_URL",
+    "GITHUB_SERVER_URL",
     "GITHUB_TOKEN",
     "AUTOFIX_APP_TOKEN",
     "AUTOFIX_ARTIFACT_DIR",
+    "AUTOFIX_GIT_DIRECTORY",
+    "AUTOFIX_INDEX_PATH",
     "SOURCE_PR_NUMBER",
     "SOURCE_HEAD_REPOSITORY",
     "SOURCE_HEAD_REF",
     "SOURCE_HEAD_SHA",
-    "SOURCE_CHECKOUT"
+    "FORMATTER_DEFAULT_BRANCH",
+    "TRUSTED_PROVIDER_REPOSITORY",
+    "TRUSTED_PROVIDER_SHA",
+    "RUNNER_TEMP",
+    "GITHUB_RUN_ID"
   ]) {
     if (!process.env[name]) throw new Error(`${name} is required`);
   }
@@ -148,7 +140,10 @@ async function main() {
     pullRequest: Number(process.env.SOURCE_PR_NUMBER),
     headRepository: process.env.SOURCE_HEAD_REPOSITORY,
     headRef: process.env.SOURCE_HEAD_REF,
-    headSha: process.env.SOURCE_HEAD_SHA
+    headSha: process.env.SOURCE_HEAD_SHA,
+    defaultBranch: process.env.FORMATTER_DEFAULT_BRANCH,
+    providerRepository: process.env.TRUSTED_PROVIDER_REPOSITORY,
+    providerWorkflowSha: process.env.TRUSTED_PROVIDER_SHA
   };
   const patch = readFileSync(
     join(process.env.AUTOFIX_ARTIFACT_DIR, "patch.diff")
@@ -165,25 +160,34 @@ async function main() {
     appToken: process.env.AUTOFIX_APP_TOKEN
   });
   const result = await runPublish({
-    repository: expected.repository,
-    pullRequestNumber: expected.pullRequest,
-    headRepository: expected.headRepository,
-    headRef: expected.headRef,
-    headSha: expected.headSha,
+    ...expected,
     manifest,
     patch,
-    sourceDirectory: process.env.SOURCE_CHECKOUT,
+    gitDirectory: process.env.AUTOFIX_GIT_DIRECTORY,
+    indexPath: process.env.AUTOFIX_INDEX_PATH,
+    remoteUrl: repositoryRemote(),
+    runnerTemp: process.env.RUNNER_TEMP,
+    runId: process.env.GITHUB_RUN_ID,
+    readToken: process.env.GITHUB_TOKEN,
     getCurrentPullRequest: () =>
       api.getPullRequest(expected.pullRequest, process.env.GITHUB_TOKEN),
-    pushBranch: ({ sourceDirectory, branch }) =>
+    pushBranch: ({ directory, branch, commit }) =>
       pushGeneratedBranch({
-        sourceDirectory,
+        directory,
         branch,
-        appToken: process.env.AUTOFIX_APP_TOKEN
+        commit,
+        appToken: process.env.AUTOFIX_APP_TOKEN,
+        runnerTemp: process.env.RUNNER_TEMP,
+        runId: process.env.GITHUB_RUN_ID
       }),
     api
   });
   console.log(JSON.stringify(result));
+}
+
+function repositoryRemote() {
+  const server = process.env.GITHUB_SERVER_URL.replace(/\/$/u, "");
+  return `${server}/${process.env.GITHUB_REPOSITORY}.git`;
 }
 
 function createApi({ apiUrl, repository, appToken }) {
@@ -259,61 +263,4 @@ async function requestWithToken(root, repoPath, number, token) {
     );
   }
   return response.json();
-}
-
-export function pushGeneratedBranch({
-  sourceDirectory,
-  branch,
-  appToken,
-  pullRequestNumber = process.env.SOURCE_PR_NUMBER,
-  runnerTemp = process.env.RUNNER_TEMP,
-  runId = process.env.GITHUB_RUN_ID
-}) {
-  const askpass = join(runnerTemp, `prettier-autofix-askpass-${runId}`);
-  writeFileSync(
-    askpass,
-    "#!/bin/sh\ncase \"$1\" in\n  *Username*) printf 'x-access-token\\n' ;;\n  *) printf '%s\\n' \"$AUTOFIX_APP_TOKEN\" ;;\nesac\n",
-    { mode: 0o700 }
-  );
-  chmodSync(askpass, 0o700);
-  const env = {
-    ...process.env,
-    AUTOFIX_APP_TOKEN: appToken,
-    GIT_ASKPASS: askpass,
-    GIT_CONFIG_GLOBAL: "/dev/null",
-    GIT_CONFIG_NOSYSTEM: "1",
-    GIT_TERMINAL_PROMPT: "0"
-  };
-  const git = (args, options = {}) =>
-    execFileSync("git", ["-c", "credential.helper=", ...args], {
-      cwd: sourceDirectory,
-      env,
-      ...options
-    });
-
-  git(
-    [
-      "-c",
-      "user.name=Prettier Autofix",
-      "-c",
-      "user.email=prettier-autofix@users.noreply.github.com",
-      "commit",
-      "-m",
-      `style: format PR #${pullRequestNumber}`
-    ],
-    { stdio: "ignore" }
-  );
-
-  const ref = `refs/heads/${branch}`;
-  const remote = git(["ls-remote", "--heads", "origin", ref], {
-    encoding: "utf8"
-  }).trim();
-  const expected = remote === "" ? "" : remote.split(/\s+/u)[0];
-  if (remote !== "" && !/^[a-f0-9]{40}\s+refs\/heads\//u.test(remote)) {
-    throw new Error("remote autofix branch lookup returned an unexpected ref");
-  }
-  git(
-    ["push", `--force-with-lease=${ref}:${expected}`, "origin", `HEAD:${ref}`],
-    { stdio: "inherit" }
-  );
 }
