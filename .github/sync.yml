@@ -1,4 +1,4 @@
-# Sync targets for .github/workflows/sync-org-templates.yml. Each top-level
+# Sync targets for .github/workflows/sync-org-templates.yml. Autofix wrappers are distributed from this map. Each top-level
 # key is a target "owner/repo" pushed to directly (no PR, no review gate —
 # see docs/github-metadata-inheritance.md). Before adding a repository,
 # confirm it doesn't already carry a same-path file with content this repo
