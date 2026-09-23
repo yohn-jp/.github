@@ -57,10 +57,16 @@ export function expandSyncConfig(config) {
 }
 
 export function renderSyncConfig(config) {
-  return `# Generated from .github/sync-groups.yml; do not edit.\n${yaml.dump(
-    expandSyncConfig(config),
-    { lineWidth: -1, noRefs: true }
-  )}`;
+  const repositories = expandSyncConfig(config);
+  const lines = ["# Generated from .github/sync-groups.yml; do not edit."];
+  for (const [repository, mappings] of Object.entries(repositories)) {
+    lines.push(`${repository}:`);
+    for (const { source, dest } of mappings) {
+      lines.push(`  - source: ${source}`);
+      lines.push(`    dest: ${dest}`);
+    }
+  }
+  return `${lines.join("\n")}\n`;
 }
 
 async function main() {
