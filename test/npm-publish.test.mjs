@@ -46,19 +46,6 @@ function assertStepFails(run, cwd, environment, expectedMessage) {
   );
 }
 
-// The step always invokes `node --import tsx`; stub an empty, resolvable
-// "tsx" package so the fixture doesn't need the real dependency the
-// consumer's own pnpm install would provide.
-function stubTsx(root) {
-  const tsxDir = join(root, "node_modules", "tsx");
-  mkdirSync(tsxDir, { recursive: true });
-  writeFileSync(
-    join(tsxDir, "package.json"),
-    JSON.stringify({ name: "tsx", version: "0.0.0", exports: "./index.mjs" })
-  );
-  writeFileSync(join(tsxDir, "index.mjs"), "");
-}
-
 test("release certification gate is optional and receives only the generic exact-release context", () => {
   const verifyStep = stepNamed("Verify release certification");
   assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
@@ -80,7 +67,8 @@ test("release certification gate is optional and receives only the generic exact
     RELEASE_ARTIFACT_PATH: "${{ steps.pack.outputs.path }}",
     RELEASE_ARTIFACT_SHA256: "${{ steps.pack.outputs.sha256 }}"
   });
-  assert.match(verifyStep.run, /node --import tsx/);
+  assert.match(verifyStep.run, /node "\$CERTIFICATION_VERIFICATION_SCRIPT"/);
+  assert.doesNotMatch(verifyStep.run, /--import tsx/);
   assert.match(stepNamed("Resolve release context").run, /git rev-parse HEAD/);
   assert.equal(
     stepNamed("Checkout").with.ref,
@@ -99,7 +87,6 @@ test("release certification gate is optional and receives only the generic exact
       /not found/
     );
 
-    stubTsx(root);
     const scripts = join(root, "scripts");
     mkdirSync(scripts, { recursive: true });
     const failingScript = join(scripts, "verify-release-certification.mjs");
