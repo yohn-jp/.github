@@ -247,7 +247,8 @@ test("PR scripts, formatter config, dependencies, plugins, and ignore files cann
         "prettier.config.mjs",
         ".prettierignore",
         ".editorconfig",
-        "src/arbitrary.txt"
+        "src/arbitrary.txt",
+        "src/trusted-ignored.js"
       ].join("\n") + "\n"
     );
     writeFileSync(path.join(authority, ".gitignore"), "node_modules/\n");
@@ -296,6 +297,7 @@ test("PR scripts, formatter config, dependencies, plugins, and ignore files cann
       "node_modules/\nsrc/target.js\n"
     );
     writeFileSync(path.join(source, "src/target.js"), "const value='x'\n");
+    writeFileSync(path.join(source, "src/trusted-ignored.js"), "const ignored='x'\n");
     writeFileSync(
       path.join(source, "src/arbitrary.txt"),
       "keep this non-canonical payload\n"
@@ -344,6 +346,10 @@ test("PR scripts, formatter config, dependencies, plugins, and ignore files cann
     assert.equal(
       readFileSync(path.join(source, "src/arbitrary.txt"), "utf8"),
       "keep this non-canonical payload\n"
+    );
+    assert.equal(
+      readFileSync(path.join(source, "src/trusted-ignored.js"), "utf8"),
+      "const ignored='x'\n"
     );
     assert.equal(existsSync(marker), false);
     const generatedPatch = git(
@@ -447,6 +453,10 @@ test("same-repository dirty PR produces one bounded stacked autofix path", async
     );
     assert.equal(calls.create[0].head, "autofix/prettier/pr-42");
     assert.equal(calls.create[0].base, headRef);
+    assert.equal(
+      calls.create[0].title,
+      "style(prettier): format feat/42-format-source (PR #42)"
+    );
     assert.equal(
       git(fixture.directory, ["rev-parse", "HEAD"], {
         encoding: "utf8"
