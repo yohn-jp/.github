@@ -86,7 +86,6 @@ jobs:
         shell: bash
         env:
           FORMATTER_AUTHORITY_DIRECTORY: ${{ github.workspace }}/formatter-authority
-          GITHUB_OUTPUT: ${{ github.output }}
         run: node .prettier-autofix-tools/scripts/prettier-autofix/check-authority.mjs
 
       - name: Setup Node.js, pnpm, and default-branch dependencies
