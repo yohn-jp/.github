@@ -19,7 +19,9 @@ const compatibleConsumers = [
   "yohn-jp/suzukuri",
   "yohn-jp/shikitari",
   "yohn-jp/nawabari",
-  "yohn-jp/wabachi"
+  "yohn-jp/wabachi",
+  "yohn-jp/cli-canon",
+  "yohn-jp/majiwari"
 ];
 
 test(
