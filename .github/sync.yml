@@ -41,6 +41,8 @@ yohn-jp/gh-inari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -63,6 +65,8 @@ yohn-jp/gh-inari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -103,6 +107,8 @@ yohn-jp/gh-makami:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -123,6 +129,8 @@ yohn-jp/gh-makami:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -162,6 +170,8 @@ yohn-jp/suzukuri:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -184,6 +194,8 @@ yohn-jp/suzukuri:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -228,6 +240,8 @@ yohn-jp/shikitari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -250,6 +264,8 @@ yohn-jp/shikitari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -295,6 +311,8 @@ yohn-jp/nawabari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -317,6 +335,8 @@ yohn-jp/nawabari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -378,6 +398,8 @@ yohn-jp/wabachi:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -400,6 +422,8 @@ yohn-jp/wabachi:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -444,6 +468,8 @@ yohn-jp/cli-canon:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -466,6 +492,8 @@ yohn-jp/cli-canon:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -512,6 +540,8 @@ yohn-jp/mottainai:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -532,6 +562,8 @@ yohn-jp/mottainai:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
@@ -579,6 +611,8 @@ yohn-jp/majiwari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
@@ -599,6 +633,8 @@ yohn-jp/majiwari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
