@@ -54,6 +54,7 @@ jobs:
     permissions:
       contents: read
     outputs:
+      authority-available: ${{ steps.authority.outputs.available }}
       changed: ${{ steps.capture.outputs.changed }}
       artifact-directory: ${{ steps.capture.outputs.directory }}
     steps:
@@ -80,16 +81,27 @@ jobs:
           path: .prettier-autofix-tools
           persist-credentials: false
 
+      - name: Check formatter authority availability
+        id: authority
+        shell: bash
+        env:
+          FORMATTER_AUTHORITY_DIRECTORY: ${{ github.workspace }}/formatter-authority
+          GITHUB_OUTPUT: ${{ github.output }}
+        run: node .prettier-autofix-tools/scripts/prettier-autofix/check-authority.mjs
+
       - name: Setup Node.js, pnpm, and default-branch dependencies
+        if: steps.authority.outputs.available == 'true'
         uses: ./.prettier-autofix-tools/.github/actions/setup-node-pnpm
         with:
           working-directory: formatter-authority
 
       - name: Isolate provider tooling
+        if: steps.authority.outputs.available == 'true'
         shell: bash
         run: mv .prettier-autofix-tools "$RUNNER_TEMP/prettier-autofix-tools"
 
       - name: Run trusted Prettier against PR source data
+        if: steps.authority.outputs.available == 'true'
         shell: bash
         env:
           FORMATTER_AUTHORITY_DIRECTORY: ${{ github.workspace }}/formatter-authority
@@ -104,6 +116,7 @@ jobs:
         run: node "$RUNNER_TEMP/prettier-autofix-tools/scripts/prettier-autofix/format.mjs"
 
       - name: Capture text patch and provenance
+        if: steps.authority.outputs.available == 'true'
         id: capture
         shell: bash
         env:
@@ -120,7 +133,7 @@ jobs:
         run: node "$RUNNER_TEMP/prettier-autofix-tools/scripts/prettier-autofix/capture.mjs"
 
       - name: Upload patch and provenance handoff
-        if: steps.capture.outputs.changed == 'true'
+        if: steps.authority.outputs.available == 'true' && steps.capture.outputs.changed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: prettier-autofix-${{ github.run_id }}
@@ -140,7 +153,7 @@ jobs:
   writer:
     name: Validate patch and create stacked autofix PR
     needs: [eligibility, format]
-    if: needs.eligibility.outputs.eligible == 'true' && needs.format.outputs.changed == 'true'
+    if: needs.eligibility.outputs.eligible == 'true' && needs.format.outputs.authority-available == 'true' && needs.format.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
