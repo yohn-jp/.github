@@ -15,7 +15,7 @@ group:
     yohn-jp/majiwari
     yohn-jp/cli-canon
   files:
-    - source: AGENTS.md
+    - source: .github/agent-governance/AGENTS.md
       dest: .github/agent-governance/AGENTS.md
     - source: .github/agent-governance/skills/
       dest: .github/agent-governance/skills/
