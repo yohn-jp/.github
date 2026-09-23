@@ -52,7 +52,7 @@ file-groups:
       dest: .github/ISSUE_TEMPLATE/epic.yml
     - source: .github/inari/issues/epic.json
       dest: .github/inari/issues/epic.json
-  gh-inari-extra:
+  standard-extra:
     - source: .github/ISSUE_TEMPLATE/implementation.yml
       dest: .github/ISSUE_TEMPLATE/implementation.yml
     - source: .github/inari/issues/implementation.json
@@ -70,36 +70,6 @@ file-groups:
   gh-makami-extra:
     - source: templates/workflows/governance.yml
       dest: .github/workflows/governance.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  suzukuri-extra:
-    - source: .github/ISSUE_TEMPLATE/implementation.yml
-      dest: .github/ISSUE_TEMPLATE/implementation.yml
-    - source: .github/inari/issues/implementation.json
-      dest: .github/inari/issues/implementation.json
-    - source: templates/workflows/codeql.yml
-      dest: .github/workflows/codeql.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/publish.yml
-      dest: .github/workflows/publish.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  shikitari-extra:
-    - source: .github/ISSUE_TEMPLATE/implementation.yml
-      dest: .github/ISSUE_TEMPLATE/implementation.yml
-    - source: .github/inari/issues/implementation.json
-      dest: .github/inari/issues/implementation.json
-    - source: templates/workflows/codeql.yml
-      dest: .github/workflows/codeql.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/publish.yml
-      dest: .github/workflows/publish.yml
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
   nawabari-extra:
@@ -123,36 +93,6 @@ file-groups:
       dest: scripts/epic-branch.mjs
     - source: scripts/validate-issue.mjs
       dest: scripts/validate-issue.mjs
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  wabachi-extra:
-    - source: .github/ISSUE_TEMPLATE/implementation.yml
-      dest: .github/ISSUE_TEMPLATE/implementation.yml
-    - source: .github/inari/issues/implementation.json
-      dest: .github/inari/issues/implementation.json
-    - source: templates/workflows/codeql.yml
-      dest: .github/workflows/codeql.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/publish.yml
-      dest: .github/workflows/publish.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  cli-canon-extra:
-    - source: .github/ISSUE_TEMPLATE/implementation.yml
-      dest: .github/ISSUE_TEMPLATE/implementation.yml
-    - source: .github/inari/issues/implementation.json
-      dest: .github/inari/issues/implementation.json
-    - source: templates/workflows/codeql.yml
-      dest: .github/workflows/codeql.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/publish.yml
-      dest: .github/workflows/publish.yml
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
   mottainai-extra:
@@ -183,15 +123,14 @@ file-groups:
 sync-groups:
   standard:
     repositories:
-    include:
-      - common
-
-  gh-inari:
-    repositories:
       - yohn-jp/gh-inari
+      - yohn-jp/suzukuri
+      - yohn-jp/shikitari
+      - yohn-jp/wabachi
+      - yohn-jp/cli-canon
     include:
       - common
-      - gh-inari-extra
+      - standard-extra
 
   gh-makami:
     repositories:
@@ -200,40 +139,12 @@ sync-groups:
       - common
       - gh-makami-extra
 
-  suzukuri:
-    repositories:
-      - yohn-jp/suzukuri
-    include:
-      - common
-      - suzukuri-extra
-
-  shikitari:
-    repositories:
-      - yohn-jp/shikitari
-    include:
-      - common
-      - shikitari-extra
-
   nawabari:
     repositories:
       - yohn-jp/nawabari
     include:
       - common
       - nawabari-extra
-
-  wabachi:
-    repositories:
-      - yohn-jp/wabachi
-    include:
-      - common
-      - wabachi-extra
-
-  cli-canon:
-    repositories:
-      - yohn-jp/cli-canon
-    include:
-      - common
-      - cli-canon-extra
 
   mottainai:
     repositories:
