@@ -16,6 +16,7 @@ import { execFileSync } from "node:child_process";
 import {
   createProvenance,
   evaluateEligibility,
+  inspectFormatterAuthority,
   upsertAutofixPullRequest,
   validatePatch,
   validateProvenance
@@ -171,6 +172,45 @@ function createSourceFixture() {
   git(directory, ["checkout", "--", "src/example.js"]);
   return { directory, sha, patch: formattedPatch };
 }
+
+test("formatter authority availability distinguishes absence from malformed inputs", () => {
+  const directory = mkdtempSync(
+    path.join(os.tmpdir(), "prettier-autofix-authority-")
+  );
+  try {
+    assert.deepEqual(inspectFormatterAuthority(directory), {
+      available: false,
+      missing: [
+        "package.json",
+        "pnpm-lock.yaml",
+        "prettier.config.mjs",
+        ".prettierignore"
+      ]
+    });
+
+    for (const name of [
+      "package.json",
+      "pnpm-lock.yaml",
+      "prettier.config.mjs",
+      ".prettierignore"
+    ]) {
+      writeFileSync(path.join(directory, name), "\n");
+    }
+    assert.deepEqual(inspectFormatterAuthority(directory), {
+      available: true,
+      missing: []
+    });
+
+    rmSync(path.join(directory, "prettier.config.mjs"));
+    mkdirSync(path.join(directory, "prettier.config.mjs"));
+    assert.throws(
+      () => inspectFormatterAuthority(directory),
+      /formatter authority input is not a regular file/u
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("PR scripts, formatter config, dependencies, plugins, and ignore files cannot choose published text", () => {
   const workspace = mkdtempSync(
