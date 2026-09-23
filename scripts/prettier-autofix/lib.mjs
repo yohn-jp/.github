@@ -565,7 +565,7 @@ export async function upsertAutofixPullRequest({
 
   const created = await api.createPullRequest({
     repository,
-    title: `style: format PR #${sourcePullRequest.number}`,
+    title: autofixPullRequestTitle(sourcePullRequest),
     body: [
       `Automated Prettier formatting repair for #${sourcePullRequest.number}.`,
       "",
@@ -577,6 +577,15 @@ export async function upsertAutofixPullRequest({
     base: sourcePullRequest.head.ref
   });
   return { action: "created", number: created.number };
+}
+
+function autofixPullRequestTitle(sourcePullRequest) {
+  const prefix = "style(prettier): format ";
+  const suffix = ` (PR #${sourcePullRequest.number})`;
+  const ref = sourcePullRequest.head?.ref ?? "source";
+  const maxRefLength = 240 - prefix.length - suffix.length;
+  const displayRef = ref.length > maxRefLength ? `${ref.slice(0, Math.max(1, maxRefLength - 1))}…` : ref;
+  return `${prefix}${displayRef}${suffix}`;
 }
 
 function parsePathPair(value) {
