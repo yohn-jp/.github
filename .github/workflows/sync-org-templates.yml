@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - "AGENTS.md"
+      - ".github/agent-governance/AGENTS.md"
       - "CLAUDE.md"
       - "docs/agent-change-workflow.md"
       - "docs/agent-runtime-profiles.md"
