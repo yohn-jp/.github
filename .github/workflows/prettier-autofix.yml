@@ -1,0 +1,219 @@
+name: Prettier autofix
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing package.json and the Prettier format script.
+        type: string
+        default: "."
+    secrets:
+      AUTOFIX_APP_ID:
+        required: false
+      AUTOFIX_APP_PRIVATE_KEY:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  eligibility:
+    name: Check autofix eligibility
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.check.outputs.eligible }}
+      reason: ${{ steps.check.outputs.reason }}
+    steps:
+      - name: Exclude forks and autofix PR recursion
+        id: check
+        shell: bash
+        env:
+          BASE_REPOSITORY: ${{ github.repository }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "$HEAD_REPOSITORY" ] || [ "${HEAD_REPOSITORY,,}" != "${BASE_REPOSITORY,,}" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "reason=external-fork" >> "$GITHUB_OUTPUT"
+            echo "::notice::Prettier autofix is explicitly skipped for external fork pull requests; the ordinary format check is unchanged."
+          elif [[ "$HEAD_REF" == autofix/prettier/pr-* ]]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "reason=autofix-recursion" >> "$GITHUB_OUTPUT"
+            echo "::notice::Prettier autofix PRs are excluded from recursive remediation."
+          else
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+            echo "reason=eligible" >> "$GITHUB_OUTPUT"
+          fi
+
+  format:
+    name: Format unprivileged source checkout
+    needs: eligibility
+    if: needs.eligibility.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.capture.outputs.changed }}
+      artifact-directory: ${{ steps.capture.outputs.directory }}
+    steps:
+      - name: Checkout exact source PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Checkout provider tooling (yohn-jp/.github)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .prettier-autofix-tools
+          persist-credentials: false
+
+      - name: Setup Node.js, pnpm, and consumer dependencies
+        uses: ./.prettier-autofix-tools/.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .prettier-autofix-tools "$RUNNER_TEMP/prettier-autofix-tools"
+
+      - name: Run the consumer's canonical Prettier formatter
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm run format
+
+      - name: Refresh trusted patch-capture tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .prettier-autofix-capture-tools
+          persist-credentials: false
+
+      - name: Isolate patch-capture tooling
+        shell: bash
+        run: mv .prettier-autofix-capture-tools "$RUNNER_TEMP/prettier-autofix-capture-tools"
+
+      - name: Capture text patch and provenance
+        id: capture
+        shell: bash
+        env:
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node "$RUNNER_TEMP/prettier-autofix-capture-tools/scripts/prettier-autofix/capture.mjs"
+
+      - name: Upload patch and provenance handoff
+        if: steps.capture.outputs.changed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prettier-autofix-${{ github.run_id }}
+          path: ${{ steps.capture.outputs.directory }}
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
+      - name: Restore provider tooling for composite-action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/prettier-autofix-tools" ] && [ ! -e .prettier-autofix-tools ]; then
+            mv "$RUNNER_TEMP/prettier-autofix-tools" .prettier-autofix-tools
+          fi
+          if [ -d "$RUNNER_TEMP/prettier-autofix-capture-tools" ] && [ ! -e .prettier-autofix-capture-tools ]; then
+            mv "$RUNNER_TEMP/prettier-autofix-capture-tools" .prettier-autofix-capture-tools
+          fi
+
+  writer:
+    name: Validate patch and create stacked autofix PR
+    needs: [eligibility, format]
+    if: needs.eligibility.outputs.eligible == 'true' && needs.format.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout trusted provider tooling (yohn-jp/.github)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .prettier-autofix-tools
+          persist-credentials: false
+
+      - name: Isolate trusted provider tooling
+        shell: bash
+        run: mv .prettier-autofix-tools "$RUNNER_TEMP/prettier-autofix-tools"
+
+      - name: Download patch and provenance handoff
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: prettier-autofix-${{ github.run_id }}
+          path: ${{ runner.temp }}/prettier-autofix-artifact
+
+      - name: Checkout source tree without running PR code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Reject stale, malformed, or unsafe patch before credentials
+        working-directory: ${{ runner.temp }}/prettier-autofix-tools
+        env:
+          AUTOFIX_ARTIFACT_DIR: ${{ runner.temp }}/prettier-autofix-artifact
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_CHECKOUT: ${{ github.workspace }}/source
+        run: node scripts/prettier-autofix/validate-artifact.mjs
+
+      - name: Require the dedicated GitHub App credentials
+        shell: bash
+        env:
+          AUTOFIX_APP_ID: ${{ secrets.AUTOFIX_APP_ID }}
+          AUTOFIX_APP_PRIVATE_KEY: ${{ secrets.AUTOFIX_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AUTOFIX_APP_ID" ] || [ -z "$AUTOFIX_APP_PRIVATE_KEY" ]; then
+            echo "::error::Configure AUTOFIX_APP_ID and AUTOFIX_APP_PRIVATE_KEY to enable Prettier autofix. No token fallback is available."
+            exit 1
+          fi
+
+      - name: Create narrowly scoped GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.AUTOFIX_APP_ID }}
+          private-key: ${{ secrets.AUTOFIX_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-metadata: read
+          permission-pull-requests: write
+          permission-workflows: write
+
+      - name: Publish deterministic autofix branch and stacked PR
+        working-directory: ${{ runner.temp }}/prettier-autofix-tools
+        env:
+          AUTOFIX_APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          AUTOFIX_ARTIFACT_DIR: ${{ runner.temp }}/prettier-autofix-artifact
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          RUNNER_TEMP: ${{ runner.temp }}
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_CHECKOUT: ${{ github.workspace }}/source
+        run: node scripts/prettier-autofix/publish.mjs

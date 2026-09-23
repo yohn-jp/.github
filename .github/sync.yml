@@ -91,6 +91,8 @@ yohn-jp/gh-inari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 yohn-jp/gh-makami:
   - source: .github/ISSUE_TEMPLATE/config.yml
@@ -144,6 +146,8 @@ yohn-jp/gh-makami:
   # wrappers remain opt-in until their consumer-specific inputs are aligned.
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 # yohn-jp/suzukuri: Suzukuri is a first-class CLI consumer of the same
 # organization-managed metadata, Inari contracts, and canonical workflow
@@ -208,6 +212,8 @@ yohn-jp/suzukuri:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 # yohn-jp/shikitari: Shikitari is a first-class TypeScript CLI consumer of
 # the same organization-managed metadata, Inari contracts, and canonical
@@ -272,6 +278,8 @@ yohn-jp/shikitari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 # yohn-jp/nawabari: bug.yml/feature.yml there use an older, differently
 # structured field set (e.g. "reproduction"/"proposal" instead of this
@@ -351,6 +359,8 @@ yohn-jp/nawabari:
     dest: scripts/epic-branch.mjs
   - source: scripts/validate-issue.mjs
     dest: scripts/validate-issue.mjs
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 # yohn-jp/wabachi: Wabachi is a first-class consumer of the same organization-
 # managed metadata, Inari contracts, and canonical workflow wrappers as
@@ -418,6 +428,8 @@ yohn-jp/wabachi:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 
 # yohn-jp/cli-canon: CLI Canon is a first-class TypeScript CLI consumer of
 # the same organization-managed metadata, Inari contracts, and canonical
