@@ -2,6 +2,7 @@
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { pathToFileURL } from "node:url";
 
 const repositoryRoot = process.cwd();
@@ -51,7 +52,7 @@ async function main() {
     // parseSemanticTemplate is the current Inari normalization boundary. A
     // semantic source that only survives through legacy aliases/defaulting is
     // valid input, but it is not the current canonical representation.
-    if (JSON.stringify(authored) !== JSON.stringify(canonical)) {
+    if (!isDeepStrictEqual(authored, canonical)) {
       errors.push(
         `${identity.sourcePath}: semantic JSON is accepted but is not the current canonical representation of gh-inari@${packageJson.version}`
       );
