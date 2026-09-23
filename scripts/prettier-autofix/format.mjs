@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readFileSync,
   realpathSync,
+  unlinkSync,
   writeFileSync
 } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -54,6 +55,11 @@ const packagePath = trustedFile(authorityDirectory, "package.json");
 const lockPath = trustedFile(authorityDirectory, "pnpm-lock.yaml");
 const configPath = trustedFile(authorityDirectory, "prettier.config.mjs");
 const ignorePath = trustedFile(authorityDirectory, ".prettierignore");
+const sourceIgnorePath = join(
+  sourceDirectory,
+  `.prettier-autofix-ignore-${sourceSha}`
+);
+writeFileSync(sourceIgnorePath, readFileSync(ignorePath), { flag: "wx" });
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
 const expectedVersion =
   packageJson.devDependencies?.prettier ?? packageJson.dependencies?.prettier;
@@ -114,18 +120,22 @@ const args = [
   "--config",
   configPath,
   "--ignore-path",
-  ignorePath,
+  sourceIgnorePath,
   "--no-editorconfig",
   sourceDirectory
 ];
 console.log(
   `Running trusted Prettier ${prettierPackage.version} from ${formatterAuthority.consumerRepository}@${authoritySha} against source ${sourceSha}.`
 );
-execFileSync(process.execPath, [prettierCli, ...args], {
-  cwd: authorityDirectory,
-  stdio: "inherit",
-  maxBuffer: 8 * 1024 * 1024
-});
+try {
+  execFileSync(process.execPath, [prettierCli, ...args], {
+    cwd: authorityDirectory,
+    stdio: "inherit",
+    maxBuffer: 8 * 1024 * 1024
+  });
+} finally {
+  unlinkSync(sourceIgnorePath);
+}
 
 const output = resolve(process.env.FORMATTER_AUTHORITY_OUTPUT);
 mkdirSync(dirname(output), { recursive: true });
