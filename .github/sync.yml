@@ -8,14 +8,10 @@ yohn-jp/gh-inari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -32,14 +28,10 @@ yohn-jp/gh-inari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -54,71 +46,14 @@ yohn-jp/gh-inari:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
-  - source: templates/workflows/codeql.yml
-    dest: .github/workflows/codeql.yml
-  - source: templates/workflows/governance.yml
-    dest: .github/workflows/governance.yml
-  - source: templates/workflows/issue-governance.yml
-    dest: .github/workflows/issue-governance.yml
-  - source: templates/workflows/publish.yml
-    dest: .github/workflows/publish.yml
-  - source: templates/workflows/prettier-autofix.yml
-    dest: .github/workflows/prettier-autofix.yml
-yohn-jp/gh-makami:
-  - source: .github/ISSUE_TEMPLATE/config.yml
-    dest: .github/ISSUE_TEMPLATE/config.yml
-  - source: .github/ISSUE_TEMPLATE/bug.yml
-    dest: .github/ISSUE_TEMPLATE/bug.yml
-  - source: .github/ISSUE_TEMPLATE/feature.yml
-    dest: .github/ISSUE_TEMPLATE/feature.yml
-  - source: .github/ISSUE_TEMPLATE/architecture.yml
-    dest: .github/ISSUE_TEMPLATE/architecture.yml
   - source: .github/ISSUE_TEMPLATE/epic.yml
     dest: .github/ISSUE_TEMPLATE/epic.yml
-  - source: .github/ISSUE_TEMPLATE/maintenance.yml
-    dest: .github/ISSUE_TEMPLATE/maintenance.yml
-  - source: .github/ISSUE_TEMPLATE/research.yml
-    dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
-  - source: .github/PULL_REQUEST_TEMPLATE/default.md
-    dest: .github/PULL_REQUEST_TEMPLATE/default.md
-  - source: .github/PULL_REQUEST_TEMPLATE/release.md
-    dest: .github/PULL_REQUEST_TEMPLATE/release.md
-  - source: .github/PULL_REQUEST_TEMPLATE/authority.md
-    dest: .github/PULL_REQUEST_TEMPLATE/authority.md
-  - source: .github/PULL_REQUEST_TEMPLATE/epic.md
-    dest: .github/PULL_REQUEST_TEMPLATE/epic.md
-  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
-    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
-  - source: .github/inari/issues/bug.json
-    dest: .github/inari/issues/bug.json
-  - source: .github/inari/issues/feature.json
-    dest: .github/inari/issues/feature.json
-  - source: .github/inari/issues/architecture.json
-    dest: .github/inari/issues/architecture.json
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
-  - source: .github/inari/issues/maintenance.json
-    dest: .github/inari/issues/maintenance.json
-  - source: .github/inari/issues/research.json
-    dest: .github/inari/issues/research.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
-  - source: .github/inari/pull-requests/default.json
-    dest: .github/inari/pull-requests/default.json
-  - source: .github/inari/pull-requests/release.json
-    dest: .github/inari/pull-requests/release.json
-  - source: .github/inari/pull-requests/authority.json
-    dest: .github/inari/pull-requests/authority.json
-  - source: .github/inari/pull-requests/epic.json
-    dest: .github/inari/pull-requests/epic.json
-  - source: .github/inari/pull-requests/issue-integration.json
-    dest: .github/inari/pull-requests/issue-integration.json
-  - source: .github/inari/pr-policy.yml
-    dest: .github/inari/pr-policy.yml
-  - source: .github/inari/manifest.json
-    dest: .github/inari/manifest.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: templates/workflows/governance.yml
@@ -138,14 +73,10 @@ yohn-jp/suzukuri:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -162,14 +93,10 @@ yohn-jp/suzukuri:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -184,6 +111,14 @@ yohn-jp/suzukuri:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: templates/workflows/governance.yml
@@ -203,14 +138,10 @@ yohn-jp/shikitari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -227,14 +158,10 @@ yohn-jp/shikitari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -249,71 +176,14 @@ yohn-jp/shikitari:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
-  - source: templates/workflows/codeql.yml
-    dest: .github/workflows/codeql.yml
-  - source: templates/workflows/governance.yml
-    dest: .github/workflows/governance.yml
-  - source: templates/workflows/issue-governance.yml
-    dest: .github/workflows/issue-governance.yml
-  - source: templates/workflows/publish.yml
-    dest: .github/workflows/publish.yml
-  - source: templates/workflows/prettier-autofix.yml
-    dest: .github/workflows/prettier-autofix.yml
-yohn-jp/nawabari:
-  - source: .github/ISSUE_TEMPLATE/config.yml
-    dest: .github/ISSUE_TEMPLATE/config.yml
-  - source: .github/ISSUE_TEMPLATE/bug.yml
-    dest: .github/ISSUE_TEMPLATE/bug.yml
-  - source: .github/ISSUE_TEMPLATE/feature.yml
-    dest: .github/ISSUE_TEMPLATE/feature.yml
-  - source: .github/ISSUE_TEMPLATE/architecture.yml
-    dest: .github/ISSUE_TEMPLATE/architecture.yml
   - source: .github/ISSUE_TEMPLATE/epic.yml
     dest: .github/ISSUE_TEMPLATE/epic.yml
-  - source: .github/ISSUE_TEMPLATE/maintenance.yml
-    dest: .github/ISSUE_TEMPLATE/maintenance.yml
-  - source: .github/ISSUE_TEMPLATE/research.yml
-    dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
-  - source: .github/PULL_REQUEST_TEMPLATE/default.md
-    dest: .github/PULL_REQUEST_TEMPLATE/default.md
-  - source: .github/PULL_REQUEST_TEMPLATE/release.md
-    dest: .github/PULL_REQUEST_TEMPLATE/release.md
-  - source: .github/PULL_REQUEST_TEMPLATE/authority.md
-    dest: .github/PULL_REQUEST_TEMPLATE/authority.md
-  - source: .github/PULL_REQUEST_TEMPLATE/epic.md
-    dest: .github/PULL_REQUEST_TEMPLATE/epic.md
-  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
-    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
-  - source: .github/inari/issues/bug.json
-    dest: .github/inari/issues/bug.json
-  - source: .github/inari/issues/feature.json
-    dest: .github/inari/issues/feature.json
-  - source: .github/inari/issues/architecture.json
-    dest: .github/inari/issues/architecture.json
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
-  - source: .github/inari/issues/maintenance.json
-    dest: .github/inari/issues/maintenance.json
-  - source: .github/inari/issues/research.json
-    dest: .github/inari/issues/research.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
-  - source: .github/inari/pull-requests/default.json
-    dest: .github/inari/pull-requests/default.json
-  - source: .github/inari/pull-requests/release.json
-    dest: .github/inari/pull-requests/release.json
-  - source: .github/inari/pull-requests/authority.json
-    dest: .github/inari/pull-requests/authority.json
-  - source: .github/inari/pull-requests/epic.json
-    dest: .github/inari/pull-requests/epic.json
-  - source: .github/inari/pull-requests/issue-integration.json
-    dest: .github/inari/pull-requests/issue-integration.json
-  - source: .github/inari/pr-policy.yml
-    dest: .github/inari/pr-policy.yml
-  - source: .github/inari/manifest.json
-    dest: .github/inari/manifest.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: templates/workflows/governance.yml
@@ -333,14 +203,10 @@ yohn-jp/wabachi:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -357,14 +223,10 @@ yohn-jp/wabachi:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -379,6 +241,14 @@ yohn-jp/wabachi:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: templates/workflows/governance.yml
@@ -398,14 +268,10 @@ yohn-jp/cli-canon:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -422,14 +288,10 @@ yohn-jp/cli-canon:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -444,6 +306,14 @@ yohn-jp/cli-canon:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: templates/workflows/governance.yml
@@ -454,7 +324,7 @@ yohn-jp/cli-canon:
     dest: .github/workflows/publish.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
-yohn-jp/majiwari:
+yohn-jp/gh-makami:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
   - source: .github/ISSUE_TEMPLATE/bug.yml
@@ -463,14 +333,10 @@ yohn-jp/majiwari:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -487,14 +353,10 @@ yohn-jp/majiwari:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -509,14 +371,85 @@ yohn-jp/majiwari:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
-  - source: templates/workflows/codeql.yml
-    dest: .github/workflows/codeql.yml
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
+yohn-jp/nawabari:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
+  - source: .github/PULL_REQUEST_TEMPLATE/authority.md
+    dest: .github/PULL_REQUEST_TEMPLATE/authority.md
+  - source: .github/PULL_REQUEST_TEMPLATE/epic.md
+    dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+  - source: .github/inari/issues/bug.json
+    dest: .github/inari/issues/bug.json
+  - source: .github/inari/issues/feature.json
+    dest: .github/inari/issues/feature.json
+  - source: .github/inari/issues/architecture.json
+    dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/maintenance.json
+    dest: .github/inari/issues/maintenance.json
+  - source: .github/inari/issues/research.json
+    dest: .github/inari/issues/research.json
+  - source: .github/inari/pull-requests/default.json
+    dest: .github/inari/pull-requests/default.json
+  - source: .github/inari/pull-requests/release.json
+    dest: .github/inari/pull-requests/release.json
+  - source: .github/inari/pull-requests/authority.json
+    dest: .github/inari/pull-requests/authority.json
+  - source: .github/inari/pull-requests/epic.json
+    dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
+  - source: .github/inari/pr-policy.yml
+    dest: .github/inari/pr-policy.yml
+  - source: .github/inari/manifest.json
+    dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
     dest: .github/workflows/issue-governance.yml
-  - source: templates/workflows/publish.yml
-    dest: .github/workflows/publish.yml
+  - source: scripts/validate-pr.mjs
+    dest: scripts/validate-pr.mjs
+  - source: scripts/pr-contract-routing.mjs
+    dest: scripts/pr-contract-routing.mjs
+  - source: scripts/pr-template-marker.mjs
+    dest: scripts/pr-template-marker.mjs
+  - source: scripts/release-branch.mjs
+    dest: scripts/release-branch.mjs
+  - source: scripts/epic-branch.mjs
+    dest: scripts/epic-branch.mjs
+  - source: scripts/validate-issue.mjs
+    dest: scripts/validate-issue.mjs
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/mottainai:
@@ -528,14 +461,10 @@ yohn-jp/mottainai:
     dest: .github/ISSUE_TEMPLATE/feature.yml
   - source: .github/ISSUE_TEMPLATE/architecture.yml
     dest: .github/ISSUE_TEMPLATE/architecture.yml
-  - source: .github/ISSUE_TEMPLATE/epic.yml
-    dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/ISSUE_TEMPLATE/maintenance.yml
     dest: .github/ISSUE_TEMPLATE/maintenance.yml
   - source: .github/ISSUE_TEMPLATE/research.yml
     dest: .github/ISSUE_TEMPLATE/research.yml
-  - source: .github/ISSUE_TEMPLATE/implementation.yml
-    dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/PULL_REQUEST_TEMPLATE/default.md
     dest: .github/PULL_REQUEST_TEMPLATE/default.md
   - source: .github/PULL_REQUEST_TEMPLATE/release.md
@@ -552,14 +481,10 @@ yohn-jp/mottainai:
     dest: .github/inari/issues/feature.json
   - source: .github/inari/issues/architecture.json
     dest: .github/inari/issues/architecture.json
-  - source: .github/inari/issues/epic.json
-    dest: .github/inari/issues/epic.json
   - source: .github/inari/issues/maintenance.json
     dest: .github/inari/issues/maintenance.json
   - source: .github/inari/issues/research.json
     dest: .github/inari/issues/research.json
-  - source: .github/inari/issues/implementation.json
-    dest: .github/inari/issues/implementation.json
   - source: .github/inari/pull-requests/default.json
     dest: .github/inari/pull-requests/default.json
   - source: .github/inari/pull-requests/release.json
@@ -574,3 +499,80 @@ yohn-jp/mottainai:
     dest: .github/inari/pr-policy.yml
   - source: .github/inari/manifest.json
     dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
+yohn-jp/majiwari:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
+  - source: .github/PULL_REQUEST_TEMPLATE/authority.md
+    dest: .github/PULL_REQUEST_TEMPLATE/authority.md
+  - source: .github/PULL_REQUEST_TEMPLATE/epic.md
+    dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+  - source: .github/inari/issues/bug.json
+    dest: .github/inari/issues/bug.json
+  - source: .github/inari/issues/feature.json
+    dest: .github/inari/issues/feature.json
+  - source: .github/inari/issues/architecture.json
+    dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/maintenance.json
+    dest: .github/inari/issues/maintenance.json
+  - source: .github/inari/issues/research.json
+    dest: .github/inari/issues/research.json
+  - source: .github/inari/pull-requests/default.json
+    dest: .github/inari/pull-requests/default.json
+  - source: .github/inari/pull-requests/release.json
+    dest: .github/inari/pull-requests/release.json
+  - source: .github/inari/pull-requests/authority.json
+    dest: .github/inari/pull-requests/authority.json
+  - source: .github/inari/pull-requests/epic.json
+    dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
+  - source: .github/inari/pr-policy.yml
+    dest: .github/inari/pr-policy.yml
+  - source: .github/inari/manifest.json
+    dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: AGENTS.md
+    dest: AGENTS.md
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: templates/workflows/majiwari-ci.yml
+    dest: .github/workflows/ci.yml
+  - source: templates/workflows/codeql.yml
+    dest: .github/workflows/codeql.yml
+  - source: .github/codeql/codeql-config.yml
+    dest: .github/codeql/codeql-config.yml
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
+  - source: templates/workflows/issue-governance.yml
+    dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
+  - source: scripts/validate-action-pins.mjs
+    dest: scripts/validate-action-pins.mjs
