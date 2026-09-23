@@ -73,6 +73,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Repair canonical Prettier formatting
+        run: pnpm run format
+
       - name: Check canonical Prettier formatting
         run: pnpm run format:check
 
