@@ -399,6 +399,7 @@ export function validatePatch(input) {
     let newFilePath;
     let sawHunk = false;
     let hunkChangedLines = 0;
+    let previousHunkLine;
     for (let i = 0; i < section.lines.length; i += 1) {
       const line = section.lines[i];
       if (
@@ -441,13 +442,23 @@ export function validatePatch(input) {
           throw new Error("patch contains a malformed hunk header");
         }
         sawHunk = true;
+        previousHunkLine = undefined;
         continue;
       }
       if (!sawHunk) {
         throw new Error("patch contains an unsupported file header");
       }
       if (line.startsWith("\\ No newline at end of file")) {
-        throw new Error("patch without final newlines is not permitted");
+        if (
+          line !== "\\ No newline at end of file" ||
+          previousHunkLine === undefined ||
+          !previousHunkLine.startsWith("-") ||
+          previousHunkLine.startsWith("---")
+        ) {
+          throw new Error("patch without final newlines is not permitted");
+        }
+        previousHunkLine = line;
+        continue;
       }
       if (line.startsWith("+") || line.startsWith("-")) {
         totalChangedLines += 1;
@@ -455,6 +466,7 @@ export function validatePatch(input) {
       } else if (!line.startsWith(" ")) {
         throw new Error("patch contains malformed hunk data");
       }
+      previousHunkLine = line;
     }
     if (
       oldFilePath === undefined ||
