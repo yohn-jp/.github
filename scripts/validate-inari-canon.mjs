@@ -156,6 +156,8 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(\n    error instanceof Error ? error.stack ?? error.message : String(error)\n  );
+  console.error(
+    error instanceof Error ? error.stack ?? error.message : String(error)
+  );
   process.exitCode = 1;
 });
