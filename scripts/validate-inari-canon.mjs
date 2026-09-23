@@ -40,12 +40,26 @@ async function main() {
   const identities = await semantic.discoverSemanticTemplates(repositoryRoot);
 
   for (const identity of identities) {
-    const document = await semantic.readSemanticTemplate(
-      repositoryRoot,
-      identity
+    const sourcePath = path.join(repositoryRoot, identity.sourcePath);
+    const serialized = await readFile(sourcePath, "utf8");
+    const authored = JSON.parse(serialized);
+    const canonical = semantic.parseSemanticTemplate(
+      serialized,
+      identity.sourcePath
     );
+
+    // parseSemanticTemplate is the current Inari normalization boundary. A
+    // semantic source that only survives through legacy aliases/defaulting is
+    // valid input, but it is not the current canonical representation.
+    if (JSON.stringify(authored) !== JSON.stringify(canonical)) {
+      errors.push(
+        `${identity.sourcePath}: semantic JSON is accepted but is not the current canonical representation of gh-inari@${packageJson.version}`
+      );
+    }
+
+    const document = { ...identity, source: canonical };
     const expected = semantic.renderSemanticNative(
-      document.source,
+      canonical,
       identity.generatedPath
     );
     const generatedPath = path.join(repositoryRoot, identity.generatedPath);
