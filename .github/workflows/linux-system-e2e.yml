@@ -47,6 +47,10 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
 
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
+
       - name: Run consumer host setup
         if: inputs.pre-command != ''
         working-directory: ${{ inputs.working-directory }}

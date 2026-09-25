@@ -22,7 +22,10 @@ jobs:
 
         membership="$(awk -F: '$1 == "0" { print $3 }' /proc/self/cgroup)"
         current="/sys/fs/cgroup${membership}"
-        test "$(basename "$current")" = "yohn-ci-runner"
+        case "$(basename "$current")" in
+          *.scope) ;;
+          *) exit 1 ;;
+        esac
         delegated_root="$current"
 
         for controller in cpu memory pids; do
