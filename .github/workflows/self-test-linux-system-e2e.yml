@@ -23,12 +23,12 @@ jobs:
         membership="$(awk -F: '$1 == "0" { print $3 }' /proc/self/cgroup)"
         current="/sys/fs/cgroup${membership}"
         test "$(basename "$current")" = "yohn-ci-runner"
-        delegated_root="$(dirname "$current")"
+        delegated_root="$current"
 
         for controller in cpu memory pids; do
           grep -qw "$controller" "$delegated_root/cgroup.controllers"
         done
 
-        probe="$delegated_root/yohn-ci-selftest-$$"
+        probe="$delegated_root/yohn-ci-selftest-$"
         mkdir "$probe"
         rmdir "$probe"

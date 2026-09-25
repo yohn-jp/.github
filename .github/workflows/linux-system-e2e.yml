@@ -47,10 +47,6 @@ jobs:
         with:
           working-directory: ${{ inputs.working-directory }}
 
-      - name: Isolate provider tooling
-        shell: bash
-        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
-
       - name: Run consumer host setup
         if: inputs.pre-command != ''
         working-directory: ${{ inputs.working-directory }}
@@ -113,25 +109,8 @@ jobs:
 
           delegated_root="/sys/fs/cgroup${membership}"
           test -d "$delegated_root"
-          child="$delegated_root/yohn-ci-runner"
-          mkdir "$child"
-
-          cleanup() {
-            set +e
-            printf '%s\n' "$$" >"$delegated_root/cgroup.procs"
-            rmdir "$child"
-          }
-          trap cleanup EXIT
-
-          printf '%s\n' "$$" >"$child/cgroup.procs"
-
           for controller in cpu memory pids; do
             grep -qw "$controller" "$delegated_root/cgroup.controllers"
-          done
-          printf '+cpu +memory +pids\n' >"$delegated_root/cgroup.subtree_control"
-
-          for controller in cpu memory pids; do
-            grep -qw "$controller" "$child/cgroup.controllers"
           done
 
           cd "$SYSTEM_E2E_WORKING_DIR"
@@ -145,3 +124,11 @@ jobs:
           systemctl --user is-active default.target >/dev/null
 
           systemd-run --user --scope --quiet --collect             --property=Delegate=yes             "$wrapper"
+
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
