@@ -14,7 +14,7 @@ aggregate:
     fail: [failure, cancelled, timed_out, action_required]
 
 defaults:
-  runner: ubuntu-latest
+  runner: ubuntu-24.04
   permissions:
     contents: read
   forbidden-keys:

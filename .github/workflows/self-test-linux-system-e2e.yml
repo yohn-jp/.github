@@ -1,0 +1,34 @@
+name: Self-test Linux system E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  system-e2e:
+    uses: ./.github/workflows/linux-system-e2e.yml
+    with:
+      working-directory: test/fixtures/ts-cli
+      command: |
+        set -euo pipefail
+        test "$(id -u)" -ne 0
+        test "$(stat -fc %T /sys/fs/cgroup)" = "cgroup2fs"
+        node -e 'if (process.versions.node.split(".")[0] !== "24") process.exit(1)'
+        nix --version
+
+        membership="$(awk -F: '$1 == "0" { print $3 }' /proc/self/cgroup)"
+        current="/sys/fs/cgroup${membership}"
+        test "$(basename "$current")" = "yohn-ci-runner"
+        delegated_root="$(dirname "$current")"
+
+        for controller in cpu memory pids; do
+          grep -qw "$controller" "$delegated_root/cgroup.controllers"
+        done
+
+        probe="$delegated_root/yohn-ci-selftest-$$"
+        mkdir "$probe"
+        rmdir "$probe"

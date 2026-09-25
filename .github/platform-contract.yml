@@ -9,6 +9,14 @@ linux:
     - nixos
   init: systemd
   cgroups: v2
+  system_e2e:
+    workflow: linux-system-e2e.yml
+    execution: systemd-user-scope
+    user: non-root
+    delegated_controllers:
+      - cpu
+      - memory
+      - pids
 
 runtime:
   node: "24"
