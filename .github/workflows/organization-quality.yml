@@ -209,7 +209,7 @@ jobs:
       - supply-chain-security
       - workflow-security
       - test-effectiveness
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:

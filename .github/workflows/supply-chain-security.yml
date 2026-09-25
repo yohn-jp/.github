@@ -46,7 +46,7 @@ permissions:
 jobs:
   validate-policy:
     name: Validate supply-chain policy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -104,7 +104,7 @@ jobs:
       needs.validate-policy.result == 'success' &&
       inputs.execution-mode == 'pr' &&
       github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: read
@@ -158,7 +158,7 @@ jobs:
     name: Supply-chain security status
     if: always()
     needs: [validate-policy, dependency-review, codeql]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:

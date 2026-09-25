@@ -1,7 +1,7 @@
-name: Setup Node.js and pnpm
+name: Setup canonical runtime
 
 description: >-
-  Installs Nix, then sets up Node.js and provisions the exact pnpm executable declared by the
+  Installs Nix, sets up Node.js 24 by default, and provisions the exact pnpm executable declared by the
   consumer's packageManager field, then installs dependencies with a frozen
   lockfile. The pnpm executable and the pnpm content-addressable store are
   cached independently: the executable cache is keyed by OS/arch/version and
