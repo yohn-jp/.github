@@ -116,7 +116,7 @@ permissions:
 jobs:
   plan:
     name: Validate contract and select mode
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       mutation_mode: ${{ steps.mode.outputs.mutation_mode }}
       consumer_sha: ${{ steps.consumer-ref.outputs.consumer_sha }}
@@ -208,7 +208,7 @@ jobs:
     name: Coverage regression
     needs: plan
     if: inputs.coverage-enabled
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout consumer repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -338,7 +338,7 @@ jobs:
     name: Property tests
     needs: plan
     if: inputs.property-enabled
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout consumer repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -471,7 +471,7 @@ jobs:
     name: Mutation (${{ needs.plan.outputs.mutation_mode }})
     needs: plan
     if: inputs.mutation-enabled
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout consumer repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -601,7 +601,7 @@ jobs:
       - mutation
     outputs:
       status: ${{ steps.status.outputs.status }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check capability results
         id: status

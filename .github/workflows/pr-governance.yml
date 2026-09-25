@@ -49,7 +49,7 @@ jobs:
   validate-branch-name:
     name: Validate branch name
     if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'reopened') && !inputs.skip-branch-name-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout governance tooling (yohn-jp/.github)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,7 +72,7 @@ jobs:
   validate-pr-contract:
     name: Validate PR contract (Inari snapshot)
     if: github.event_name == 'pull_request' && !inputs.skip-pr-contract-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:

@@ -1,0 +1,23 @@
+version: 1
+
+architecture: x86_64
+
+linux:
+  canonical_runner: ubuntu-24.04
+  supported_distributions:
+    - ubuntu-24.04
+    - nixos
+  init: systemd
+  cgroups: v2
+
+runtime:
+  node: "24"
+  nix: required
+
+unsupported:
+  - windows
+  - macos
+
+policy:
+  reusable_workflows_ref: "@main"
+  product_verification_owner: consumer
