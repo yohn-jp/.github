@@ -1,0 +1,138 @@
+name: Linux system E2E
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the consumer package and lockfile.
+        type: string
+        default: "."
+      pre-command:
+        description: Optional consumer-owned host setup command run before entering the delegated scope.
+        type: string
+        default: ""
+      command:
+        description: Consumer-owned system E2E command executed as the non-root runner user.
+        type: string
+        required: true
+      timeout-minutes:
+        description: Maximum job duration.
+        type: number
+        default: 20
+
+permissions:
+  contents: read
+
+jobs:
+  system-e2e:
+    name: Ubuntu 24.04 / Nix / delegated cgroups v2
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Checkout consumer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout provider tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .provider-tools
+          persist-credentials: false
+
+      - name: Setup canonical runtime
+        uses: ./.provider-tools/.github/actions/setup-runtime
+        with:
+          working-directory: ${{ inputs.working-directory }}
+
+      - name: Isolate provider tooling
+        shell: bash
+        run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
+
+      - name: Run consumer host setup
+        if: inputs.pre-command != ''
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
+        env:
+          PRE_COMMAND: ${{ inputs.pre-command }}
+        run: bash -euo pipefail -c "$PRE_COMMAND"
+
+      - name: Prepare systemd user delegation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          test "$(stat -fc %T /sys/fs/cgroup)" = "cgroup2fs"
+
+          if ! dpkg-query -W -f='${Status}' dbus-user-session 2>/dev/null | grep -q 'ok installed'; then
+            sudo apt-get update
+            sudo apt-get install -y dbus-user-session
+          fi
+
+          sudo install -d -m 0755 /etc/systemd/system/user@.service.d
+          printf '[Service]\nDelegate=cpu memory pids\n' |
+            sudo tee /etc/systemd/system/user@.service.d/yohn-ci-delegate.conf >/dev/null
+          sudo systemctl daemon-reload
+          sudo loginctl enable-linger "$(id -un)"
+          sudo systemctl restart "user@$(id -u).service"
+
+          runtime_dir="/run/user/$(id -u)"
+          for _ in $(seq 1 20); do
+            test -S "$runtime_dir/bus" && break
+            sleep 0.25
+          done
+          test -S "$runtime_dir/bus"
+
+      - name: Run consumer command in delegated non-root scope
+        shell: bash
+        env:
+          SYSTEM_E2E_COMMAND: ${{ inputs.command }}
+          SYSTEM_E2E_WORKING_DIR: ${{ github.workspace }}/${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          wrapper="$RUNNER_TEMP/yohn-linux-system-e2e.sh"
+          cat >"$wrapper" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          if [ "$(id -u)" -eq 0 ]; then
+            echo "system E2E consumer command must not run as root" >&2
+            exit 1
+          fi
+
+          membership="$(awk -F: '$1 == "0" { print $3 }' /proc/self/cgroup)"
+          case "$membership" in
+            /*) ;;
+            *)
+              echo "unified cgroup membership is unavailable" >&2
+              exit 1
+              ;;
+          esac
+
+          delegated_root="/sys/fs/cgroup${membership}"
+          test -d "$delegated_root"
+          for controller in cpu memory pids; do
+            grep -qw "$controller" "$delegated_root/cgroup.controllers"
+          done
+
+          cd "$SYSTEM_E2E_WORKING_DIR"
+          bash -euo pipefail -c "$SYSTEM_E2E_COMMAND"
+          EOF
+          chmod 0700 "$wrapper"
+
+          uid="$(id -u)"
+          export XDG_RUNTIME_DIR="/run/user/$uid"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          systemctl --user is-active default.target >/dev/null
+
+          systemd-run --user --scope --quiet --collect             --property=Delegate=yes             "$wrapper"
+
+      - name: Restore provider tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/provider-tools" ] && [ ! -e .provider-tools ]; then
+            mv "$RUNNER_TEMP/provider-tools" .provider-tools
+          fi
