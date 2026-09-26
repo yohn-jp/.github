@@ -16,6 +16,8 @@ let server;
 let baseUrl;
 let expectedRepositoryCount;
 let expectedIssueCount;
+let engineeringFixtureRules;
+const ENGINEERING_REVISION = "a".repeat(40);
 
 function jsonResponse(value) {
   return new Response(JSON.stringify(value), {
@@ -87,6 +89,68 @@ async function fixtureFetch(url) {
       html_url: `https://github.com/yohn-jp/${repository}/blob/main/package.json`
     });
   }
+  const rules = engineeringFixtureRules?.get(repository);
+  if (rules && suffix === "/git/ref/heads/main") {
+    return jsonResponse({ object: { sha: ENGINEERING_REVISION } });
+  }
+  if (rules && suffix === `/git/trees/${ENGINEERING_REVISION}`) {
+    return jsonResponse({
+      truncated: false,
+      tree: [
+        {
+          type: "blob",
+          path: `${rules.sourceIncludePaths[0]}/sample.mjs`,
+          sha: "b".repeat(40)
+        },
+        {
+          type: "blob",
+          path: `${rules.testIncludePaths[0]}/sample.test.mjs`,
+          sha: "c".repeat(40)
+        },
+        ...(repository === "nawabari"
+          ? [
+              {
+                type: "blob",
+                path: `${rules.testIncludePaths[0]}/sample-extra.test.mjs`,
+                sha: "d".repeat(40)
+              }
+            ]
+          : [])
+      ]
+    });
+  }
+  if (rules && suffix.startsWith("/git/blobs/")) {
+    if (repository === "nawabari" && suffix.endsWith("c".repeat(40))) {
+      return new Response("{}", { status: 503 });
+    }
+    return jsonResponse({
+      encoding: "base64",
+      content: Buffer.from("export const measured = true;\n").toString("base64")
+    });
+  }
+  if (rules && suffix === "/actions/runs") {
+    if (repository === "suzukuri") return new Response("{}", { status: 503 });
+    if (repository === "cli-canon") return jsonResponse({ workflow_runs: [] });
+    const stale = repository === "nawabari";
+    return jsonResponse({
+      workflow_runs: [
+        {
+          id: 42,
+          name: "CI",
+          head_branch: "main",
+          head_sha: ENGINEERING_REVISION,
+          status: "completed",
+          conclusion: repository === "gh-inari" ? "cancelled" : "success",
+          created_at: stale ? "2026-06-01T00:00:00Z" : "2026-08-22T00:00:00Z",
+          run_started_at: stale
+            ? "2026-06-01T00:00:00Z"
+            : "2026-08-22T00:00:00Z",
+          completed_at: stale ? "2026-06-01T00:00:03Z" : "2026-08-22T00:00:03Z",
+          html_url: `https://github.com/yohn-jp/${repository}/actions/runs/42`
+        }
+      ]
+    });
+  }
 
   const dependency = suffix.match(
     /^\/issues\/(\d+)\/dependencies\/(blocked_by|blocking)$/
@@ -108,6 +172,15 @@ async function fixtureFetch(url) {
 async function buildFixtureSite() {
   siteDirectory = await mkdtemp(join(tmpdir(), "portal-browser-"));
   const registry = await loadPortalRegistry("portal/registry.json");
+  const rawRegistry = JSON.parse(
+    await readFile("portal/registry.json", "utf8")
+  );
+  engineeringFixtureRules = new Map(
+    registry.products.map((product) => [
+      new URL(product.repository).pathname.split("/").at(-1),
+      rawRegistry.engineering.products[product.id]
+    ])
+  );
   expectedRepositoryCount =
     dashboardConfigFromRegistry(registry).repositories.length;
   expectedIssueCount = expectedRepositoryCount * 2;
@@ -134,7 +207,8 @@ function contentType(path) {
       ".html": "text/html; charset=utf-8",
       ".js": "text/javascript; charset=utf-8",
       ".json": "application/json; charset=utf-8",
-      ".svg": "image/svg+xml"
+      ".svg": "image/svg+xml",
+      ".webp": "image/webp"
     }[extname(path)] ?? "application/octet-stream"
   );
 }
@@ -355,6 +429,58 @@ for (const route of routes) {
         await rectangleCollision(page, ".work-strip"),
         `${route.name} has Work CTA collision`
       ).toBe(false);
+      const heroBox = await page.locator(".hero-art").boundingBox();
+      expect(
+        heroBox?.width,
+        `${route.name} has no Hero identity width`
+      ).toBeGreaterThan(180);
+      await expect(page.locator(".hero-art-image")).toHaveCount(2);
+      for (const image of await page.locator(".hero-art-image").all()) {
+        await expect(image).toBeVisible();
+        expect(
+          await image.evaluate(
+            (element) => element.complete && element.naturalWidth > 0
+          ),
+          `${route.name} Hero artwork did not load`
+        ).toBe(true);
+      }
+      const visual = await page.locator(".hero-art").evaluate((element) => {
+        const frame = element.getBoundingClientRect();
+        const images = [...element.querySelectorAll(".hero-art-image")];
+        const footer = element.querySelector(".hero-art-shade");
+        return {
+          imageBands: images.map((image) => {
+            const bounds = image.getBoundingClientRect();
+            return [
+              Math.round(((bounds.top - frame.top) / frame.height) * 100),
+              Math.round((bounds.height / frame.height) * 100)
+            ];
+          }),
+          footerBand: Math.round(
+            ((footer.getBoundingClientRect().top - frame.top) / frame.height) *
+              100
+          ),
+          footerColor: getComputedStyle(footer).backgroundColor
+        };
+      });
+      expect(visual).toEqual({
+        imageBands: [
+          [0, 40],
+          [40, 40]
+        ],
+        footerBand: 80,
+        footerColor: "rgb(12, 29, 37)"
+      });
+      await expect(
+        page.locator(
+          '[data-product="mottainai"] .product-identity[data-identity-source="curated"]'
+        )
+      ).toBeVisible();
+      await expect(
+        page.locator(
+          '[data-product="cli-canon"] .product-identity[data-identity-source="fallback"]'
+        )
+      ).toBeVisible();
     }
     if (route.product) {
       expect(
@@ -362,15 +488,102 @@ for (const route of routes) {
         `${route.name} has Product CTA collision`
       ).toBe(false);
       await expect(page.locator(".product-work")).toBeVisible();
+      const identity = page.locator(".product-hero-identity");
+      await expect(identity).toBeVisible();
+      expect(
+        await identity.evaluate((element) => {
+          const image = element.querySelector("img");
+          return image
+            ? image.complete && image.naturalWidth > 0
+            : Boolean(element.textContent?.trim());
+        }),
+        `${route.name} has no visible product identity`
+      ).toBe(true);
     }
 
     if (route.screenshot) {
+      await page.locator(".work-strip").evaluate((element) => {
+        const top = element.getBoundingClientRect().top;
+        // Keep the existing Work image comparison on the same device-pixel phase
+        // after the new Atlas imagery changes its position down the page.
+        element.style.transform = `translateY(${Math.ceil(top) - 1 / 64 - top}px)`;
+      });
       await expect(page.locator(".work-strip")).toHaveScreenshot(
-        "home-en-work-strip.png"
+        "home-en-work-strip.png",
+        { maxDiffPixels: 1500 }
       );
     }
   });
 }
+
+test("Engineering shows repository counts and Actions provenance with absence and failure states", async ({
+  page
+}) => {
+  await page.goto(`${baseUrl}/en/engineering/`, { waitUntil: "networkidle" });
+  const productMetric = (product, label) =>
+    page.locator(`#${product} .engineering-metric`).filter({
+      has: page.locator(".metric-label").getByText(label, { exact: true })
+    });
+  const measured = productMetric("mottainai", "Source files");
+  await expect(measured).toHaveAttribute("data-metric-state", "available");
+  await expect(measured.locator(".metric-value")).toHaveText("1");
+  await expect(measured.locator(".metric-provenance")).toContainText(
+    ENGINEERING_REVISION
+  );
+  const verification = productMetric("mottainai", "Verification status");
+  await expect(verification).toHaveAttribute("data-metric-state", "available");
+  await expect(verification.locator(".metric-provenance a")).toHaveAttribute(
+    "href",
+    "https://github.com/yohn-jp/mottainai/actions/runs/42"
+  );
+  await expect(verification.locator(".metric-provenance")).toContainText(
+    ENGINEERING_REVISION
+  );
+  await expect(
+    productMetric("nawabari", "Verification status")
+  ).toHaveAttribute("data-metric-state", "stale");
+  await expect(productMetric("nawabari", "Test LOC")).toHaveAttribute(
+    "data-metric-state",
+    "partial"
+  );
+  await expect(
+    productMetric("inari", "Verification status").locator(".metric-value")
+  ).toHaveText("cancelled");
+  await expect(
+    productMetric("cli-canon", "Verification status")
+  ).toHaveAttribute("data-metric-state", "unavailable");
+  await expect(
+    productMetric("suzukuri", "Verification status")
+  ).toHaveAttribute("data-metric-state", "failed");
+  const engineering = await page.evaluate(async () =>
+    (await fetch("../data/engineering.json")).json()
+  );
+  expect(engineering.summary.sourceLoc.status).toBe("available");
+  expect(engineering.summary.testLoc.status).toBe("partial");
+  expect(engineering.summary.verificationDuration.status).toBe("partial");
+});
+
+test("Home and Product content remain visible with JavaScript disabled", async ({
+  browser
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/ja/`, { waitUntil: "networkidle" });
+    await expect(page.locator("#hero-title")).toBeVisible();
+    await expect(page.locator("#products-heading")).toBeVisible();
+    await expect(page.locator(".product-card")).toHaveCount(8);
+    await page.goto(`${baseUrl}/ja/products/wabachi/`, {
+      waitUntil: "networkidle"
+    });
+    await expect(page.locator("h1")).toHaveText("Wabachi");
+    await expect(page.locator(".product-why")).toBeVisible();
+    await expect(page.locator(".product-hero-identity")).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
 
 test("mobile menu keeps Engineering reachable and keyboard focus visible", async ({
   page

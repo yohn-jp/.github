@@ -2,6 +2,16 @@ import { readFile } from "node:fs/promises";
 import { PRODUCT_CONTENT_LOCALES } from "./product-catalog.mjs";
 
 export const PRODUCT_DETAILS_SCHEMA_VERSION = 1;
+const PRODUCT_IDENTITY_TONES = new Set([
+  "moss",
+  "blue",
+  "ember",
+  "lime",
+  "violet",
+  "ochre",
+  "stone",
+  "teal"
+]);
 
 function requiredString(value, path) {
   if (typeof value !== "string" || value.trim() === "") {
@@ -99,15 +109,71 @@ function localizedDetailContent(detail, path) {
   );
 }
 
+function productIdentity(value, path) {
+  const source = record(value, path);
+  const asset = source.asset;
+  if (asset !== null && typeof asset !== "string") {
+    throw new Error(`${path}.asset must be a string or null`);
+  }
+  if (typeof asset === "string") {
+    requiredString(asset, `${path}.asset`);
+    if (!/^[a-z0-9][a-z0-9.-]*\.webp$/.test(asset)) {
+      throw new Error(`${path}.asset must be a product WebP filename`);
+    }
+  }
+  const fallback = requiredString(source.fallback, `${path}.fallback`);
+  if (!/^[A-Z]{2,4}$/.test(fallback)) {
+    throw new Error(`${path}.fallback must be an uppercase monogram`);
+  }
+  const tone = requiredString(source.tone, `${path}.tone`);
+  if (!PRODUCT_IDENTITY_TONES.has(tone)) {
+    throw new Error(`${path}.tone is not a supported identity tone: ${tone}`);
+  }
+  if (source.source !== null && source.source !== undefined) {
+    const provenance = record(source.source, `${path}.source`);
+    const repository = requiredString(
+      provenance.repository,
+      `${path}.source.repository`
+    );
+    if (!/^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(repository)) {
+      throw new Error(`${path}.source.repository must be owner/name`);
+    }
+    const sourcePath = requiredString(provenance.path, `${path}.source.path`);
+    if (sourcePath.includes("..") || sourcePath.startsWith("/")) {
+      throw new Error(`${path}.source.path must be a repository-relative path`);
+    }
+    const revision = requiredString(
+      provenance.revision,
+      `${path}.source.revision`
+    );
+    const sha256 = requiredString(provenance.sha256, `${path}.source.sha256`);
+    if (!/^[a-f0-9]{64}$/i.test(sha256)) {
+      throw new Error(`${path}.source.sha256 must be a SHA-256 digest`);
+    }
+    return {
+      asset,
+      fallback,
+      tone,
+      source: { repository, path: sourcePath, revision, sha256 }
+    };
+  }
+  if (asset !== null) {
+    throw new Error(`${path}.source is required when an asset is present`);
+  }
+  return { asset, fallback, tone, source: null };
+}
+
 function normalizeDetail(detail, index) {
   const path = `products[${index}]`;
   if (!detail || typeof detail !== "object" || Array.isArray(detail)) {
     throw new Error(`${path} must be an object`);
   }
   const id = requiredString(detail.id, `${path}.id`);
+  const identity = productIdentity(detail.identity, `${path}.identity`);
   const locales = localizedDetailContent(detail, path);
   return {
     id,
+    identity,
     why: locales.en.why,
     core: locales.en.core,
     maturity: locales.en.maturity,

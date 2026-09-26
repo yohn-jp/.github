@@ -213,3 +213,24 @@
 .maturity-block > p:last-child {
   color: var(--dark-muted);
 }
+
+.product-hero-identity {
+  width: min(100%, 720px);
+  height: clamp(130px, 18vw, 220px);
+  margin-bottom: 34px;
+}
+
+.product-hero-identity img {
+  min-height: 0;
+}
+
+.product-hero-identity .product-identity-fallback {
+  font-size: clamp(4rem, 11vw, 8rem);
+}
+
+@media (max-width: 520px) {
+  .product-hero-identity {
+    height: 130px;
+    margin-bottom: 28px;
+  }
+}
