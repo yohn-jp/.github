@@ -502,6 +502,63 @@ for (const route of routes) {
     }
 
     if (route.screenshot) {
+      const currentHero = await page.locator(".hero-art").screenshot({
+        animations: "disabled"
+      });
+      const referenceHero = await readFile(
+        new URL(
+          "./portal-browser.spec.mjs-snapshots/home-en-hero.png",
+          import.meta.url
+        )
+      );
+      const heroDifference = await page.evaluate(
+        async ({ current, reference }) => {
+          const load = (data) =>
+            new Promise((resolve, reject) => {
+              const image = new Image();
+              image.onload = () => resolve(image);
+              image.onerror = reject;
+              image.src = `data:image/png;base64,${data}`;
+            });
+          const [actual, baseline] = await Promise.all([
+            load(current),
+            load(reference)
+          ]);
+          if (
+            actual.width !== baseline.width ||
+            actual.height !== baseline.height
+          )
+            return { sameSize: false, changedPixels: null };
+          const pixels = (image) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const context = canvas.getContext("2d");
+            context.drawImage(image, 0, 0);
+            return context.getImageData(0, 0, image.width, image.height).data;
+          };
+          const first = pixels(actual);
+          const second = pixels(baseline);
+          let changedPixels = 0;
+          for (let index = 0; index < first.length; index += 4) {
+            if (
+              Math.max(
+                Math.abs(first[index] - second[index]),
+                Math.abs(first[index + 1] - second[index + 1]),
+                Math.abs(first[index + 2] - second[index + 2])
+              ) > 12
+            )
+              changedPixels += 1;
+          }
+          return { sameSize: true, changedPixels };
+        },
+        {
+          current: currentHero.toString("base64"),
+          reference: referenceHero.toString("base64")
+        }
+      );
+      expect(heroDifference.sameSize).toBe(true);
+      expect(heroDifference.changedPixels).toBeLessThanOrEqual(1500);
       await page.locator(".work-strip").evaluate((element) => {
         const top = element.getBoundingClientRect().top;
         // Keep the existing Work image comparison on the same device-pixel phase
