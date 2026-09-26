@@ -129,7 +129,24 @@ export function renderLocaleSelector({ locale = "en", path = "", t } = {}) {
   )}</span>${links}</div>`;
 }
 
-function renderProductCard(product, t, locale) {
+const MISSING_PRODUCT_IDENTITY = Object.freeze({
+  asset: null,
+  fallback: "??",
+  tone: "stone"
+});
+
+function renderProductIdentity(
+  identity,
+  { assetPrefix = "./assets/products/", className = "product-identity" } = {}
+) {
+  const source = identity?.asset ? "curated" : "fallback";
+  const visual = identity?.asset
+    ? `<img src="${escapeHtml(`${assetPrefix}${identity.asset}`)}" alt="" loading="lazy" decoding="async" />`
+    : `<span class="product-identity-fallback" aria-hidden="true">${escapeHtml(identity?.fallback ?? "??")}</span>`;
+  return `<div class="${className}" data-identity-tone="${escapeHtml(identity?.tone ?? "stone")}" data-identity-source="${source}" aria-hidden="true">${visual}</div>`;
+}
+
+function renderProductCard(product, t, locale, identity) {
   const content = localizedProductContent(product, locale);
   return `
 <article class="product-card" data-product="${escapeHtml(product.id)}">
@@ -138,6 +155,7 @@ function renderProductCard(product, t, locale) {
     <span class="status-dot" data-status-tone="${escapeHtml(product.statusTone)}" aria-hidden="true"></span>
     <span class="product-status">${escapeHtml(product.status)}</span>
   </div>
+  ${renderProductIdentity(identity)}
   <div class="product-card-content">
     <h3>${escapeHtml(product.name)}</h3>
     <p class="product-summary">${escapeHtml(content.role)}</p>
@@ -179,8 +197,14 @@ function renderRelationships(catalog, locale) {
     .join("");
 }
 
-function formatEngineeringValue(field, locale) {
+function formatEngineeringValue(field, locale, key) {
   if (field.value === null || field.value === undefined) return "—";
+  if (key === "verificationDuration" && typeof field.value === "number") {
+    const seconds = Math.round(field.value / 1000);
+    return seconds < 60
+      ? `${seconds} s`
+      : `${Math.floor(seconds / 60)} m ${seconds % 60} s`;
+  }
   if (typeof field.value === "number")
     return new Intl.NumberFormat(locale).format(field.value);
   return escapeHtml(field.value);
@@ -188,20 +212,31 @@ function formatEngineeringValue(field, locale) {
 
 function renderMetric(
   field,
+  key,
   label,
   locale,
   t,
   className = "engineering-metric"
 ) {
   const state = t(`portal.engineering.state.${field.status}`);
-  const provenance = field.source
-    ? `${field.source}${field.scope ? ` · ${field.scope}` : ""}`
-    : field.reason;
+  const source = field.source?.startsWith("https://github.com/")
+    ? `<a href="${escapeHtml(field.source)}" rel="noreferrer">${escapeHtml(field.source)}</a>`
+    : escapeHtml(field.source ?? "");
+  const provenance = [
+    source,
+    field.scope && escapeHtml(field.scope),
+    field.observedAt && escapeHtml(field.observedAt),
+    field.evidenceAt && escapeHtml(field.evidenceAt),
+    field.revision && escapeHtml(field.revision),
+    field.reason && escapeHtml(field.reason)
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return `<article class="${className}" data-metric-state="${escapeHtml(field.status)}">
     <p class="metric-label">${escapeHtml(label)}</p>
-    <strong class="metric-value">${formatEngineeringValue(field, locale)}</strong>
+    <strong class="metric-value">${formatEngineeringValue(field, locale, key)}</strong>
     <span class="metric-state">${escapeHtml(state)}</span>
-    <p class="metric-provenance">${escapeHtml(provenance)}</p>
+    <p class="metric-provenance">${provenance}</p>
   </article>`;
 }
 
@@ -215,7 +250,7 @@ function renderHomeMetrics(engineering, locale, t) {
   ];
   return fields
     .map(([key, label]) =>
-      renderMetric(engineering.summary[key], t(label), locale, t)
+      renderMetric(engineering.summary[key], key, t(label), locale, t)
     )
     .join("\n");
 }
@@ -227,12 +262,15 @@ function renderProductMetrics(engineering, product, locale, t) {
     ["openIssues", "portal.engineering.openIssues"],
     ["sourceLoc", "portal.engineering.sourceLoc"],
     ["testLoc", "portal.engineering.testLoc"],
+    ["sourceFiles", "portal.engineering.sourceFiles"],
+    ["testFiles", "portal.engineering.testFiles"],
     ["coverageLines", "portal.engineering.coverageLines"],
-    ["verificationStatus", "portal.engineering.verificationStatus"]
+    ["verificationStatus", "portal.engineering.verificationStatus"],
+    ["verificationDuration", "portal.engineering.verificationDuration"]
   ];
   return fields
     .map(([key, label]) =>
-      renderMetric(entry.metrics[key], t(label), locale, t)
+      renderMetric(entry.metrics[key], key, t(label), locale, t)
     )
     .join("\n");
 }
@@ -298,12 +336,28 @@ export function renderPortalHome(template, catalog, locale, options = {}) {
   const t = (key, values = {}) => message(key, values, resolvedLocale);
   const engineering =
     options.engineering ?? unavailableEngineeringMetrics(catalog);
+  const detailsById =
+    options.productDetailsById instanceof Map
+      ? options.productDetailsById
+      : new Map(
+          (options.productDetails?.products ?? []).map((detail) => [
+            detail.id,
+            detail
+          ])
+        );
   let output = template;
   output = replaceOnce(
     output,
     "{{PRODUCT_CARDS}}",
     catalog.products
-      .map((product) => renderProductCard(product, t, resolvedLocale))
+      .map((product) =>
+        renderProductCard(
+          product,
+          t,
+          resolvedLocale,
+          detailsById.get(product.id)?.identity ?? MISSING_PRODUCT_IDENTITY
+        )
+      )
       .join("\n")
   );
   output = replaceOnce(
@@ -378,6 +432,7 @@ export function renderProductOverviewPage(
   });
   const engineering =
     options.engineering ?? unavailableEngineeringMetrics(catalog);
+  const identity = detail.identity ?? MISSING_PRODUCT_IDENTITY;
 
   return `<!doctype html>
 <html lang="${escapeHtml(resolvedLocale)}">
@@ -412,6 +467,7 @@ export function renderProductOverviewPage(
     <main>
       <section class="shell product-hero" data-motion="reveal">
         <a class="back-link" href="../../#products">${escapeHtml(t("portal.product.backToProducts"))}</a>
+        ${renderProductIdentity(identity, { assetPrefix: "../../assets/products/", className: "product-identity product-hero-identity" })}
         <p class="eyebrow">${escapeHtml(productContent.role)}</p>
         <h1>${escapeHtml(product.name)}</h1>
         <p class="product-page-summary">${escapeHtml(productContent.summary)}</p>
@@ -455,18 +511,21 @@ export function renderEngineeringPage(
     path: options.path ?? "engineering/",
     localized: options.localized ?? true
   });
+  const tableFields = [
+    "packageVersion",
+    "openIssues",
+    "sourceLoc",
+    "testLoc",
+    "sourceFiles",
+    "testFiles",
+    "coverageLines",
+    "verificationStatus",
+    "verificationDuration"
+  ];
   const productRows = catalog.products
     .map((product) => {
       const entry = engineering.products.find((item) => item.id === product.id);
-      const fields = [
-        "packageVersion",
-        "openIssues",
-        "sourceLoc",
-        "testLoc",
-        "coverageLines",
-        "verificationStatus"
-      ];
-      return `<tr><th scope="row"><a href="../products/${escapeHtml(product.id)}/">${escapeHtml(product.name)}</a></th>${fields.map((key) => `<td data-metric-state="${entry.metrics[key].status}"><strong>${formatEngineeringValue(entry.metrics[key], resolvedLocale)}</strong><span>${escapeHtml(t(`portal.engineering.state.${entry.metrics[key].status}`))}</span></td>`).join("")}</tr>`;
+      return `<tr><th scope="row"><a href="../products/${escapeHtml(product.id)}/">${escapeHtml(product.name)}</a></th>${tableFields.map((key) => `<td data-metric-state="${entry.metrics[key].status}"><strong>${formatEngineeringValue(entry.metrics[key], resolvedLocale, key)}</strong><span>${escapeHtml(t(`portal.engineering.state.${entry.metrics[key].status}`))}</span></td>`).join("")}</tr>`;
     })
     .join("\n");
   const details = catalog.products
@@ -475,5 +534,5 @@ export function renderEngineeringPage(
         `<section class="engineering-product" id="${escapeHtml(product.id)}"><div><p class="eyebrow">${escapeHtml(t("portal.engineering.repositoryEvidence"))}</p><h2><a href="../products/${escapeHtml(product.id)}/">${escapeHtml(product.name)}</a></h2></div><div class="engineering-metrics-grid">${renderProductMetrics(engineering, product, resolvedLocale, t)}</div></section>`
     )
     .join("\n");
-  return `<!doctype html><html lang="${escapeHtml(resolvedLocale)}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="description" content="${escapeHtml(t("portal.engineering.body"))}"/><link rel="canonical" href="${escapeHtml(metadata.canonical)}"/>${metadata.links}<title>${escapeHtml(t("portal.engineering.pageTitle"))}</title><link rel="stylesheet" href="../styles.css"/><link rel="stylesheet" href="../engineering.css"/></head><body class="engineering-page"><header class="site-nav-wrap"><nav class="shell site-nav" aria-label="${escapeHtml(t("portal.nav.primary"))}"><a class="brand" href="../" aria-label="${escapeHtml(t("portal.nav.home"))}"><span class="brand-slash">/</span><span>yohn-jp</span></a><div class="nav-links"><a href="../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="./" aria-current="page">${escapeHtml(t("portal.nav.engineering"))}</a><a href="../work/">${escapeHtml(t("portal.nav.work"))}</a><a href="../work/governance/">${escapeHtml(t("portal.nav.governance"))}</a><a href="../work/graph/">${escapeHtml(t("portal.nav.graph"))}</a></div><details class="mobile-nav"><summary class="mobile-nav-toggle"><span class="mobile-nav-icon" aria-hidden="true"><span></span><span></span><span></span></span><span>${escapeHtml(t("portal.nav.menu"))}</span></summary><div class="mobile-nav-panel"><div class="mobile-nav-links"><a href="../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="./" aria-current="page">${escapeHtml(t("portal.nav.engineering"))}</a><a href="../work/">${escapeHtml(t("portal.nav.work"))}</a><a href="../work/governance/">${escapeHtml(t("portal.nav.governance"))}</a><a href="../work/graph/">${escapeHtml(t("portal.nav.graph"))}</a></div></div></details>${renderLocaleSelector({ locale: resolvedLocale, path: options.path ?? "engineering/", t })}</nav></header><main><section class="shell engineering-hero"><p class="eyebrow">${escapeHtml(t("portal.engineering.eyebrow"))}</p><h1>${escapeHtml(t("portal.engineering.title"))}</h1><p>${escapeHtml(t("portal.engineering.body"))}</p><p class="engineering-note">${escapeHtml(t("portal.engineering.generated", { date: engineering.generatedAt }))} · ${escapeHtml(t("portal.engineering.sourceNote"))}</p></section><section class="engineering-overview"><div class="shell"><div class="section-head"><div><p class="eyebrow">01 · ${escapeHtml(t("portal.engineering.overview"))}</p><h2>${escapeHtml(t("portal.engineering.snapshot"))}</h2></div><p>${escapeHtml(t("portal.engineering.scopeNote"))}</p></div><div class="engineering-metrics-grid">${renderHomeMetrics(engineering, resolvedLocale, t)}</div></div></section><section class="shell engineering-table-section"><div class="section-head"><div><p class="eyebrow">02 · ${escapeHtml(t("portal.engineering.productEvidence"))}</p><h2>${escapeHtml(t("portal.engineering.atlas"))}</h2></div><p>${escapeHtml(t("portal.engineering.tableNote"))}</p></div><div class="engineering-table-scroll"><table><thead><tr><th scope="col">${escapeHtml(t("portal.nav.products"))}</th>${["packageVersion", "openIssues", "sourceLoc", "testLoc", "coverageLines", "verificationStatus"].map((key) => `<th scope="col">${escapeHtml(t(`portal.engineering.${key}`))}</th>`).join("")}</tr></thead><tbody>${productRows}</tbody></table></div></section><div class="shell engineering-detail">${details}</div></main><footer class="shell footer"><span>${escapeHtml(t("portal.footer.domain"))}</span><a href="../">${escapeHtml(t("portal.footer.portalHome"))}</a></footer></body></html>`;
+  return `<!doctype html><html lang="${escapeHtml(resolvedLocale)}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="description" content="${escapeHtml(t("portal.engineering.body"))}"/><link rel="canonical" href="${escapeHtml(metadata.canonical)}"/>${metadata.links}<title>${escapeHtml(t("portal.engineering.pageTitle"))}</title><link rel="stylesheet" href="../styles.css"/><link rel="stylesheet" href="../engineering.css"/></head><body class="engineering-page"><header class="site-nav-wrap"><nav class="shell site-nav" aria-label="${escapeHtml(t("portal.nav.primary"))}"><a class="brand" href="../" aria-label="${escapeHtml(t("portal.nav.home"))}"><span class="brand-slash">/</span><span>yohn-jp</span></a><div class="nav-links"><a href="../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="./" aria-current="page">${escapeHtml(t("portal.nav.engineering"))}</a><a href="../work/">${escapeHtml(t("portal.nav.work"))}</a><a href="../work/governance/">${escapeHtml(t("portal.nav.governance"))}</a><a href="../work/graph/">${escapeHtml(t("portal.nav.graph"))}</a></div><details class="mobile-nav"><summary class="mobile-nav-toggle"><span class="mobile-nav-icon" aria-hidden="true"><span></span><span></span><span></span></span><span>${escapeHtml(t("portal.nav.menu"))}</span></summary><div class="mobile-nav-panel"><div class="mobile-nav-links"><a href="../#products">${escapeHtml(t("portal.nav.products"))}</a><a href="../#system">${escapeHtml(t("portal.nav.system"))}</a><a href="./" aria-current="page">${escapeHtml(t("portal.nav.engineering"))}</a><a href="../work/">${escapeHtml(t("portal.nav.work"))}</a><a href="../work/governance/">${escapeHtml(t("portal.nav.governance"))}</a><a href="../work/graph/">${escapeHtml(t("portal.nav.graph"))}</a></div></div></details>${renderLocaleSelector({ locale: resolvedLocale, path: options.path ?? "engineering/", t })}</nav></header><main><section class="shell engineering-hero"><p class="eyebrow">${escapeHtml(t("portal.engineering.eyebrow"))}</p><h1>${escapeHtml(t("portal.engineering.title"))}</h1><p>${escapeHtml(t("portal.engineering.body"))}</p><p class="engineering-note">${escapeHtml(t("portal.engineering.generated", { date: engineering.generatedAt }))} · ${escapeHtml(t("portal.engineering.sourceNote"))}</p></section><section class="engineering-overview"><div class="shell"><div class="section-head"><div><p class="eyebrow">01 · ${escapeHtml(t("portal.engineering.overview"))}</p><h2>${escapeHtml(t("portal.engineering.snapshot"))}</h2></div><p>${escapeHtml(t("portal.engineering.scopeNote"))}</p></div><div class="engineering-metrics-grid">${renderHomeMetrics(engineering, resolvedLocale, t)}</div></div></section><section class="shell engineering-table-section"><div class="section-head"><div><p class="eyebrow">02 · ${escapeHtml(t("portal.engineering.productEvidence"))}</p><h2>${escapeHtml(t("portal.engineering.atlas"))}</h2></div><p>${escapeHtml(t("portal.engineering.tableNote"))}</p></div><div class="engineering-table-scroll"><table><thead><tr><th scope="col">${escapeHtml(t("portal.nav.products"))}</th>${tableFields.map((key) => `<th scope="col">${escapeHtml(t(`portal.engineering.${key}`))}</th>`).join("")}</tr></thead><tbody>${productRows}</tbody></table></div></section><div class="shell engineering-detail">${details}</div></main><footer class="shell footer"><span>${escapeHtml(t("portal.footer.domain"))}</span><a href="../">${escapeHtml(t("portal.footer.portalHome"))}</a></footer></body></html>`;
 }

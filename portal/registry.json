@@ -2,6 +2,117 @@
   "schemaVersion": 1,
   "organization": "yohn-jp",
   "collectionRepositories": ["gh-makami", ".github"],
+  "engineering": {
+    "schemaVersion": 1,
+    "products": {
+      "mottainai": {
+        "revision": "main",
+        "sourceIncludePaths": [
+          "host-bootstrap/src",
+          "packages",
+          "review-pages/src"
+        ],
+        "testIncludePaths": ["host-bootstrap/tests", "review-pages/test"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      },
+      "nawabari": {
+        "revision": "main",
+        "sourceIncludePaths": ["src", "scripts"],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      },
+      "inari": {
+        "revision": "main",
+        "sourceIncludePaths": ["src", "apps", "scripts"],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      },
+      "cli-canon": {
+        "revision": "main",
+        "sourceIncludePaths": ["src", "scripts"],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI", "ci"],
+          "maxAgeDays": 30
+        }
+      },
+      "suzukuri": {
+        "revision": "main",
+        "sourceIncludePaths": ["src", "scripts"],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      },
+      "wabachi": {
+        "revision": "main",
+        "sourceIncludePaths": ["src", "scripts"],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      },
+      "shikitari": {
+        "revision": "main",
+        "sourceIncludePaths": ["src", "scripts"],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      },
+      "majiwari": {
+        "revision": "main",
+        "sourceIncludePaths": [
+          "adapters",
+          "gateway",
+          "registry",
+          "runtime",
+          "ui"
+        ],
+        "testIncludePaths": ["test", "tests"],
+        "excludePaths": [],
+        "testFileSuffixes": [".test.", ".spec."],
+        "verification": {
+          "branch": "main",
+          "workflowNames": ["CI"],
+          "maxAgeDays": 30
+        }
+      }
+    }
+  },
   "products": [
     {
       "id": "mottainai",

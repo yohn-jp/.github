@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
+import { cp, mkdir, readFile, writeFile, copyFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDashboardData } from "./dashboard-data.mjs";
@@ -8,6 +8,7 @@ import { hydrateDashboardPullRequests } from "./pull-request-links.mjs";
 import { loadProductDetails } from "./product-details.mjs";
 import {
   collectEngineeringMetrics,
+  engineeringRulesFromRegistry,
   validateEngineeringMetrics
 } from "./engineering-metrics.mjs";
 import {
@@ -77,6 +78,10 @@ export async function buildDashboard({
   ]);
   const config = dashboardConfigFromRegistry(registry);
   const productCatalog = productCatalogFromRegistry(registry);
+  const engineeringRules = engineeringRulesFromRegistry(
+    registry,
+    productCatalog
+  );
   const [rawDashboard, productDetails] = await Promise.all([
     collectDashboardData({
       config,
@@ -98,6 +103,7 @@ export async function buildDashboard({
     await collectEngineeringMetrics({
       catalog: productCatalog,
       dashboard: data,
+      engineeringRules,
       fetchImpl,
       token
     }),
@@ -127,6 +133,13 @@ export async function buildDashboard({
       mkdir(graphOutputDirectory, { recursive: true }),
       mkdir(governanceOutputDirectory, { recursive: true })
     ]);
+    await cp(
+      join(PORTAL_DIRECTORY, "assets"),
+      join(variantDirectory, "assets"),
+      {
+        recursive: true
+      }
+    );
 
     for (const file of PORTAL_COPY_FILES) {
       await copyFile(
@@ -148,7 +161,8 @@ export async function buildDashboard({
       renderPortalHome(portalTemplate, productCatalog, variantLocale, {
         localized,
         path: "",
-        engineering
+        engineering,
+        productDetails
       })
     );
     await writeFile(

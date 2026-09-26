@@ -3,6 +3,17 @@
   "products": [
     {
       "id": "mottainai",
+      "identity": {
+        "asset": "mottainai.webp",
+        "fallback": "MO",
+        "tone": "moss",
+        "source": {
+          "repository": "yohn-jp/mottainai",
+          "path": "docs/design/mockups/readme/mottainai-hero.webp",
+          "revision": "a4bf64e3",
+          "sha256": "3b3c9f2963ddfad44958d1a7698f25be490532a720ce4dc39671502f5204d70c"
+        }
+      },
       "why": {
         "en": "Coding agents often inherit orchestration through prompts, shell fragments, ad-hoc polling, and unbounded tool output. Mottainai turns that ambient behavior into an explicit runtime: one place to coordinate bounded work, preserve evidence, and route operations to the authority that actually owns them.",
         "ja": "コーディングエージェントは、プロンプトやシェル断片、場当たり的なポーリング、境界のないツール出力を通じてオーケストレーションを引き継ぎがちです。Mottainaiはその暗黙の振る舞いを明示的なランタイムに変え、境界付きの作業を調整し、証拠を保持し、実際に所有する権限へ操作を届ける場所を提供します。"
@@ -56,6 +67,17 @@
     },
     {
       "id": "nawabari",
+      "identity": {
+        "asset": "nawabari.webp",
+        "fallback": "NA",
+        "tone": "blue",
+        "source": {
+          "repository": "yohn-jp/nawabari",
+          "path": "docs/assets/readme/nawabari-hero.webp",
+          "revision": "db5a0433",
+          "sha256": "848fcf0616fbf2ed73f53714223c8095cda52672b24c556af6aa6dd152b9bf1c"
+        }
+      },
       "why": {
         "en": "Parallel coding agents need a physical repository ownership model that does not depend on GitHub, an orchestrator, or prompt discipline. Nawabari makes local session identity, worktree ownership, mutable branches, claims, and destructive cleanup explicit and machine-verifiable.",
         "ja": "並行するコーディングエージェントには、GitHubやオーケストレーター、プロンプト規律に依存しない物理リポジトリ所有モデルが必要です。Nawabariはローカルセッション識別子、worktree所有権、可変ブランチ、要求、破壊的クリーンアップを明示し、機械で検証可能にします。"
@@ -119,6 +141,17 @@
     },
     {
       "id": "inari",
+      "identity": {
+        "asset": "inari.webp",
+        "fallback": "IN",
+        "tone": "ember",
+        "source": {
+          "repository": "yohn-jp/gh-inari",
+          "path": "docs/assets/readme/inari-hero.webp",
+          "revision": "ba099958",
+          "sha256": "1557dbbf7a38a2aa5d5f16d211245886f9bd50b61e170e6f86a1f0db9d6f62ad"
+        }
+      },
       "why": {
         "en": "Repository governance becomes unreliable when agents repeatedly reconstruct Markdown templates and policy rules from prose. Inari compiles repository-native Issue Forms and pull-request templates into typed semantic contracts so structured intent can be validated before any GitHub mutation occurs.",
         "ja": "エージェントが文章からMarkdownテンプレートとポリシー規則を繰り返し再構成すると、リポジトリのガバナンスは信頼できなくなります。InariはリポジトリネイティブのIssueフォームとPull Requestテンプレートを型付き意味契約へコンパイルし、GitHub変更の前に構造化された意図を検証できるようにします。"
@@ -172,6 +205,12 @@
     },
     {
       "id": "cli-canon",
+      "identity": {
+        "asset": null,
+        "fallback": "CC",
+        "tone": "lime",
+        "source": null
+      },
       "why": {
         "en": "Products need one command authority that can produce consistent runtime routing, help, machine discovery, invocation metadata, and agent-facing projections without parallel tables.",
         "ja": "プロダクトには、並列の表を維持せずに実行時ルーティング、ヘルプ、機械向け発見、呼び出しメタデータ、エージェント向け投影を生成できる単一のコマンド権限が必要です。 これにより各利用側プロダクトは領域固有の権限と動作を維持できます。"
@@ -215,6 +254,17 @@
     },
     {
       "id": "suzukuri",
+      "identity": {
+        "asset": "suzukuri.webp",
+        "fallback": "SU",
+        "tone": "violet",
+        "source": {
+          "repository": "yohn-jp/suzukuri",
+          "path": "docs/assets/readme/suzukuri-hero.webp",
+          "revision": "23b78e16",
+          "sha256": "9d30cd62e06c5c4de291f10d6df0655427734c6c38caad22065a8ab581234165"
+        }
+      },
       "why": {
         "en": "Raw source and tool output are often too large for a consumer context, but naive truncation destroys meaning and hides what was lost. Suzukuri makes projection explicit: the caller chooses an adapter and semantic view, and the engine must either preserve required meaning inside a hard budget or fail visibly.",
         "ja": "生のソースやツール出力は利用者のコンテキストには大きすぎることがありますが、単純な切り詰めは意味を壊し、失われたものを隠します。Suzukuriは投影を明示化し、呼び出し元がアダプターと意味ビューを選び、エンジンが厳格な予算内で必要な意味を保持するか、明示的に失敗することを求めます。"
@@ -268,6 +318,17 @@
     },
     {
       "id": "wabachi",
+      "identity": {
+        "asset": "wabachi.webp",
+        "fallback": "WA",
+        "tone": "ochre",
+        "source": {
+          "repository": "yohn-jp/wabachi",
+          "path": "docs/assets/readme/wabachi-hero.webp",
+          "revision": "da2cbea7",
+          "sha256": "177e5ff58b91db0d15bc2760f8112657c015d887dfd2b8f4c7c6d760ccd2f5ef"
+        }
+      },
       "why": {
         "en": "Repository understanding needs inspectable evidence and explicit architecture declarations. Wabachi resolves a pinned revision, runs registered analysis providers, retains their outputs and comparison matrices, and validates or renders an authored Architecture Canon.",
         "ja": "リポジトリ理解には検査可能な証拠と明示的なアーキテクチャ宣言が必要です。Wabachiは固定されたリビジョンを解決し、登録済み解析プロバイダーを実行し、その出力と比較マトリクスを保持し、記述されたArchitecture Canonを検証・描画します。"
@@ -311,6 +372,12 @@
     },
     {
       "id": "shikitari",
+      "identity": {
+        "asset": null,
+        "fallback": "SH",
+        "tone": "stone",
+        "source": null
+      },
       "why": {
         "en": "Coding conventions need a semantic authority independent of any one formatter, linter, or agent instruction. Shikitari records that policy so enforcement tools can be derived without redefining it.",
         "ja": "コーディング規約には特定のフォーマッター、リンター、エージェント指示から独立した意味的権限が必要です。Shikitariはそのポリシーを記録し、再定義せずに適用ツールを導出できるようにします。"
@@ -354,6 +421,12 @@
     },
     {
       "id": "majiwari",
+      "identity": {
+        "asset": null,
+        "fallback": "MA",
+        "tone": "teal",
+        "source": null
+      },
       "why": {
         "en": "A coding agent hosted outside the local machine (ChatGPT) still needs to call deterministic, narrowly-scoped tools -- not a general shell. Majiwari keeps that exposure explicit: adapters know what a wrapped tool means, the gateway knows only MCP transport, and remote reachability is a separate, Access-protected concern layered on top of both.",
         "ja": "ローカルマシンの外部（ChatGPT）でホストされるコーディングエージェントにも、汎用シェルではなく決定的で範囲を限定したツールを呼び出す仕組みが必要です。Majiwariはその公開を明示的に保ち、アダプターはラップしたツールの意味を理解し、ゲートウェイはMCP転送だけを扱い、リモート到達性は両者の上に重なるAccess保護された別の関心として扱います。"

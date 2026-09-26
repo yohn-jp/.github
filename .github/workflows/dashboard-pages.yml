@@ -89,6 +89,7 @@ jobs:
           permission-issues: read
           permission-pull-requests: read
           permission-metadata: read
+          permission-actions: read
 
       - name: Generate portal and dashboard data
         env:

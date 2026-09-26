@@ -1527,3 +1527,132 @@ summary:focus-visible {
   opacity: 1;
   transform: none;
 }
+
+/* Curated product identity: real repository artwork where available, stable
+   monograms where a repository has no published mark. */
+.hero-art {
+  isolation: isolate;
+  background: var(--dark);
+}
+
+.hero-art-image,
+.hero-art-shade {
+  position: absolute;
+  width: 100%;
+}
+
+.hero-art-image {
+  z-index: 0;
+  height: 40%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-art-image-primary {
+  top: 0;
+}
+
+.hero-art-image-secondary {
+  top: 40%;
+  border-top: 1px solid var(--line-strong);
+}
+
+.hero-art-shade {
+  z-index: 1;
+  inset: 80% 0 0;
+  background: var(--dark);
+}
+
+.hero-art-mark,
+.hero-art-caption {
+  z-index: 2;
+}
+
+.hero-art-mark {
+  font-size: clamp(2.8rem, 4vw, 4.4rem);
+}
+
+.product-identity {
+  position: relative;
+  display: grid;
+  min-height: 72px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+}
+
+.product-identity img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 72px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.product-identity-fallback {
+  color: var(--identity-ink, var(--ink));
+  font:
+    500 clamp(2rem, 4vw, 3.6rem) Georgia,
+    serif;
+  letter-spacing: -0.08em;
+}
+
+.product-identity[data-identity-tone="moss"] {
+  --identity-ink: #28653c;
+  background: #e4f0e2;
+}
+
+.product-identity[data-identity-tone="blue"] {
+  --identity-ink: #245f9d;
+  background: #e5effa;
+}
+
+.product-identity[data-identity-tone="ember"] {
+  --identity-ink: #aa3d29;
+  background: #fae7e0;
+}
+
+.product-identity[data-identity-tone="lime"] {
+  --identity-ink: #33450c;
+  background: var(--accent);
+}
+
+.product-identity[data-identity-tone="violet"] {
+  --identity-ink: #553bb0;
+  background: #eee9ff;
+}
+
+.product-identity[data-identity-tone="ochre"] {
+  --identity-ink: #916a12;
+  background: #f9edcf;
+}
+
+.product-identity[data-identity-tone="stone"] {
+  --identity-ink: #4d554f;
+  background: #e9e8e1;
+}
+
+.product-identity[data-identity-tone="teal"] {
+  --identity-ink: #186868;
+  background: #e0efeb;
+}
+
+.product-card .product-identity {
+  margin-top: 18px;
+}
+
+.product-card .product-card-content {
+  padding-top: 22px;
+}
+
+@media (max-width: 520px) {
+  .product-card .product-identity {
+    min-height: 64px;
+  }
+
+  .product-card .product-identity img {
+    min-height: 64px;
+  }
+}
