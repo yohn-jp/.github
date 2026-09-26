@@ -7,6 +7,10 @@ import { collectDashboardData } from "./dashboard-data.mjs";
 import { hydrateDashboardPullRequests } from "./pull-request-links.mjs";
 import { loadProductDetails } from "./product-details.mjs";
 import {
+  collectEngineeringMetrics,
+  validateEngineeringMetrics
+} from "./engineering-metrics.mjs";
+import {
   dashboardConfigFromRegistry,
   loadPortalRegistry,
   productCatalogFromRegistry
@@ -14,6 +18,7 @@ import {
 import {
   normalizePortalLocale,
   renderPortalHome,
+  renderEngineeringPage,
   renderProductOverviewPage,
   renderLocalizedHtml
 } from "./render-portal.mjs";
@@ -26,7 +31,12 @@ const DASHBOARD_DIRECTORY = join(REPOSITORY_ROOT, "dashboard");
 const GRAPH_DIRECTORY = join(DASHBOARD_DIRECTORY, "graph");
 const GOVERNANCE_DIRECTORY = join(DASHBOARD_DIRECTORY, "governance");
 
-const PORTAL_COPY_FILES = ["styles.css", "product.css", "motion.js"];
+const PORTAL_COPY_FILES = [
+  "styles.css",
+  "product.css",
+  "engineering.css",
+  "motion.js"
+];
 const ROOT_COPY_FILES = ["messages.js"];
 const DASHBOARD_FILES = ["index.html", "work.css", "app.js", "work-model.js"];
 const GRAPH_FILES = ["index.html", "graph.css", "graph.js", "graph-model.js"];
@@ -84,6 +94,15 @@ export async function buildDashboard({
     fetchImpl,
     token
   });
+  const engineering = validateEngineeringMetrics(
+    await collectEngineeringMetrics({
+      catalog: productCatalog,
+      dashboard: data,
+      fetchImpl,
+      token
+    }),
+    productCatalog
+  );
   const detailsById = new Map(
     productDetails.products.map((detail) => [detail.id, detail])
   );
@@ -95,6 +114,7 @@ export async function buildDashboard({
   }) => {
     const portalDataDirectory = join(variantDirectory, "data");
     const productDirectory = join(variantDirectory, "products");
+    const engineeringDirectory = join(variantDirectory, "engineering");
     const workDirectory = join(variantDirectory, "work");
     const workDataDirectory = join(workDirectory, "data");
     const graphOutputDirectory = join(workDirectory, "graph");
@@ -102,6 +122,7 @@ export async function buildDashboard({
     await Promise.all([
       mkdir(portalDataDirectory, { recursive: true }),
       mkdir(productDirectory, { recursive: true }),
+      mkdir(engineeringDirectory, { recursive: true }),
       mkdir(workDataDirectory, { recursive: true }),
       mkdir(graphOutputDirectory, { recursive: true }),
       mkdir(governanceOutputDirectory, { recursive: true })
@@ -126,7 +147,15 @@ export async function buildDashboard({
       join(variantDirectory, "index.html"),
       renderPortalHome(portalTemplate, productCatalog, variantLocale, {
         localized,
-        path: ""
+        path: "",
+        engineering
+      })
+    );
+    await writeFile(
+      join(engineeringDirectory, "index.html"),
+      renderEngineeringPage(productCatalog, engineering, variantLocale, {
+        localized,
+        path: "engineering/"
       })
     );
 
@@ -142,7 +171,9 @@ export async function buildDashboard({
           variantLocale,
           {
             localized,
-            path: `products/${encodeURIComponent(product.id)}/`
+            path: `products/${encodeURIComponent(product.id)}/`,
+            engineering,
+            dashboard: data
           }
         )
       );
@@ -201,6 +232,10 @@ export async function buildDashboard({
       writeFile(
         join(portalDataDirectory, "products.json"),
         `${JSON.stringify(productCatalog, null, 2)}\n`
+      ),
+      writeFile(
+        join(portalDataDirectory, "engineering.json"),
+        `${JSON.stringify(engineering, null, 2)}\n`
       ),
       writeFile(
         join(workDataDirectory, "dashboard.json"),

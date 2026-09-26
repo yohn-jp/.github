@@ -32,6 +32,7 @@
         <div class="nav-links">
           <a href="#products" data-message="portal.nav.products"></a>
           <a href="#system" data-message="portal.nav.system"></a>
+          <a href="./engineering/" data-message="portal.nav.engineering"></a>
           <a href="./work/" data-message="portal.nav.work"></a>
           <a href="./work/governance/" data-message="portal.nav.governance"></a>
           <a href="./work/graph/" data-message="portal.nav.graph"></a>
@@ -52,6 +53,10 @@
             <div class="mobile-nav-links">
               <a href="#products" data-message="portal.nav.products"></a>
               <a href="#system" data-message="portal.nav.system"></a>
+              <a
+                href="./engineering/"
+                data-message="portal.nav.engineering"
+              ></a>
               <a href="./work/" data-message="portal.nav.work"></a>
               <a
                 href="./work/governance/"
@@ -96,51 +101,14 @@
             ></a>
             <a
               class="button light"
-              href="./work/"
-              data-message="portal.hero.seeWork"
+              href="./engineering/"
+              data-message="portal.hero.seeEngineering"
             ></a>
           </div>
         </div>
-        <aside
-          class="hero-note"
-          data-motion="reveal"
-          aria-label=""
-          data-message-aria-label="portal.hero.designPrinciple"
-        >
-          <span class="hero-note-index">01</span>
-          <p data-message="portal.hero.note"></p>
-          <span
-            class="hero-note-caption"
-            data-message="portal.hero.sourceOfTruth"
-          ></span>
-        </aside>
-      </section>
-
-      <section
-        class="principles"
-        aria-label=""
-        data-message-aria-label="portal.principles.title"
-      >
-        <div class="shell principle-grid" data-motion-stagger>
-          <div data-motion="reveal">
-            <span>01</span
-            ><strong
-              data-message="portal.principles.explicitAuthority.title"
-            ></strong>
-            <p data-message="portal.principles.explicitAuthority.body"></p>
-          </div>
-          <div data-motion="reveal">
-            <span>02</span
-            ><strong
-              data-message="portal.principles.machineReadable.title"
-            ></strong>
-            <p data-message="portal.principles.machineReadable.body"></p>
-          </div>
-          <div data-motion="reveal">
-            <span>03</span
-            ><strong data-message="portal.principles.failClosed.title"></strong>
-            <p data-message="portal.principles.failClosed.body"></p>
-          </div>
+        <div class="hero-art" aria-hidden="true">
+          <span class="hero-art-mark">yohn<span> / </span>jp</span
+          ><span class="hero-art-caption">A × C · 2026</span>
         </div>
       </section>
 
@@ -190,6 +158,39 @@
                 {{RELATIONSHIPS}}
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="engineering"
+        class="engineering-snapshot"
+        aria-labelledby="engineering-heading"
+      >
+        <div class="shell section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow" data-message="portal.engineering.eyebrow"></p>
+              <h2
+                id="engineering-heading"
+                data-message="portal.engineering.homeTitle"
+              ></h2>
+            </div>
+            <p data-message="portal.engineering.homeBody"></p>
+          </div>
+          <div class="engineering-metrics-grid">{{ENGINEERING_METRICS}}</div>
+          <div class="engineering-snapshot-footer">
+            <p class="engineering-note">
+              <span data-message="portal.engineering.snapshotAt"></span>
+              <time datetime="{{ENGINEERING_GENERATED_AT}}"
+                >{{ENGINEERING_GENERATED_AT}}</time
+              >
+            </p>
+            <a
+              class="text-link"
+              href="./engineering/"
+              data-message="portal.engineering.open"
+            ></a>
           </div>
         </div>
       </section>

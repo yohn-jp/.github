@@ -209,8 +209,67 @@
       ]
     },
     {
-      "id": "suzukuri",
+      "id": "cli-canon",
       "order": 40,
+      "name": "CLI Canon",
+      "role": {
+        "en": "Canonical product command and projection contracts",
+        "ja": "プロダクトCLIの正規コマンド・投影契約"
+      },
+      "repository": "https://github.com/yohn-jp/cli-canon",
+      "documentation": "https://github.com/yohn-jp/cli-canon#readme",
+      "summary": {
+        "en": "Defines typed command contracts once and derives routing, help, discovery, invocation, Skills, output behavior, and package certification.",
+        "ja": "型付きコマンド契約を一度定義し、ルーティング、ヘルプ、発見、呼び出し、Skills、出力動作、パッケージ認証へ投影します。"
+      },
+      "status": "Published library · pre-1.0",
+      "statusTone": "positive",
+      "owns": {
+        "en": [
+          "Typed command declarations, compilation, and handler binding",
+          "Help, discovery, invocation, Path and Skill projections",
+          "Reusable CLI package certification primitives"
+        ],
+        "ja": [
+          "型付きコマンド宣言、コンパイル、ハンドラー結合",
+          "ヘルプ、発見、呼び出し、PathとSkillの投影",
+          "再利用可能なCLIパッケージ認証プリミティブ"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Product-domain authorization or lifecycle decisions",
+          "Provider behavior, filesystem safety, or transport authority",
+          "Consumer-owned domain schemas"
+        ],
+        "ja": [
+          "プロダクト領域の認可やライフサイクル判断",
+          "プロバイダー動作、ファイルシステム安全性、転送権限",
+          "利用側が所有する領域スキーマ"
+        ]
+      },
+      "relationships": [
+        {
+          "product": "inari",
+          "type": "adjacent-to",
+          "label": {
+            "en": "Shares interface concerns without taking GitHub effect authority",
+            "ja": "GitHub変更権限を引き受けずにインターフェース上の関心を共有"
+          }
+        },
+        {
+          "product": "nawabari",
+          "type": "adjacent-to",
+          "label": {
+            "en": "Keeps command projection separate from local execution authority",
+            "ja": "コマンド投影をローカル実行権限から分離"
+          }
+        }
+      ]
+    },
+    {
+      "id": "suzukuri",
+      "order": 50,
       "name": "Suzukuri",
       "role": {
         "en": "Deterministic bounded semantic view engine",
@@ -269,44 +328,42 @@
     },
     {
       "id": "wabachi",
-      "order": 50,
+      "order": 60,
       "name": "Wabachi",
       "role": {
-        "en": "Repository semantic authority and provider-evidence programme",
-        "ja": "リポジトリ意味権限とプロバイダー証拠プログラム"
+        "en": "Repository analysis and Architecture Canon tooling",
+        "ja": "リポジトリ解析とArchitecture Canonツール"
       },
       "repository": "https://github.com/yohn-jp/wabachi",
       "documentation": "https://github.com/yohn-jp/wabachi/issues/5",
       "summary": {
-        "en": "Early-stage semantic-authority work focused on immutable provider evidence, provenance-preserving observations, explicit entity correlation, and evidence-driven canonical repository semantics.",
-        "ja": "不変のプロバイダー証拠、プロヴナンスを保持した観測、明示的なエンティティ相関、証拠駆動の正規リポジトリ意味論に取り組む初期段階の意味権限プロジェクトです。"
+        "en": "Runs deterministic repository analysis with registered providers, retains auditable evidence and matrices, and validates or renders explicit Architecture Canon documents.",
+        "ja": "登録済みプロバイダーで決定的なリポジトリ解析を実行し、監査可能な証拠とマトリクスを保持し、明示的なArchitecture Canon文書を検証・描画します。"
       },
-      "status": "Early architecture and provider-evidence programme",
-      "statusTone": "caution",
+      "status": "Active analysis CLI · pre-1.0",
+      "statusTone": "positive",
       "owns": {
         "en": [
-          "Intended repository semantic-authority boundary",
-          "Provider execution evidence and provenance-preserving observations",
-          "Explicit correlation, ambiguity, and derived semantic fact modelling"
+          "Repository and revision resolution for deterministic provider analysis",
+          "Retained provider evidence and auditable comparison matrices",
+          "Validation and rendering of explicit Architecture Canon documents"
         ],
         "ja": [
-          "想定するリポジトリ意味権限の境界",
-          "プロバイダー実行証拠とプロヴナンスを保持した観測",
-          "明示的な相関、曖昧性、導出された意味事実のモデル化"
+          "決定的なプロバイダー解析のためのリポジトリとリビジョンの解決",
+          "保持されたプロバイダー証拠と監査可能な比較マトリクス",
+          "明示的なArchitecture Canon文書の検証と描画"
         ]
       },
       "doesNotOwn": {
         "en": [
-          "Agent orchestration or context-window projection",
-          "Physical Git/worktree/session authority",
-          "GitHub Issue/PR governance",
-          "Provider output as canonical truth merely because a producer emitted it"
+          "Automatic admission of provider observations as canonical architecture",
+          "Coding-agent orchestration or physical Git mutation",
+          "Tool-independent semantic coding policy"
         ],
         "ja": [
-          "エージェントのオーケストレーションまたはコンテキストウィンドウ投影",
-          "物理Git/worktree/sessionの権限",
-          "GitHub Issue/PRガバナンス",
-          "生成者が出力したというだけでプロバイダー出力を正規の真実とすること"
+          "プロバイダー観測の正規アーキテクチャへの自動受け入れ",
+          "コーディングエージェントの調整や物理Git変更",
+          "ツール非依存の意味的コーディングポリシー"
         ]
       },
       "relationships": [
@@ -325,12 +382,79 @@
             "en": "Keeps semantic authority separate from execution orchestration",
             "ja": "意味権限を実行オーケストレーションから分離"
           }
+        },
+        {
+          "product": "shikitari",
+          "type": "separates-from",
+          "label": {
+            "en": "Owns architecture semantics separately from coding policy",
+            "ja": "コーディングポリシーとは別にアーキテクチャ意味論を所有"
+          }
+        }
+      ]
+    },
+    {
+      "id": "shikitari",
+      "order": 70,
+      "name": "Shikitari",
+      "role": {
+        "en": "Tool-independent semantic coding policy",
+        "ja": "ツール非依存の意味的コーディングポリシー"
+      },
+      "repository": "https://github.com/yohn-jp/shikitari",
+      "documentation": "https://github.com/yohn-jp/shikitari/blob/main/docs/semantic-policy.md",
+      "summary": {
+        "en": "Defines the canonical semantic coding policy; formatter, linter, and agent projections remain downstream of that policy.",
+        "ja": "正規の意味的コーディングポリシーを定義し、フォーマッター、リンター、エージェントへの投影をその下流に置きます。"
+      },
+      "status": "Policy model · CLI baseline",
+      "statusTone": "caution",
+      "owns": {
+        "en": [
+          "Tool-independent semantic coding policy",
+          "Formatting and naming policy domains",
+          "Canonical policy model for future enforcement projections"
+        ],
+        "ja": [
+          "ツール非依存の意味的コーディングポリシー",
+          "書式と命名のポリシー領域",
+          "将来の適用投影のための正規ポリシーモデル"
+        ]
+      },
+      "doesNotOwn": {
+        "en": [
+          "Architecture semantics or Architecture Canon",
+          "A complete formatter or linter enforcement runtime",
+          "Repository analysis and provider evidence"
+        ],
+        "ja": [
+          "アーキテクチャ意味論やArchitecture Canon",
+          "完成済みのフォーマッターやリンター実行環境",
+          "リポジトリ解析とプロバイダー証拠"
+        ]
+      },
+      "relationships": [
+        {
+          "product": "wabachi",
+          "type": "separates-from",
+          "label": {
+            "en": "Coding policy is distinct from architecture authority",
+            "ja": "コーディングポリシーはアーキテクチャ権限と区別される"
+          }
+        },
+        {
+          "product": "cli-canon",
+          "type": "adjacent-to",
+          "label": {
+            "en": "Policy and CLI command contracts are separate authorities",
+            "ja": "ポリシーとCLIコマンド契約は別の権限"
+          }
         }
       ]
     },
     {
       "id": "majiwari",
-      "order": 60,
+      "order": 80,
       "name": "Majiwari",
       "role": {
         "en": "Deterministic MCP adapter gateway for remote agent exposure",

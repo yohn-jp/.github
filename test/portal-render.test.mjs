@@ -166,7 +166,9 @@ test("each product page carries product-specific grounded core concepts", async 
     nawabari: /Session and resource ownership/,
     inari: /Validate, render, then mutate/,
     suzukuri: /Provenance and loss semantics/,
-    wabachi: /Immutable provider evidence/,
+    "cli-canon": /Typed command canon/,
+    wabachi: /Auditable provider matrices/,
+    shikitari: /Semantic policy model/,
     majiwari: /Deterministic adapters, not reimplementation/
   };
   for (const product of catalog.products) {
@@ -215,7 +217,7 @@ test("build publishes root and stable product routes", async () => {
   try {
     await buildDashboard({ outputDirectory, registryPath, fetchImpl });
     const root = await readFile(join(outputDirectory, "index.html"), "utf8");
-    assert.match(root, /Small tools\./);
+    assert.match(root, /Governed tools/);
     assert.match(root, /<script defer src="\.\/motion\.js"><\/script>/);
     assert.equal(
       await readFile(join(outputDirectory, "motion.js"), "utf8"),
@@ -225,8 +227,10 @@ test("build publishes root and stable product routes", async () => {
       "mottainai",
       "nawabari",
       "inari",
+      "cli-canon",
       "suzukuri",
       "wabachi",
+      "shikitari",
       "majiwari"
     ]) {
       const product = await readFile(
@@ -238,11 +242,19 @@ test("build publishes root and stable product routes", async () => {
         new RegExp(`https://dev\\.yohn\\.jp/products/${id}/`)
       );
       assert.match(product, /Why it exists/);
+      assert.match(product, /Engineering evidence/);
       assert.match(
         product,
         /<script defer src="\.\.\/\.\.\/motion\.js"><\/script>/
       );
     }
+    const engineering = await readFile(
+      join(outputDirectory, "engineering", "index.html"),
+      "utf8"
+    );
+    assert.match(engineering, /Evidence, not decoration/);
+    assert.match(engineering, /Source LOC/);
+    assert.match(engineering, /data-metric-state="unavailable"/);
     for (const locale of ["en", "ja"]) {
       const home = await readFile(
         join(outputDirectory, locale, "index.html"),

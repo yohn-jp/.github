@@ -201,3 +201,15 @@
     gap: 8px;
   }
 }
+/* Maturity is an inverse editorial section; lime remains a state/action accent. */
+.maturity-wrap {
+  border-color: var(--dark-line);
+  background: var(--dark);
+  color: var(--dark-text);
+}
+.maturity-block .eyebrow {
+  color: var(--dark-text-muted);
+}
+.maturity-block > p:last-child {
+  color: var(--dark-muted);
+}

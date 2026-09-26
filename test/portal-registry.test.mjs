@@ -23,8 +23,10 @@ test("portal registry preserves product mappings and derives all collection repo
       ["mottainai", "https://github.com/yohn-jp/mottainai"],
       ["nawabari", "https://github.com/yohn-jp/nawabari"],
       ["inari", "https://github.com/yohn-jp/gh-inari"],
+      ["cli-canon", "https://github.com/yohn-jp/cli-canon"],
       ["suzukuri", "https://github.com/yohn-jp/suzukuri"],
       ["wabachi", "https://github.com/yohn-jp/wabachi"],
+      ["shikitari", "https://github.com/yohn-jp/shikitari"],
       ["majiwari", "https://github.com/yohn-jp/majiwari"]
     ]
   );
@@ -34,8 +36,10 @@ test("portal registry preserves product mappings and derives all collection repo
       "mottainai",
       "nawabari",
       "gh-inari",
+      "cli-canon",
       "suzukuri",
       "wabachi",
+      "shikitari",
       "majiwari",
       "gh-makami",
       ".github"
