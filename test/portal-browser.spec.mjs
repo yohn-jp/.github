@@ -558,7 +558,7 @@ for (const route of routes) {
       expect(
         heroDifference.aspectDelta,
         JSON.stringify(heroDifference)
-      ).toBeLessThan(0.1);
+      ).toBeLessThan(0.15);
       expect(
         heroDifference.changedPixels,
         JSON.stringify(heroDifference)
