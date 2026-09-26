@@ -77,6 +77,16 @@ async function fixtureFetch(url) {
     });
   }
   if (suffix === "/issues") return jsonResponse(issues);
+  if (suffix === "/contents/package.json") {
+    return jsonResponse({
+      type: "file",
+      encoding: "base64",
+      content: Buffer.from(JSON.stringify({ version: "0.1.0" })).toString(
+        "base64"
+      ),
+      html_url: `https://github.com/yohn-jp/${repository}/blob/main/package.json`
+    });
+  }
 
   const dependency = suffix.match(
     /^\/issues\/(\d+)\/dependencies\/(blocked_by|blocking)$/
@@ -230,7 +240,7 @@ const routes = [
     path: "/en/",
     locale: "en",
     viewport: { width: 1440, height: 1000 },
-    ready: (page) => expect(page.locator(".product-card")).toHaveCount(6),
+    ready: (page) => expect(page.locator(".product-card")).toHaveCount(8),
     home: true,
     screenshot: true
   },
@@ -239,7 +249,7 @@ const routes = [
     path: "/ja/",
     locale: "ja",
     viewport: { width: 1440, height: 1000 },
-    ready: (page) => expect(page.locator(".product-card")).toHaveCount(6),
+    ready: (page) => expect(page.locator(".product-card")).toHaveCount(8),
     home: true
   },
   {
@@ -247,8 +257,30 @@ const routes = [
     path: "/ja/",
     locale: "ja",
     viewport: { width: 390, height: 844 },
-    ready: (page) => expect(page.locator(".product-card")).toHaveCount(6),
+    ready: (page) => expect(page.locator(".product-card")).toHaveCount(8),
     home: true
+  },
+  {
+    name: "home EN narrow mobile",
+    path: "/en/",
+    locale: "en",
+    viewport: { width: 320, height: 740 },
+    ready: (page) => expect(page.locator(".product-card")).toHaveCount(8),
+    home: true
+  },
+  {
+    name: "Engineering desktop",
+    path: "/en/engineering/",
+    locale: "en",
+    viewport: { width: 1440, height: 1000 },
+    ready: (page) => expect(page.locator(".engineering-product")).toHaveCount(8)
+  },
+  {
+    name: "Engineering JA mobile",
+    path: "/ja/engineering/",
+    locale: "ja",
+    viewport: { width: 390, height: 844 },
+    ready: (page) => expect(page.locator(".engineering-product")).toHaveCount(8)
   },
   {
     name: "Majiwari product desktop",
@@ -256,6 +288,22 @@ const routes = [
     locale: "en",
     viewport: { width: 1440, height: 1000 },
     ready: (page) => expect(page.locator("h1")).toHaveText("Majiwari")
+  },
+  {
+    name: "Wabachi product desktop",
+    path: "/en/products/wabachi/",
+    locale: "en",
+    viewport: { width: 1440, height: 1000 },
+    ready: (page) => expect(page.locator("h1")).toHaveText("Wabachi"),
+    product: true
+  },
+  {
+    name: "Shikitari product JA narrow mobile",
+    path: "/ja/products/shikitari/",
+    locale: "ja",
+    viewport: { width: 320, height: 740 },
+    ready: (page) => expect(page.locator("h1")).toHaveText("Shikitari"),
+    product: true
   },
   {
     name: "Work desktop",
@@ -308,6 +356,13 @@ for (const route of routes) {
         `${route.name} has Work CTA collision`
       ).toBe(false);
     }
+    if (route.product) {
+      expect(
+        await rectangleCollision(page, ".product-next"),
+        `${route.name} has Product CTA collision`
+      ).toBe(false);
+      await expect(page.locator(".product-work")).toBeVisible();
+    }
 
     if (route.screenshot) {
       await expect(page.locator(".work-strip")).toHaveScreenshot(
@@ -316,3 +371,22 @@ for (const route of routes) {
     }
   });
 }
+
+test("mobile menu keeps Engineering reachable and keyboard focus visible", async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto(`${baseUrl}/ja/`, { waitUntil: "networkidle" });
+  await page.locator(".mobile-nav summary").click();
+  await page.locator(".mobile-nav-links a[href='./engineering/']").click();
+  await expect(page).toHaveURL(/\/ja\/engineering\/$/);
+  await page.keyboard.press("Tab");
+  const focused = await page.evaluate(() => {
+    const element = document.activeElement;
+    return (
+      element instanceof HTMLElement &&
+      getComputedStyle(element).outlineStyle !== "none"
+    );
+  });
+  expect(focused).toBe(true);
+});

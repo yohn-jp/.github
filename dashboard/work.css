@@ -826,3 +826,9 @@
     background: transparent;
   }
 }
+.work-header h1,
+.graph-hero h1,
+.governance-header h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}

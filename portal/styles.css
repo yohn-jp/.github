@@ -1102,3 +1102,428 @@ summary:focus-visible {
     transform: none !important;
   }
 }
+
+/* Portal v2: Design A visual language with the Product Atlas structure. */
+:root {
+  --ink: #101713;
+  --muted: #68716b;
+  --text-secondary: #47514c;
+  --text-tertiary: #59645d;
+  --line: #d8d3c7;
+  --line-strong: #c9c5b9;
+  --paper: #f4f1e9;
+  --surface: #f9f8f3;
+  --surface-quiet: #e7e2d6;
+  --dark: #0c1d25;
+  --dark-soft: #102630;
+  --dark-line: #36505a;
+  --dark-line-strong: #49616a;
+  --accent: #c7ff45;
+  --shell: 1220px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --shadow-soft: none;
+}
+
+.site-nav-wrap,
+.site-nav-wrap.is-scrolled {
+  background: rgb(244 241 233 / 96%);
+  backdrop-filter: none;
+}
+.brand-slash {
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.25rem;
+}
+.nav-links {
+  gap: clamp(12px, 1.5vw, 24px);
+  font-size: 0.79rem;
+}
+.nav-links a {
+  color: var(--ink);
+}
+.hero {
+  min-height: 610px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(26px, 4vw, 58px);
+  align-items: center;
+  padding-block: 76px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.hero h1,
+.product-hero h1,
+.section-head h2,
+.work-strip h2,
+.product-next h2,
+.boundary-panel h2,
+.product-relations h2,
+.maturity-block h2,
+.engineering-hero h1,
+.engineering-product h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: -0.055em;
+}
+.hero h1 {
+  font-size: clamp(3.6rem, 6.7vw, 6.9rem);
+  line-height: 0.91;
+}
+.hero h1 span {
+  color: #607169;
+}
+.hero .lede {
+  max-width: 650px;
+  font-size: clamp(1.05rem, 1.4vw, 1.2rem);
+}
+.hero-art {
+  min-height: 430px;
+  height: 100%;
+  position: relative;
+  border-left: 1px solid var(--line-strong);
+  background: linear-gradient(
+    145deg,
+    #d9ded8 0 31%,
+    #8da09a 31% 32%,
+    #e8e3d6 32% 57%,
+    #1c3540 57%
+  );
+  overflow: hidden;
+}
+.hero-art-mark {
+  position: absolute;
+  right: 22px;
+  bottom: 12px;
+  color: rgb(255 255 255 / 78%);
+  font:
+    500 clamp(3.5rem, 5vw, 5.5rem) Georgia,
+    serif;
+  letter-spacing: -0.09em;
+  white-space: nowrap;
+}
+.hero-art-mark span {
+  color: var(--accent);
+}
+.hero-art-caption {
+  position: absolute;
+  top: 22px;
+  left: 22px;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.button {
+  border-radius: 0;
+  box-shadow: none;
+}
+.section {
+  padding-block: 88px;
+}
+.section-head {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 50px;
+}
+.section-head h2 {
+  max-width: 700px;
+  font-size: clamp(2.6rem, 5vw, 4.35rem);
+}
+.product-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-left: 1px solid var(--line-strong);
+}
+.product-card,
+.product-card:nth-child(even) {
+  min-height: 280px;
+  padding: 22px;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  border-left: 0;
+}
+.product-role {
+  margin-top: 32px;
+  font-size: 0.7rem;
+}
+.product-card h3 {
+  font-family: Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.8rem, 2.1vw, 2.35rem);
+}
+.product-summary {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.product-actions {
+  margin-top: 26px;
+  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.product-status {
+  font-size: 0.67rem;
+}
+.system-section {
+  padding-block: 90px;
+}
+.system-layout {
+  grid-template-columns: 1fr;
+  gap: 46px;
+}
+.system-nodes {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.system-node,
+.system-node:first-child {
+  grid-column: auto;
+  min-height: 145px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dark-text);
+}
+.system-node:first-child .system-node-role {
+  color: var(--dark-text-muted);
+}
+.system-node strong {
+  font-family: Georgia, serif;
+  font-weight: 500;
+}
+.relationship-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+}
+.relationship-list li {
+  min-width: 0;
+}
+.engineering-snapshot {
+  background: #e7e2d6;
+}
+.engineering-snapshot .section {
+  padding-block: 88px;
+}
+.engineering-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--line-strong);
+}
+.engineering-metric {
+  min-width: 0;
+  padding: 20px 17px;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+.metric-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.metric-value {
+  display: block;
+  margin-top: 26px;
+  font:
+    500 clamp(1.9rem, 3vw, 2.5rem) Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.metric-state {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.metric-provenance {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.engineering-note {
+  color: var(--muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.engineering-snapshot-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 22px;
+  margin-top: 18px;
+}
+.work-strip,
+.product-next {
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  background: transparent;
+  padding: 55px 0;
+  box-shadow: none;
+}
+.work-strip h2,
+.product-next h2 {
+  font-size: clamp(2.8rem, 5vw, 4rem);
+}
+.product-hero {
+  border-bottom: 1px solid var(--line-strong);
+}
+.product-hero .eyebrow {
+  max-width: 720px;
+}
+.product-hero h1 {
+  font-size: clamp(4.3rem, 10vw, 8rem);
+}
+.product-meta > * {
+  border-radius: 0;
+}
+.product-engineering {
+  padding-block: 86px;
+}
+.product-engineering .engineering-metrics-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.product-engineering .engineering-note {
+  margin-top: 20px;
+}
+
+@media (max-width: 1050px) {
+  .product-grid,
+  .system-nodes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
+  }
+  .engineering-metrics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .hero-art {
+    height: 260px;
+    min-height: 260px;
+  }
+  .section-head {
+    grid-template-columns: 1fr;
+  }
+  .relationship-list {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .hero {
+    padding-block: 60px;
+  }
+  .hero h1 {
+    font-size: clamp(3rem, 13vw, 5rem);
+  }
+  .product-grid,
+  .system-nodes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .product-card,
+  .product-card:nth-child(even) {
+    padding: 19px;
+  }
+  .product-card h3 {
+    font-size: 1.9rem;
+  }
+  .product-engineering .engineering-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .engineering-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .product-grid,
+  .system-nodes,
+  .engineering-metrics-grid,
+  .product-engineering .engineering-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-card,
+  .product-card:nth-child(even) {
+    min-height: 235px;
+  }
+  .engineering-snapshot-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .hero-art {
+    height: 215px;
+    min-height: 215px;
+  }
+}
+.product-work {
+  padding-block: 70px;
+  border-top: 1px solid var(--line-strong);
+}
+.product-work-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line-strong);
+}
+.product-work-list li {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: baseline;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.product-work-list li span,
+.product-work-list li time {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.product-work-list li a {
+  font-family: Georgia, serif;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+}
+.work-availability {
+  border-top: 1px solid var(--line-strong);
+  padding-top: 20px;
+  color: var(--muted);
+}
+@media (max-width: 520px) {
+  .product-work-list li {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .product-work-list li time {
+    grid-column: 2;
+  }
+}
+.product-card,
+.product-card:nth-child(even) {
+  min-height: 245px;
+}
+.product-card-content {
+  padding-top: 34px;
+}
+.product-card h3 {
+  margin-top: 0;
+}
+.product-card .product-summary {
+  max-width: 260px;
+  font-size: 0.84rem;
+}
+.work-strip .button.accent {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+/* Reveal enhancement never makes product content depend on IntersectionObserver. */
+.motion-ready [data-motion="reveal"],
+.motion-ready .product-card {
+  opacity: 1;
+  transform: none;
+}
