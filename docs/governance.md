@@ -44,16 +44,18 @@ validator. The shared adapter does not define ordinary, `issue/*`, or
 bounded legacy transport inputs: they may narrow an already-canonical
 ordinary branch or preserve an explicit exemption, but cannot authorize an
 Inari-invalid branch or any malformed reserved integration prefix. The
-separate `release/<semver>` class remains local compatibility plumbing because
-release branches are intentionally Issue-less and are outside Inari's Change
-branch grammar; malformed `release/*` names fail closed.
+Issue-less `release/<semver>` branches use Inari's separate release
+publication route; the workflow supplies the observed head revision and the
+adapter enforces the canonical route result.
 
 **Integration routing is projected by the same workflow and owned by Inari.**
 Consumers that opt into the three-level topology pass canonical route
 evidence through the reusable workflow's `integration-routing` input. The
-adapter adds only the observed pull-request head and base refs from the event,
-then fails on Inari's structured decision. It never derives parentage from a
-branch name or body shape:
+adapter adds the observed pull-request head and base refs, then binds the
+projected route to the event repository, head revision, title, and body through
+Inari's published pull-request validation surface. It fails on Inari's
+structured decision and never derives parentage from a branch name or body
+shape:
 
 ```text
 Implementation -> issue/<source-Issue> -> epic/<parent-Epic> -> default
@@ -67,10 +69,11 @@ closed whenever route evidence is supplied.
 
 The ordinary GitHub pull-request event does not carry the complete Issue
 parent graph. Therefore the reusable workflow cannot manufacture route input
-without becoming a competing parentage authority. Route evidence must be
-provided by the canonical Inari consumption path once the #925 surface is
-published; until then, supplied evidence fails closed with an explicit
-unavailable diagnostic and no route enforcement is claimed.
+without becoming a competing parentage authority. Consumers supply canonical
+route evidence through the workflow input when they adopt Issue integration;
+the published Inari routing and release surfaces validate it against the
+observed event evidence. A missing route input does not cause the adapter to
+infer standalone or integration parentage.
 
 The `epic/<issue-number>-<slug>` class is an integration branch for one
 tracking/Epic Issue and its independently implemented child Issues — not an
@@ -86,20 +89,17 @@ block force pushes, and block deletion.
 
 **The separate `epic(<scope>): <description>` PR-title class**
 (`classifyEpicPrTitle()` in `scripts/epic-branch.mjs`, wired into
-`scripts/validate-pr.mjs`) is likewise owned directly here, for the same
-reason branch-name validation is: gh-inari's own scope is PR _content_
-(body) governance, and today it checks a title only for being non-empty —
-no shared governance anywhere validates a PR title's
-`<type>(<scope>): <description>` form at all, for any type. This addition
-is intentionally as narrow as that gap: `classifyEpicPrTitle()` only
-recognizes and validates a title that is itself attempting the epic type
-(starting `epic(` or `epic:`); a malformed attempt fails closed
-(`GOVERNANCE_EPIC_PR_TITLE_INVALID`), but every other title — ordinary,
-release, or anything else — is left completely unclassified and
-unaffected, exactly as before. It does not introduce a distinct Epic PR
-_content_ contract, automatic child-PR routing, merge-method semantics,
-certification freshness, or lifecycle automation — those remain out of
-scope for #177 and belong to the follow-up Epic development model (#178).
+`scripts/validate-pr.mjs`) remains a narrow local addition because Inari's PR
+contract currently requires a non-empty title but does not validate the
+`<type>(<scope>): <description>` form. It only recognizes and validates a
+title that is itself attempting the Epic type (starting `epic(` or `epic:`);
+a malformed attempt fails closed (`GOVERNANCE_EPIC_PR_TITLE_INVALID`), while
+every other title remains unclassified and unaffected. This does not change
+the canonical Inari ownership of branch names. It does not introduce a
+distinct Epic PR _content_ contract, automatic child-PR routing,
+merge-method semantics, certification freshness, or lifecycle automation —
+those remain out of scope for #177 and belong to the follow-up Epic
+development model (#178).
 
 ## `@main` is a live, mutable authority
 

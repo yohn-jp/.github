@@ -6,6 +6,8 @@ import {
 } from "../scripts/validate-branch-name.mjs";
 import * as canonicalBranchNaming from "gh-inari/branch-naming";
 
+const releaseSourceRevision = "0123456789abcdef0123456789abcdef01234567";
+
 test("default pattern accepts a conventional branch name", () => {
   assert.deepEqual(validateBranchName("feat/42-add-init-command"), []);
 });
@@ -17,25 +19,50 @@ test("default pattern rejects a branch missing the issue number", () => {
 });
 
 test("default pattern accepts a release branch without an Issue number", () => {
-  assert.deepEqual(validateBranchName("release/0.5.1"), []);
-  assert.deepEqual(classifyBranchName("release/0.5.1"), {
-    kind: "release",
-    valid: true,
-    version: "0.5.1",
-    errors: []
-  });
+  assert.deepEqual(
+    validateBranchName("release/0.5.1", {
+      sourceRevision: releaseSourceRevision
+    }),
+    []
+  );
+  assert.deepEqual(
+    classifyBranchName("release/0.5.1", {
+      sourceRevision: releaseSourceRevision
+    }),
+    {
+      kind: "release",
+      valid: true,
+      version: "0.5.1",
+      errors: []
+    }
+  );
 });
 
 test("a release branch accepts a complete prerelease and build semver", () => {
-  assert.deepEqual(validateBranchName("release/1.0.0-rc.1+build.7"), []);
+  assert.deepEqual(
+    validateBranchName("release/1.0.0-rc.1+build.7", {
+      sourceRevision: releaseSourceRevision
+    }),
+    []
+  );
 });
 
 test("malformed release branches are rejected explicitly", () => {
   for (const branch of ["release/foo", "release/0.5"]) {
-    const errors = validateBranchName(branch);
+    const errors = validateBranchName(branch, {
+      sourceRevision: releaseSourceRevision
+    });
     assert.equal(errors.length, 1);
-    assert.match(errors[0], /must match release\/<semver>/);
-    assert.equal(classifyBranchName(branch).kind, "invalid-release");
+    assert.match(
+      errors[0],
+      /Release target version must be a semantic version/
+    );
+    assert.equal(
+      classifyBranchName(branch, {
+        sourceRevision: releaseSourceRevision
+      }).kind,
+      "invalid-release"
+    );
   }
 });
 
@@ -59,7 +86,8 @@ test("exempt list is configurable", () => {
 test("pattern is configurable", () => {
   assert.deepEqual(
     validateBranchName("release/1.2.3", {
-      pattern: "^release/\\d+\\.\\d+\\.\\d+$"
+      pattern: "^release/\\d+\\.\\d+\\.\\d+$",
+      sourceRevision: releaseSourceRevision
     }),
     []
   );
@@ -105,11 +133,17 @@ test("an invalid configured pattern fails closed with a clear diagnostic", () =>
 
 test("a valid release branch passes even with a malformed configured ordinary pattern", () => {
   assert.deepEqual(
-    validateBranchName("release/0.5.1", { pattern: "[invalid" }),
+    validateBranchName("release/0.5.1", {
+      pattern: "[invalid",
+      sourceRevision: releaseSourceRevision
+    }),
     []
   );
   assert.equal(
-    classifyBranchName("release/0.5.1", { pattern: "[invalid" }).kind,
+    classifyBranchName("release/0.5.1", {
+      pattern: "[invalid",
+      sourceRevision: releaseSourceRevision
+    }).kind,
     "release"
   );
 });
@@ -117,31 +151,45 @@ test("a valid release branch passes even with a malformed configured ordinary pa
 test("a valid release branch passes even with an overlong configured ordinary pattern", () => {
   assert.deepEqual(
     validateBranchName("release/0.5.1", {
-      pattern: `^(${"a|".repeat(150)}z)$`
+      pattern: `^(${"a|".repeat(150)}z)$`,
+      sourceRevision: releaseSourceRevision
     }),
     []
   );
 });
 
 test("a malformed release branch is rejected as invalid-release even with a broad configured ordinary pattern", () => {
-  const result = classifyBranchName("release/foo", { pattern: ".*" });
+  const result = classifyBranchName("release/foo", {
+    pattern: ".*",
+    sourceRevision: releaseSourceRevision
+  });
   assert.equal(result.kind, "invalid-release");
   assert.equal(result.valid, false);
-  assert.match(result.errors[0], /must match release\/<semver>/);
+  assert.match(
+    result.errors[0],
+    /Release target version must be a semantic version/
+  );
 });
 
 test("a malformed release branch is rejected as invalid-release even with a malformed configured ordinary pattern", () => {
-  const result = classifyBranchName("release/foo", { pattern: "[invalid" });
+  const result = classifyBranchName("release/foo", {
+    pattern: "[invalid",
+    sourceRevision: releaseSourceRevision
+  });
   assert.equal(result.kind, "invalid-release");
-  assert.match(result.errors[0], /must match release\/<semver>/);
+  assert.match(
+    result.errors[0],
+    /Release target version must be a semantic version/
+  );
 });
 
 test("release prefix cannot be overridden by branch-name-exempt", () => {
   const errors = validateBranchName("release/foo", {
-    exempt: ["release/foo"]
+    exempt: ["release/foo"],
+    sourceRevision: releaseSourceRevision
   });
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /must match release\/<semver>/);
+  assert.match(errors[0], /Release target version must be a semantic version/);
 });
 
 test("default pattern accepts a canonical epic integration branch", () => {
@@ -163,7 +211,7 @@ test("a malformed epic branch is rejected explicitly", () => {
   ]) {
     const errors = validateBranchName(branch);
     assert.equal(errors.length, 1);
-    assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
+    assert.deepEqual(errors, canonicalBranchNaming.validateBranchName(branch));
     assert.equal(classifyBranchName(branch).kind, "invalid-epic");
   }
 });
@@ -196,7 +244,10 @@ test("a malformed epic branch is rejected as invalid-epic even with a broad conf
   const result = classifyBranchName("epic/foo", { pattern: ".*" });
   assert.equal(result.kind, "invalid-epic");
   assert.equal(result.valid, false);
-  assert.match(result.errors[0], /must match epic\/<issue-number>-<slug>/);
+  assert.deepEqual(
+    result.errors,
+    canonicalBranchNaming.validateBranchName("epic/foo")
+  );
 });
 
 test("epic prefix cannot be overridden by branch-name-exempt", () => {
@@ -204,7 +255,10 @@ test("epic prefix cannot be overridden by branch-name-exempt", () => {
     exempt: ["epic/foo"]
   });
   assert.equal(errors.length, 1);
-  assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
+  assert.deepEqual(
+    errors,
+    canonicalBranchNaming.validateBranchName("epic/foo")
+  );
 });
 
 test("epic branches are never accepted by an unrelated ordinary pattern override", () => {

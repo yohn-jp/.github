@@ -12,8 +12,9 @@ on:
         description: >-
           Legacy compatibility regex for an ordinary development PR's head
           branch name. Canonical ordinary and integration branch grammar is
-          owned by Inari; this input may only narrow an already-canonical
-          branch.
+          owned by Inari; release routes are derived from the canonical Inari
+          release surface. This input may only narrow an already-canonical
+          ordinary branch.
         type: string
         default: '^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$'
       branch-name-exempt:
@@ -29,8 +30,9 @@ on:
       integration-routing:
         description: >-
           JSON route evidence accepted by Inari's canonical integration-routing
-          projector. Observed PR head/base refs are added by the adapter before
-          validation; parentage is never inferred from the event or branch.
+          projector. The adapter supplies observed repository, head/base refs,
+          head revision, title, and body to Inari before enforcement; parentage
+          is never inferred from the event or branch.
         type: string
         default: ""
 
@@ -78,6 +80,7 @@ jobs:
       - name: Validate branch name
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BRANCH_NAME_PATTERN: ${{ inputs.branch-name-pattern }}
           BRANCH_NAME_EXEMPT: ${{ inputs.branch-name-exempt }}
         run: node "$RUNNER_TEMP/governance-tools/scripts/validate-branch-name.mjs" --branch "$HEAD_REF"

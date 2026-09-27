@@ -5,24 +5,22 @@
 // differences without forking this script. The default pattern matches
 // yohn-jp/gh-inari's own <type>/<issue-number>-<slug> convention.
 // release/<semver> is a separate, issue-less branch class;
-// epic/<issue-number>-<slug> is a separate, Issue-bound integration branch
-// class (see epic-branch.mjs) — not an implementation leaf branch, so it is
-// likewise classified independently of the ordinary pattern.
+// epic/<issue-number>-<slug> and issue/<issue-number>-<slug> are separate,
+// Issue-bound integration branch classes. Inari owns all three semantics;
+// this script only applies bounded transport configuration to ordinary names.
 //
-// Branch naming is delegated to gh-inari. Release branches remain a narrow
-// compatibility class because they are intentionally Issue-less and are not
-// part of gh-inari's canonical Change branch grammar.
+// Branch and release route semantics are delegated to gh-inari. Release
+// branches remain Issue-less and use Inari's separate release publication
+// surface rather than its canonical Change branch grammar.
 import { execFileSync } from "node:child_process";
+import { deriveReleasePrPublicationRoute } from "gh-inari";
 import * as canonicalBranchNaming from "gh-inari/branch-naming";
-import { classifyReleaseBranch } from "./release-branch.mjs";
-import { classifyEpicBranch } from "./epic-branch.mjs";
 
 const { recognizeBranchName, validateBranchName: validateCanonicalBranchName } =
   canonicalBranchNaming;
 
 const DEFAULT_PATTERN = "^(feat|fix|docs|refactor|test|chore)/\\d+-[a-z0-9-]+$";
 const DEFAULT_EXEMPT = ["main"];
-export { RELEASE_BRANCH_PATTERN } from "./release-branch.mjs";
 
 // `pattern` is caller-supplied config (the pr-governance.yml workflow_call
 // `branch-name-pattern` input, set in a consumer repository's own committed
@@ -37,7 +35,7 @@ const MAX_BRANCH_LENGTH = 200;
 
 /**
  * @param {string} branch
- * @param {{pattern?: string, exempt?: string[]}} [options]
+ * @param {{pattern?: string, exempt?: string[], sourceRevision?: string}} [options]
  * @returns {string[]} errors, empty if valid
  */
 export function validateBranchName(branch, options = {}) {
@@ -53,8 +51,8 @@ export function validateBranchName(branch, options = {}) {
  * branch name.
  *
  * @param {string} branch
- * @param {{pattern?: string, exempt?: string[]}} [options]
- * @returns {{kind: "release"|"invalid-release"|"epic"|"invalid-epic"|"issue"|"invalid-issue"|"ordinary"|"exempt", valid: boolean, version?: string, issueNumber?: number, slug?: string, errors: string[]}}
+ * @param {{pattern?: string, exempt?: string[], sourceRevision?: string}} [options]
+ * @returns {{kind: "release"|"invalid-release"|"epic"|"invalid-epic"|"issue"|"invalid-issue"|"ordinary"|"exempt", valid: boolean, version?: string, issueNumber?: string, slug?: string, errors: string[]}}
  */
 export function classifyBranchName(branch, options = {}) {
   const pattern = options.pattern ?? DEFAULT_PATTERN;
@@ -87,25 +85,37 @@ export function classifyBranchName(branch, options = {}) {
   // pattern is compiled, so a broad/exempting pattern can never authorize a
   // malformed reserved branch.
   if (branch.startsWith("release/")) {
-    return classifyReleaseBranch(branch);
+    try {
+      const route = deriveReleasePrPublicationRoute(
+        branch.slice("release/".length),
+        options.sourceRevision ?? ""
+      );
+      if (route.expectedHead !== branch) {
+        return {
+          kind: "invalid-release",
+          valid: false,
+          errors: [
+            `canonical Inari release routing returned unexpected head "${route.expectedHead}"`
+          ]
+        };
+      }
+      return {
+        kind: "release",
+        valid: true,
+        version: route.targetVersion,
+        errors: []
+      };
+    } catch (cause) {
+      return {
+        kind: "invalid-release",
+        valid: false,
+        errors: [cause instanceof Error ? cause.message : String(cause)]
+      };
+    }
   }
   if (branch.startsWith("epic/") || branch.startsWith("issue/")) {
     const parts = recognizeBranchName(branch);
     const errors = validateCanonicalBranchName(branch);
-    // gh-inari versions predating #925 did not expose integration branch
-    // grammar. Keep the existing Epic classifier as a bounded migration
-    // compatibility path until every consumer has the canonical surface;
-    // malformed reserved branches still fail closed and no local pattern can
-    // override this result.
-    if (
-      branch.startsWith("epic/") &&
-      typeof canonicalBranchNaming.recognizeIntegrationBranchName !== "function"
-    ) {
-      const legacyEpic = classifyEpicBranch(branch);
-      return legacyEpic.valid
-        ? legacyEpic
-        : { kind: "invalid-epic", valid: false, errors: legacyEpic.errors };
-    }
     if (errors.length > 0 || parts === undefined) {
       return {
         kind: branch.startsWith("epic/") ? "invalid-epic" : "invalid-issue",
@@ -207,7 +217,11 @@ function main() {
   const exemptRaw = get("--exempt") ?? process.env.BRANCH_NAME_EXEMPT;
   const exempt = exemptRaw ? parseList(exemptRaw) : DEFAULT_EXEMPT;
 
-  const errors = validateBranchName(branch, { pattern, exempt });
+  const errors = validateBranchName(branch, {
+    pattern,
+    exempt,
+    sourceRevision: process.env.HEAD_SHA
+  });
   if (errors.length > 0) {
     for (const error of errors) console.error(error);
     process.exitCode = 1;

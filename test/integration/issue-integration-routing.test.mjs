@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { validatePullRequest } from "../../scripts/validate-pr.mjs";
 
 const defaultBody = await readFile(
@@ -168,4 +171,126 @@ test("observed PR base cannot override canonical route evidence", async () => {
   );
   assert.equal(result.valid, false);
   assert.ok(result.violations.length > 0);
+});
+
+test("the workflow binds observed repository, head, base, and revision through Inari", async () => {
+  const revision = "0123456789abcdef0123456789abcdef01234567";
+  const event = {
+    repository: {
+      id: 100,
+      full_name: "acme/inari",
+      html_url: "https://github.com/acme/inari"
+    },
+    pull_request: {
+      number: 701,
+      title: "feat(core): deliver governed change",
+      body: defaultBody,
+      head: { ref: "feat/700-source-routing", sha: revision },
+      base: { ref: "issue/680-source-routing" }
+    }
+  };
+  const temporaryDirectory = await mkdtemp(
+    join(tmpdir(), "inari-routing-event-")
+  );
+  const eventPath = join(temporaryDirectory, "event.json");
+
+  try {
+    await writeFile(eventPath, JSON.stringify(event));
+    const child = spawnSync(
+      process.execPath,
+      [
+        "scripts/validate-pr.mjs",
+        "--event",
+        eventPath,
+        "--branch",
+        event.pull_request.head.ref
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          INARI_ROUTING: JSON.stringify(
+            route({
+              head: "feat/999-stale-input",
+              base: "main"
+            })
+          )
+        }
+      }
+    );
+
+    assert.equal(child.status, 0, child.stderr);
+    const output = JSON.parse(child.stdout);
+    assert.equal(output.valid, true);
+    assert.equal(output.routing.head, event.pull_request.head.ref);
+    assert.equal(output.routing.base, event.pull_request.base.ref);
+    assert.equal(output.routing.pullRequest.head, event.pull_request.head.ref);
+    assert.equal(output.routing.pullRequest.base, event.pull_request.base.ref);
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
+});
+
+test("the published Inari validator rejects routing references from another repository", async () => {
+  const foreignRepository = {
+    repositoryHost: "github.com",
+    repositoryId: "101",
+    repository: "other/inari"
+  };
+  const foreignRoute = route({
+    implementation: { ...foreignRepository, number: 700 },
+    sourceIssue: { ...foreignRepository, number: 680 },
+    epic: { ...foreignRepository, number: 640 },
+    relationships: {
+      implementationParent: { ...foreignRepository, number: 680 },
+      sourceIssueParent: { ...foreignRepository, number: 640 }
+    }
+  });
+  const revision = "0123456789abcdef0123456789abcdef01234567";
+  const event = {
+    repository: {
+      id: 100,
+      full_name: "acme/inari",
+      html_url: "https://github.com/acme/inari"
+    },
+    pull_request: {
+      number: 702,
+      title: "feat(core): deliver governed change",
+      body: defaultBody,
+      head: { ref: "feat/700-source-routing", sha: revision },
+      base: { ref: "issue/680-source-routing" }
+    }
+  };
+  const temporaryDirectory = await mkdtemp(
+    join(tmpdir(), "inari-routing-cross-repository-")
+  );
+  const eventPath = join(temporaryDirectory, "event.json");
+
+  try {
+    await writeFile(eventPath, JSON.stringify(event));
+    const child = spawnSync(
+      process.execPath,
+      ["scripts/validate-pr.mjs", "--event", eventPath],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          INARI_ROUTING: JSON.stringify(foreignRoute)
+        }
+      }
+    );
+
+    assert.equal(child.status, 1, child.stderr);
+    const output = JSON.parse(child.stdout);
+    assert.equal(output.valid, false);
+    assert.ok(
+      output.violations.some(
+        (violation) => violation.code === "PR_PUBLICATION_REPOSITORY_MISMATCH"
+      )
+    );
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 });
