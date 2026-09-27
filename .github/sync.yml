@@ -627,6 +627,10 @@ yohn-jp/jinushi:
     dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
