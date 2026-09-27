@@ -17,6 +17,7 @@ on:
       - "scripts/github-pr-links.mjs"
       - "scripts/pull-request-links.mjs"
       - "test/portal-browser.spec.mjs"
+      - "test/fixtures/portal-visual/**"
       - "playwright.config.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -29,6 +30,7 @@ on:
       - "messages.js"
       - "scripts/**"
       - "test/portal-browser.spec.mjs"
+      - "test/fixtures/portal-visual/**"
       - "playwright.config.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -63,11 +65,3 @@ jobs:
 
       - name: Run portal browser smoke tests
         run: pnpm run test:portal:browser
-
-      - name: Upload browser failure artifacts
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: portal-browser-test-results
-          path: test-results/
-          retention-days: 1
