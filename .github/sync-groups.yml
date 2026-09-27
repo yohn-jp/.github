@@ -161,6 +161,13 @@ sync-groups:
       - common
       - mottainai-extra
 
+  majiwari:
+    repositories:
+      - yohn-jp/majiwari
+    include:
+      - common
+      - majiwari-extra
+
   jinushi:
     repositories:
       - yohn-jp/jinushi
@@ -168,9 +175,3 @@ sync-groups:
       - common
       - jinushi-extra
 
-  majiwari:
-    repositories:
-      - yohn-jp/majiwari
-    include:
-      - common
-      - majiwari-extra
