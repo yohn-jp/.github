@@ -4,10 +4,17 @@ import {
   readGovernedExistingArtifact,
   projectExistingArtifact
 } from "gh-inari";
+import { readFile } from "node:fs/promises";
 
 const API_ROOT = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 export const INARI_GOVERNANCE_AUTHORITY = "Inari";
+export const INARI_GOVERNANCE_RUNTIME_VERSION = JSON.parse(
+  await readFile(
+    new URL("../package.json", import.meta.resolve("gh-inari")),
+    "utf8"
+  )
+).version;
 
 export const GOVERNANCE_REASON_CODES = Object.freeze({
   AUTHENTICATION_UNAVAILABLE: "authentication-unavailable",
@@ -212,6 +219,7 @@ export function unavailableGovernance(reason, options = {}) {
         ];
   return {
     authority: INARI_GOVERNANCE_AUTHORITY,
+    inariVersion: INARI_GOVERNANCE_RUNTIME_VERSION,
     status: "unavailable",
     valid: null,
     classification: "unknown",
@@ -229,6 +237,7 @@ function projectGovernance(read) {
   const violations = projection.violations ?? projection.diagnostics ?? [];
   return {
     authority: INARI_GOVERNANCE_AUTHORITY,
+    inariVersion: INARI_GOVERNANCE_RUNTIME_VERSION,
     status: projection.valid ? "valid" : "invalid",
     valid: projection.valid,
     classification: projection.classification,
@@ -245,31 +254,6 @@ function projectGovernance(read) {
   };
 }
 
-/**
- * Bounded `gh api --jq <path>` shim. Inari's repository identity resolution
- * (0.9.0+) reads a single scalar field (currently only `.id`) from a REST
- * response; this deliberately supports nothing beyond dotted field access.
- */
-function applyJqExpression(body, expression) {
-  if (typeof expression !== "string" || expression.trim() === "") return body;
-  let value;
-  try {
-    value = JSON.parse(body);
-  } catch {
-    return body;
-  }
-  for (const key of expression.trim().replace(/^\./, "").split(".")) {
-    if (key === "") continue;
-    if (value === null || typeof value !== "object") {
-      value = undefined;
-      break;
-    }
-    value = value[key];
-  }
-  if (value === undefined || value === null) return "";
-  return typeof value === "string" ? value : JSON.stringify(value);
-}
-
 class FetchGithubTransport {
   constructor({ fetchImpl, token, issues }) {
     this.fetchImpl = fetchImpl;
@@ -279,36 +263,14 @@ class FetchGithubTransport {
     this.failures = [];
   }
 
-  async run(args) {
-    if (args[0] === "--version") {
-      return {
-        exitCode: 0,
-        stdout: "gh version inari-transport\n",
-        stderr: ""
-      };
-    }
-    if (args[0] === "auth" && args[1] === "status") {
-      return hasToken(this.token)
-        ? { exitCode: 0, stdout: "Logged in\n", stderr: "" }
-        : { exitCode: 1, stdout: "", stderr: "not logged in" };
-    }
-    if (args[0] !== "api" || typeof args[1] !== "string") {
-      return { exitCode: 1, stdout: "", stderr: "unsupported gh invocation" };
-    }
-
-    const endpoint = args[1];
-    const methodIndex = args.indexOf("--method");
-    const method = methodIndex === -1 ? "GET" : args[methodIndex + 1];
-    const hostnameIndex = args.indexOf("--hostname");
-    const hostname =
-      hostnameIndex === -1 ? "github.com" : args[hostnameIndex + 1];
-    const jqIndex = args.indexOf("--jq");
-    const jqExpression = jqIndex === -1 ? null : args[jqIndex + 1];
+  async request({ hostname, method, path: endpoint, body: requestBody }) {
     const baseUrl =
       hostname === "github.com" ? API_ROOT : `https://${hostname}/api/v3`;
     const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-    const cacheKey = `${method}:${url}:${jqExpression ?? ""}`;
-    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey);
+    const cacheKey = `${method}:${url}`;
+    if (method === "GET" && this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
 
     const issueMatch = endpoint.match(/^repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/);
     if (method === "GET" && issueMatch) {
@@ -316,11 +278,7 @@ class FetchGithubTransport {
         issueKey({ fullName: issueMatch[1] }, Number(issueMatch[2]))
       );
       if (rawIssue !== undefined) {
-        const result = {
-          exitCode: 0,
-          stdout: JSON.stringify(rawIssue),
-          stderr: ""
-        };
+        const result = { status: 200, body: rawIssue };
         this.cache.set(cacheKey, result);
         return result;
       }
@@ -332,35 +290,48 @@ class FetchGithubTransport {
       "User-Agent": "yohn-jp-issue-dashboard"
     };
     if (hasToken(this.token)) headers.Authorization = `Bearer ${this.token}`;
-    const response = await this.fetchImpl(url, { headers });
-    const body = await response.text();
-    const result = response.ok
-      ? {
-          exitCode: 0,
-          stdout: applyJqExpression(body, jqExpression),
-          stderr: ""
-        }
-      : {
-          exitCode: 1,
-          stdout: "",
-          stderr:
-            `[HTTP ${response.status}] ${body || "GitHub API request failed"}`.slice(
-              0,
-              2000
-            )
-        };
+    if (requestBody !== undefined) headers["Content-Type"] = "application/json";
+    const response = await this.fetchImpl(url, {
+      method,
+      headers,
+      ...(requestBody === undefined
+        ? {}
+        : { body: JSON.stringify(requestBody) })
+    });
+    const responseText = await response.text();
+    let responseBody = responseText;
+    if (responseText !== "") {
+      try {
+        responseBody = JSON.parse(responseText);
+      } catch {
+        // Retain non-JSON provider errors for the existing bounded diagnostics.
+      }
+    } else {
+      responseBody = null;
+    }
+    const responseHeaders = {};
+    for (const name of ["link", "retry-after", "x-ratelimit-remaining"]) {
+      const value = response.headers?.get(name);
+      if (value) responseHeaders[name] = value;
+    }
+    const result = {
+      status: response.status,
+      body: responseBody,
+      ...(Object.keys(responseHeaders).length > 0
+        ? { headers: responseHeaders }
+        : {})
+    };
     if (!response.ok) {
       this.failures.push({
         status: response.status,
-        message: String(body || "GitHub API request failed").slice(0, 2000)
+        message: String(responseText || "GitHub API request failed").slice(
+          0,
+          2000
+        )
       });
     }
     if (response.ok && endpoint.includes("/git/trees/")) {
-      try {
-        this.governanceRevision = JSON.parse(body)?.sha ?? null;
-      } catch {
-        this.governanceRevision = null;
-      }
+      this.governanceRevision = responseBody?.sha ?? null;
     }
     this.cache.set(cacheKey, result);
     return result;
@@ -389,10 +360,11 @@ export function createIssueGovernanceReader({
   fetchImpl = globalThis.fetch,
   token = "",
   rawIssues = [],
-  adapter
+  adapter,
+  transport
 }) {
   const state = adapter
-    ? { adapter, transport: adapter.transport }
+    ? { adapter, transport }
     : createGovernanceAdapter({ repository, fetchImpl, token, rawIssues });
   return async (number) => ({
     ...(await readGovernedExistingArtifact(state.adapter, "issue", number)),
@@ -410,6 +382,7 @@ function preflightResult({
 }) {
   return {
     authority: INARI_GOVERNANCE_AUTHORITY,
+    inariVersion: INARI_GOVERNANCE_RUNTIME_VERSION,
     status,
     availability: status,
     available: status !== "unavailable",
@@ -511,11 +484,15 @@ export async function preflightIssueGovernance({
         repository,
         token,
         rawIssues,
-        adapter
+        adapter,
+        transport
       })
     });
   } catch (error) {
-    const reason = governanceFailureReason(error);
+    const providerFailure = transport.failures.at(-1);
+    const reason = transport.failures.some(isPermissionError)
+      ? GOVERNANCE_REASON_CODES.INSUFFICIENT_PERMISSIONS
+      : governanceFailureReason(error);
     return preflightResult({
       status: "unavailable",
       repository,
@@ -524,7 +501,7 @@ export async function preflightIssueGovernance({
           reason,
           stage: "preflight",
           repository: repository.fullName,
-          error
+          error: providerFailure ?? error
         })
       ]
     });

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { collectDashboardData } from "../scripts/dashboard-data.mjs";
 import {
   createGovernanceDiagnostic,
+  INARI_GOVERNANCE_RUNTIME_VERSION,
   GOVERNANCE_REASON_CODES
 } from "../scripts/inari-governance.mjs";
 
@@ -66,7 +67,15 @@ test("authentication preflight runs before evaluation and leaves every Issue unk
     GOVERNANCE_REASON_CODES.AUTHENTICATION_UNAVAILABLE
   );
   assert.equal(data.issues[0].governance.valid, null);
+  assert.equal(
+    data.issues[0].governance.inariVersion,
+    INARI_GOVERNANCE_RUNTIME_VERSION
+  );
   assert.equal(data.repositories[0].governance.status, "unavailable");
+  assert.equal(
+    data.repositories[0].governance.inariVersion,
+    INARI_GOVERNANCE_RUNTIME_VERSION
+  );
   assert.equal(data.governanceHealth.collection.status, "unavailable");
   assert.deepEqual(data.governanceHealth.collection.causes, [
     {
