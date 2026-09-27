@@ -592,7 +592,7 @@ test("Engineering shows repository counts and Actions provenance with absence an
     });
   const measured = productMetric("mottainai", "Included source files");
   await expect(measured).toHaveAttribute("data-metric-state", "available");
-  await expect(measured.locator(".metric-value")).toHaveText("5");
+  await expect(measured.locator(".metric-value")).toHaveText("6");
   await expect(measured.locator(".metric-provenance")).toContainText(
     ENGINEERING_REVISION
   );
