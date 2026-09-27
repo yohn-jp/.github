@@ -76,9 +76,9 @@ override any of them; an unsupported repository shape fails closed inside
 
 ## Run sequence
 
-1. Check out the caller's default branch, fail closed unless its head is
-   exactly `source-revision` (a pull-request head is never checked out), and
-   record it.
+1. Fail closed unless the caller runs on its default branch at exactly
+   `source-revision` (nothing is checked out for a pull-request or other
+   ref); check out that revision and record it.
 2. Install the caller's dependencies with the shared `setup-node-pnpm` action.
 3. Resolve `gh-inari@latest` from the npm registry, require at least the
    first release carrying the release-preparation surface (`0.18.0`), install

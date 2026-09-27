@@ -19,8 +19,9 @@ on:
       source-revision:
         description: >-
           Exact 40-character commit SHA of the caller repository to prepare
-          the release from. The run fails closed unless it is the current
-          head of the caller's default branch.
+          the release from. The run fails closed unless the caller runs on
+          its default branch at exactly this revision, and canonical Inari
+          fails closed unless it is still that branch's head.
         type: string
         required: true
       release-intent:
@@ -80,15 +81,23 @@ jobs:
       release-head-revision: ${{ steps.branch.outputs.head-revision }}
       pull-request-url: ${{ steps.publish.outputs.url }}
     steps:
+      # Only a run on the caller's default branch at exactly source-revision
+      # proceeds, so nothing is checked out or installed for any other ref
+      # (for example a pull-request head or merge commit).
       - name: Validate release request
         shell: bash
         env:
           SOURCE_REVISION: ${{ inputs.source-revision }}
           RELEASE_INTENT: ${{ inputs.release-intent }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if ! [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::source-revision must be an exact 40-character lowercase commit SHA" >&2
+            exit 1
+          fi
+          if [ -z "$DEFAULT_BRANCH" ] || [ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ] || [ "$GITHUB_SHA" != "$SOURCE_REVISION" ]; then
+            echo "::error::release preparation must run on refs/heads/$DEFAULT_BRANCH at source-revision $SOURCE_REVISION (got $GITHUB_REF at $GITHUB_SHA)" >&2
             exit 1
           fi
           if [ -z "$RELEASE_INTENT" ] || [[ "$RELEASE_INTENT" == -* ]] || [[ "$RELEASE_INTENT" =~ [[:space:]] ]]; then
@@ -96,14 +105,9 @@ jobs:
             exit 1
           fi
 
-      # Only the caller's default-branch head is ever checked out: release
-      # history is read from that branch, so a source revision that is not
-      # its current head (for example a pull-request head) fails closed here
-      # instead of being checked out and installed.
-      - name: Checkout caller default branch
+      - name: Checkout caller source revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Record exact caller source revision
@@ -115,7 +119,7 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           if [ "$actual" != "$SOURCE_REVISION" ]; then
-            echo "::error::default-branch head $actual is not the requested source revision $SOURCE_REVISION" >&2
+            echo "::error::checked-out revision $actual is not the requested source revision $SOURCE_REVISION" >&2
             exit 1
           fi
           echo "revision=$actual" >> "$GITHUB_OUTPUT"

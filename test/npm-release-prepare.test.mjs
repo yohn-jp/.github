@@ -156,11 +156,8 @@ test("workflow_call contract takes an exact source revision and explicit intent"
   ]) {
     assert.ok(call.outputs[output], `missing output ${output}`);
   }
-  const checkout = stepNamed("Checkout caller default branch");
-  assert.equal(
-    checkout.with.ref,
-    "${{ github.event.repository.default_branch }}"
-  );
+  const checkout = stepNamed("Checkout caller source revision");
+  assert.equal(checkout.with.ref, undefined);
   assert.doesNotMatch(workflowSource, /ref: \$\{\{ inputs\./);
   assert.equal(checkout.with["persist-credentials"], false);
   assert.match(
@@ -169,30 +166,48 @@ test("workflow_call contract takes an exact source revision and explicit intent"
   );
 });
 
-test("release request validation rejects non-exact revisions and option-like intents", () => {
+test("release request validation rejects non-default-branch runs, non-exact revisions and option-like intents", () => {
   const run = stepNamed("Validate release request").run;
   const cwd = mkdtempSync(join(tmpdir(), "npm-release-request-"));
   try {
     const sha = "a".repeat(40);
-    runStep(run, cwd, { SOURCE_REVISION: sha, RELEASE_INTENT: "minor" });
-    runStep(run, cwd, { SOURCE_REVISION: sha, RELEASE_INTENT: "1.2.3" });
+    const onMain = {
+      DEFAULT_BRANCH: "main",
+      GITHUB_REF: "refs/heads/main",
+      GITHUB_SHA: sha,
+      SOURCE_REVISION: sha
+    };
+    runStep(run, cwd, { ...onMain, RELEASE_INTENT: "minor" });
+    runStep(run, cwd, { ...onMain, RELEASE_INTENT: "1.2.3" });
     assertStepFails(
       run,
       cwd,
-      { SOURCE_REVISION: "main", RELEASE_INTENT: "minor" },
+      { ...onMain, SOURCE_REVISION: "main", RELEASE_INTENT: "minor" },
       /exact 40-character/
     );
     assertStepFails(
       run,
       cwd,
-      { SOURCE_REVISION: sha, RELEASE_INTENT: "--target-version=9.9.9" },
+      { ...onMain, RELEASE_INTENT: "--target-version=9.9.9" },
       /one explicit intent/
     );
     assertStepFails(
       run,
       cwd,
-      { SOURCE_REVISION: sha, RELEASE_INTENT: "" },
+      { ...onMain, RELEASE_INTENT: "" },
       /one explicit intent/
+    );
+    assertStepFails(
+      run,
+      cwd,
+      { ...onMain, GITHUB_REF: "refs/pull/7/merge", RELEASE_INTENT: "minor" },
+      /must run on refs\/heads\/main/
+    );
+    assertStepFails(
+      run,
+      cwd,
+      { ...onMain, GITHUB_SHA: "b".repeat(40), RELEASE_INTENT: "minor" },
+      /must run on refs\/heads\/main/
     );
   } finally {
     rmSync(cwd, { recursive: true, force: true });
