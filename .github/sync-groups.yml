@@ -65,6 +65,8 @@ file-groups:
       dest: .github/workflows/issue-governance.yml
     - source: templates/workflows/publish.yml
       dest: .github/workflows/publish.yml
+    - source: templates/workflows/release-prepare.yml
+      dest: .github/workflows/release-prepare.yml
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
   gh-makami-extra:
@@ -91,7 +93,7 @@ file-groups:
       dest: scripts/validate-issue.mjs
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
-  mottainai-extra:
+  mottainai-extra: []
   jinushi-extra:
     - source: templates/workflows/governance.yml
       dest: .github/workflows/governance.yml
@@ -166,4 +168,3 @@ sync-groups:
     include:
       - common
       - jinushi-extra
-

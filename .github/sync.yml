@@ -62,6 +62,8 @@ yohn-jp/gh-inari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/suzukuri:
@@ -127,6 +129,8 @@ yohn-jp/suzukuri:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/shikitari:
@@ -192,6 +196,8 @@ yohn-jp/shikitari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/wabachi:
@@ -257,6 +263,8 @@ yohn-jp/wabachi:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/cli-canon:
@@ -322,6 +330,8 @@ yohn-jp/cli-canon:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/gh-makami:
@@ -375,6 +385,10 @@ yohn-jp/gh-makami:
     dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/prettier-autofix.yml
@@ -558,6 +572,10 @@ yohn-jp/majiwari:
     dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
