@@ -17,6 +17,7 @@ const prGovernanceWorkflow = await readFile(
   ".github/workflows/pr-governance.yml",
   "utf8"
 );
+const releaseSourceRevision = "0123456789abcdef0123456789abcdef01234567";
 
 function branchNameJobCondition() {
   const job = prGovernanceWorkflow.match(
@@ -46,7 +47,19 @@ function pullRequest(
     title,
     body,
     root: requestRoot,
-    branch
+    branch,
+    observedPullRequest: {
+      repository: {
+        repositoryHost: "github.com",
+        repositoryId: "100",
+        repository: "acme/governance"
+      },
+      head: branch,
+      base: "main",
+      headRevision: releaseSourceRevision,
+      title,
+      body
+    }
   };
 }
 
@@ -102,13 +115,18 @@ test("marker resolution does not depend on the release branch shape", async () =
 
 test("malformed release branches are rejected before contract validation", async () => {
   for (const branch of ["release/foo", "release/0.5"]) {
-    assert.equal(validateBranchName(branch).length, 1);
+    assert.equal(
+      validateBranchName(branch, {
+        sourceRevision: releaseSourceRevision
+      }).length,
+      1
+    );
     const result = await validatePullRequest(pullRequest(branch, releaseBody));
     assert.equal(result.valid, false);
     assert.equal(result.branchClassification, "invalid-release");
     assert.equal(
       result.violations[0].code,
-      "GOVERNANCE_RELEASE_BRANCH_INVALID"
+      "PR_PUBLICATION_RELEASE_ROUTE_INVALID"
     );
   }
 });
@@ -131,7 +149,7 @@ test("malformed epic branches are rejected by branch-name validation before reac
   for (const branch of ["epic/foo", "epic/890"]) {
     const errors = validateBranchName(branch);
     assert.equal(errors.length, 1);
-    assert.match(errors[0], /must match epic\/<issue-number>-<slug>/);
+    assert.match(errors[0], /does not match/u);
   }
 });
 
