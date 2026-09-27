@@ -47,6 +47,24 @@ test("portal registry preserves product mappings and derives all collection repo
   });
 });
 
+test("Engineering census roots cover Mottainai implementation and Majiwari workspaces", async () => {
+  const registry = await loadPortalRegistry("portal/registry.json");
+  const mottainai = registry.engineering.products.mottainai;
+  const majiwari = registry.engineering.products.majiwari;
+
+  assert.ok(mottainai.sourceIncludePaths.includes("src"));
+  assert.ok(mottainai.sourceIncludePaths.includes("scripts"));
+  assert.ok(mottainai.sourceIncludePaths.includes("review-pages/review"));
+  assert.ok(mottainai.testIncludePaths.includes("host-bootstrap/tests"));
+  assert.ok(mottainai.testIncludePaths.includes("nix/tests"));
+  assert.ok(mottainai.testIncludePaths.includes("review-pages/test"));
+  assert.ok(
+    majiwari.sourceIncludePaths.includes("deployments/cloudflare/worker")
+  );
+  assert.deepEqual(registry.engineering.products.nawabari.testIncludePaths, []);
+  assert.deepEqual(registry.engineering.products.majiwari.testIncludePaths, []);
+});
+
 test("portal registry rejects duplicate repository mappings", async () => {
   const registry = await loadPortalRegistry("portal/registry.json");
   const invalid = clone(registry);

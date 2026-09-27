@@ -1,0 +1,362 @@
+name: npm release preparation
+
+# Reusable npm release preparation: check out the caller's exact source
+# revision, resolve and record the published gh-inari release used for the
+# run, let canonical Inari prepare and verify the release workspace from
+# governed history, commit only the prepared paths to release/<version>, and
+# let canonical Inari publish (or return) the one Issue-less release PR.
+#
+# This workflow owns orchestration and Git plumbing only. Release-history
+# interpretation, version/intent semantics, version-bearing files, release
+# documents, package verification and PR-publication idempotency are owned by
+# gh-inari. It never publishes npm and never creates a tag or GitHub Release:
+# npm-publish.yml remains the publication authority once the release PR has
+# merged and a GitHub Release is published. See
+# docs/npm-release-preparation.md.
+on:
+  workflow_call:
+    inputs:
+      source-revision:
+        description: >-
+          Exact 40-character commit SHA of the caller repository to prepare
+          the release from. The run fails closed unless it is the current
+          head of the caller's default branch.
+        type: string
+        required: true
+      release-intent:
+        description: >-
+          Explicit release intent: patch, minor, major, or an exact semantic
+          version. Interpreted only by canonical Inari.
+        type: string
+        required: true
+      node-version:
+        description: Node.js version used for installation and verification.
+        type: string
+        default: "24"
+    outputs:
+      source-revision:
+        description: Exact caller source revision the release was prepared from.
+        value: ${{ jobs.prepare.outputs.source-revision }}
+      inari-version:
+        description: Resolved published gh-inari version used for the run.
+        value: ${{ jobs.prepare.outputs.inari-version }}
+      inari-integrity:
+        description: npm registry integrity of the resolved gh-inari tarball.
+        value: ${{ jobs.prepare.outputs.inari-integrity }}
+      target-version:
+        description: Release version prepared by canonical Inari.
+        value: ${{ jobs.prepare.outputs.target-version }}
+      release-branch:
+        description: Governed release branch (release/<version>).
+        value: ${{ jobs.prepare.outputs.release-branch }}
+      release-head-revision:
+        description: Commit at the head of the governed release branch.
+        value: ${{ jobs.prepare.outputs.release-head-revision }}
+      pull-request-url:
+        description: URL of the created or reused governed release PR.
+        value: ${{ jobs.prepare.outputs.pull-request-url }}
+    secrets: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release-prepare-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare release PR
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      source-revision: ${{ steps.source.outputs.revision }}
+      inari-version: ${{ steps.inari.outputs.version }}
+      inari-integrity: ${{ steps.inari.outputs.integrity }}
+      target-version: ${{ steps.prepare.outputs.target-version }}
+      release-branch: ${{ steps.branch.outputs.branch }}
+      release-head-revision: ${{ steps.branch.outputs.head-revision }}
+      pull-request-url: ${{ steps.publish.outputs.url }}
+    steps:
+      - name: Validate release request
+        shell: bash
+        env:
+          SOURCE_REVISION: ${{ inputs.source-revision }}
+          RELEASE_INTENT: ${{ inputs.release-intent }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::source-revision must be an exact 40-character lowercase commit SHA" >&2
+            exit 1
+          fi
+          if [ -z "$RELEASE_INTENT" ] || [[ "$RELEASE_INTENT" == -* ]] || [[ "$RELEASE_INTENT" =~ [[:space:]] ]]; then
+            echo "::error::release-intent must be one explicit intent or version argument" >&2
+            exit 1
+          fi
+
+      # Only the caller's default-branch head is ever checked out: release
+      # history is read from that branch, so a source revision that is not
+      # its current head (for example a pull-request head) fails closed here
+      # instead of being checked out and installed.
+      - name: Checkout caller default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Record exact caller source revision
+        id: source
+        shell: bash
+        env:
+          SOURCE_REVISION: ${{ inputs.source-revision }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "$SOURCE_REVISION" ]; then
+            echo "::error::default-branch head $actual is not the requested source revision $SOURCE_REVISION" >&2
+            exit 1
+          fi
+          echo "revision=$actual" >> "$GITHUB_OUTPUT"
+          echo "- Source revision: \`$actual\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout release tooling (yohn-jp/.github)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .release-tools
+          persist-credentials: false
+
+      - uses: ./.release-tools/.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Isolate release tooling
+        shell: bash
+        run: mv .release-tools "$RUNNER_TEMP/release-tools"
+
+      - name: Resolve published Inari
+        id: inari
+        shell: bash
+        env:
+          # First published gh-inari release carrying the certified
+          # release-preparation and Issue-less release-PR publication surfaces.
+          MINIMUM_INARI_VERSION: "0.18.0"
+        run: |
+          set -euo pipefail
+          inari_root="$RUNNER_TEMP/inari"
+          mkdir -p "$inari_root"
+          npm view gh-inari@latest name version dist.integrity dist.tarball --json > "$inari_root/resolved.json"
+          node - "$inari_root/resolved.json" "$MINIMUM_INARI_VERSION" <<'NODE' > "$inari_root/resolved.env"
+          const { readFileSync } = require("node:fs");
+          const [file, minimum] = process.argv.slice(2);
+          const resolved = JSON.parse(readFileSync(file, "utf8"));
+          const exact = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+          const version = resolved.version;
+          const integrity = resolved["dist.integrity"];
+          const tarball = resolved["dist.tarball"];
+          if (resolved.name !== "gh-inari" || typeof version !== "string" || !exact.test(version)) {
+            throw new Error("gh-inari@latest did not resolve to an exact stable published version");
+          }
+          if (typeof integrity !== "string" || integrity === "" || typeof tarball !== "string" || tarball === "") {
+            throw new Error("gh-inari@latest has no recorded registry integrity/tarball");
+          }
+          const parts = (value) => exact.exec(value).slice(1).map(Number);
+          const [a, b] = [parts(version), parts(minimum)];
+          const order = a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+          if (order < 0) {
+            throw new Error(`gh-inari ${version} predates the release-preparation surface (${minimum})`);
+          }
+          console.log(`version=${version}`);
+          console.log(`integrity=${integrity}`);
+          console.log(`tarball=${tarball}`);
+          NODE
+          # shellcheck disable=SC1091
+          . "$inari_root/resolved.env"
+          npm install --prefix "$inari_root" --no-save --omit=dev --ignore-scripts --no-audit --no-fund "gh-inari@$version"
+          installed="$(node -p "require(process.argv[1]).version" "$inari_root/node_modules/gh-inari/package.json")"
+          if [ "$installed" != "$version" ]; then
+            echo "::error::installed gh-inari $installed does not match resolved $version" >&2
+            exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "integrity=$integrity"
+            echo "cli=$inari_root/node_modules/gh-inari/dist/index.js"
+            echo "module=$inari_root/node_modules/gh-inari/dist/index.js"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "- Inari: \`gh-inari@$version\`"
+            echo "- Inari source: $tarball (\`$integrity\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare release with canonical Inari
+        id: prepare
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INARI_CLI: ${{ steps.inari.outputs.cli }}
+          RELEASE_INTENT: ${{ inputs.release-intent }}
+          SOURCE_REVISION: ${{ steps.source.outputs.revision }}
+        run: |
+          set -euo pipefail
+          result="$RUNNER_TEMP/release-preparation.json"
+          node "$INARI_CLI" release prepare "$RELEASE_INTENT" --repository "$GITHUB_REPOSITORY" --json > "$result"
+          node - "$result" "$SOURCE_REVISION" <<'NODE' >> "$GITHUB_OUTPUT"
+          const { readFileSync } = require("node:fs");
+          const [file, source] = process.argv.slice(2);
+          const result = JSON.parse(readFileSync(file, "utf8"));
+          if (result.ok !== true || result.operation !== "release.prepare") {
+            throw new Error("canonical Inari release preparation did not succeed");
+          }
+          if (result.source?.sourceRevision !== source) {
+            throw new Error(`Inari prepared ${result.source?.sourceRevision}, not the requested source ${source}`);
+          }
+          if (!Array.isArray(result.changedPaths) || result.changedPaths.length === 0) {
+            throw new Error("Inari reported no prepared release paths");
+          }
+          console.log(`target-version=${result.targetVersion}`);
+          console.log(`previous-version=${result.previousRelease.version}`);
+          console.log(`plan-digest=${result.planDigest}`);
+          console.log(`changed-paths=${JSON.stringify(result.changedPaths)}`);
+          NODE
+          echo "- Prepared version: \`$(node -p "require(process.argv[1]).targetVersion" "$result")\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit prepared changes to release branch
+        id: branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REVISION: ${{ steps.source.outputs.revision }}
+          TARGET_VERSION: ${{ steps.prepare.outputs.target-version }}
+          CHANGED_PATHS: ${{ steps.prepare.outputs.changed-paths }}
+        run: |
+          set -euo pipefail
+          branch="release/$TARGET_VERSION"
+          if [ -n "${GH_TOKEN:-}" ] && [ -n "${GITHUB_SERVER_URL:-}" ]; then
+            credentials="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+            export GIT_CONFIG_COUNT=1
+            export GIT_CONFIG_KEY_0="http.$GITHUB_SERVER_URL/.extraheader"
+            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $credentials"
+          fi
+
+          mapfile -t paths < <(node -e 'for (const p of JSON.parse(process.argv[1])) console.log(p)' "$CHANGED_PATHS")
+          git add --all -- "${paths[@]}"
+          unexpected="$(git diff --name-only; git ls-files --others --exclude-standard)"
+          if [ -n "$unexpected" ]; then
+            echo "::error::release preparation changed paths outside the Inari-reported set:" >&2
+            echo "$unexpected" >&2
+            exit 1
+          fi
+          if git diff --cached --quiet; then
+            echo "::error::source $SOURCE_REVISION already contains the prepared release; nothing to commit" >&2
+            exit 1
+          fi
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --no-verify -m "chore(release): prepare v$TARGET_VERSION"
+          prepared_tree="$(git rev-parse 'HEAD^{tree}')"
+
+          remote_head="$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)"
+          if [ -z "$remote_head" ]; then
+            git push --quiet origin "HEAD:refs/heads/$branch"
+            head_revision="$(git rev-parse HEAD)"
+            echo "Created $branch at $head_revision"
+          else
+            git fetch --quiet --no-tags origin "refs/heads/$branch"
+            fetched="$(git rev-parse FETCH_HEAD)"
+            parents="$(git rev-list --parents -n 1 "$fetched" | cut -d ' ' -f 2-)"
+            remote_tree="$(git rev-parse "$fetched^{tree}")"
+            if [ "$fetched" != "$remote_head" ] || [ "$parents" != "$SOURCE_REVISION" ] || [ "$remote_tree" != "$prepared_tree" ]; then
+              echo "::error::existing $branch ($remote_head) is not the exact prepared release of $SOURCE_REVISION; refusing to reuse or overwrite it" >&2
+              exit 1
+            fi
+            head_revision="$remote_head"
+            echo "Reused $branch at $head_revision"
+          fi
+          {
+            echo "branch=$branch"
+            echo "head-revision=$head_revision"
+          } >> "$GITHUB_OUTPUT"
+          echo "- Release branch: \`$branch\` at \`$head_revision\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish release PR with canonical Inari
+        id: publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INARI_CLI: ${{ steps.inari.outputs.cli }}
+          INARI_MODULE: ${{ steps.inari.outputs.module }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+          SOURCE_REVISION: ${{ steps.source.outputs.revision }}
+          TARGET_VERSION: ${{ steps.prepare.outputs.target-version }}
+          PREVIOUS_VERSION: ${{ steps.prepare.outputs.previous-version }}
+          RELEASE_INTENT: ${{ inputs.release-intent }}
+          PLAN_DIGEST: ${{ steps.prepare.outputs.plan-digest }}
+          HEAD_REVISION: ${{ steps.branch.outputs.head-revision }}
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/release-pr-body.json"
+          node "$INARI_CLI" pr render --template release --json \
+            --field "release_pr=Prepared by the organization npm release-preparation workflow. Release PRs use a \`release/<semver>\` head branch; this naming convention is an operational classification only." \
+            --field "version=- Target version: $TARGET_VERSION
+          - Version bump (patch/minor/major): $RELEASE_INTENT (previous $PREVIOUS_VERSION)" \
+            --field "release_notes=See \`docs/releases/$TARGET_VERSION.md\`, prepared by canonical Inari from governed history at \`$SOURCE_REVISION\` (plan digest \`$PLAN_DIGEST\`)." \
+            --field "breaking_migration=See the Breaking changes section of \`docs/releases/$TARGET_VERSION.md\`." \
+            --field "publish_plan=After merge, publish the immutable \`v$TARGET_VERSION\` GitHub Release from the merged commit; the repository's publish workflow (yohn-jp/.github npm-publish.yml) publishes the package. This workflow publishes nothing." \
+            --field "post_release_verification=Confirm the publish workflow succeeded and the registry serves version $TARGET_VERSION." \
+            > "$body"
+
+          request="$RUNNER_TEMP/release-pr-publication.json"
+          node --input-type=module - "$body" "$request" <<'NODE'
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { pathToFileURL } from "node:url";
+          const [bodyFile, requestFile] = process.argv.slice(2);
+          const { createReleasePrPublicationRequest } = await import(pathToFileURL(process.env.INARI_MODULE).href);
+          const rendered = JSON.parse(readFileSync(bodyFile, "utf8"));
+          if (rendered.valid !== true || typeof rendered.body !== "string") {
+            throw new Error("canonical Inari did not render a valid release PR body");
+          }
+          const request = createReleasePrPublicationRequest({
+            repository: {
+              repositoryHost: new URL(process.env.GITHUB_SERVER_URL).host,
+              repositoryId: process.env.REPOSITORY_ID,
+              repository: process.env.GITHUB_REPOSITORY,
+            },
+            targetVersion: process.env.TARGET_VERSION,
+            sourceRevision: process.env.HEAD_REVISION,
+            title: `chore(release): v${process.env.TARGET_VERSION}`,
+            body: rendered.body,
+          });
+          writeFileSync(requestFile, JSON.stringify(request));
+          NODE
+
+          result="$RUNNER_TEMP/release-pr-publication-result.json"
+          status=0
+          node "$INARI_CLI" pr publish --from "$request" --repository "$GITHUB_REPOSITORY" --json > "$result" || status=$?
+          cat "$result"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::canonical Inari release PR publication failed closed (exit $status)" >&2
+            exit "$status"
+          fi
+          node - "$result" <<'NODE' >> "$GITHUB_OUTPUT"
+          const { readFileSync } = require("node:fs");
+          const result = JSON.parse(readFileSync(process.argv[2], "utf8"));
+          const url = result.pullRequest?.url ?? result.pullRequest?.htmlUrl ?? "";
+          if (result.ok !== true || url === "") {
+            throw new Error("canonical Inari release PR publication returned no pull request");
+          }
+          console.log(`url=${url}`);
+          console.log(`classification=${result.classification}`);
+          NODE
+          echo "- Release PR: $(grep '^url=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2-)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Restore release tooling for action cleanup
+        if: always()
+        shell: bash
+        run: |
+          if [ -d "$RUNNER_TEMP/release-tools" ] && [ ! -e .release-tools ]; then
+            mv "$RUNNER_TEMP/release-tools" .release-tools
+          fi

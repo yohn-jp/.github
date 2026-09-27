@@ -10,10 +10,17 @@
         "sourceIncludePaths": [
           "host-bootstrap/src",
           "packages",
-          "review-pages/src"
+          "review-pages/review",
+          "review-pages/src",
+          "scripts",
+          "src"
         ],
-        "testIncludePaths": ["host-bootstrap/tests", "review-pages/test"],
-        "excludePaths": [],
+        "testIncludePaths": [
+          "host-bootstrap/tests",
+          "nix/tests",
+          "review-pages/test"
+        ],
+        "excludePaths": ["docs/design/models"],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
           "branch": "main",
@@ -24,7 +31,7 @@
       "nawabari": {
         "revision": "main",
         "sourceIncludePaths": ["src", "scripts"],
-        "testIncludePaths": ["test", "tests"],
+        "testIncludePaths": [],
         "excludePaths": [],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
@@ -35,8 +42,13 @@
       },
       "inari": {
         "revision": "main",
-        "sourceIncludePaths": ["src", "apps", "scripts"],
-        "testIncludePaths": ["test", "tests"],
+        "sourceIncludePaths": [
+          "src",
+          "apps",
+          "scripts",
+          "branch-naming-authority.mjs"
+        ],
+        "testIncludePaths": ["test"],
         "excludePaths": [],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
@@ -48,7 +60,7 @@
       "cli-canon": {
         "revision": "main",
         "sourceIncludePaths": ["src", "scripts"],
-        "testIncludePaths": ["test", "tests"],
+        "testIncludePaths": ["test"],
         "excludePaths": [],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
@@ -60,7 +72,7 @@
       "suzukuri": {
         "revision": "main",
         "sourceIncludePaths": ["src", "scripts"],
-        "testIncludePaths": ["test", "tests"],
+        "testIncludePaths": [],
         "excludePaths": [],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
@@ -72,7 +84,7 @@
       "wabachi": {
         "revision": "main",
         "sourceIncludePaths": ["src", "scripts"],
-        "testIncludePaths": ["test", "tests"],
+        "testIncludePaths": [],
         "excludePaths": [],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
@@ -84,7 +96,7 @@
       "shikitari": {
         "revision": "main",
         "sourceIncludePaths": ["src", "scripts"],
-        "testIncludePaths": ["test", "tests"],
+        "testIncludePaths": [],
         "excludePaths": [],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
@@ -100,10 +112,11 @@
           "gateway",
           "registry",
           "runtime",
-          "ui"
+          "ui",
+          "deployments/cloudflare/worker"
         ],
-        "testIncludePaths": ["test", "tests"],
-        "excludePaths": [],
+        "testIncludePaths": [],
+        "excludePaths": ["scripts"],
         "testFileSuffixes": [".test.", ".spec."],
         "verification": {
           "branch": "main",

@@ -62,6 +62,8 @@ yohn-jp/gh-inari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/suzukuri:
@@ -127,6 +129,8 @@ yohn-jp/suzukuri:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/shikitari:
@@ -192,6 +196,8 @@ yohn-jp/shikitari:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/wabachi:
@@ -257,6 +263,8 @@ yohn-jp/wabachi:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/cli-canon:
@@ -322,6 +330,8 @@ yohn-jp/cli-canon:
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/publish.yml
     dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
 yohn-jp/gh-makami:
@@ -375,6 +385,10 @@ yohn-jp/gh-makami:
     dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/prettier-autofix.yml
@@ -558,6 +572,10 @@ yohn-jp/majiwari:
     dest: .github/ISSUE_TEMPLATE/epic.yml
   - source: .github/inari/issues/epic.json
     dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
@@ -576,3 +594,64 @@ yohn-jp/majiwari:
     dest: .github/workflows/prettier-autofix.yml
   - source: scripts/validate-action-pins.mjs
     dest: scripts/validate-action-pins.mjs
+yohn-jp/jinushi:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
+  - source: .github/PULL_REQUEST_TEMPLATE/authority.md
+    dest: .github/PULL_REQUEST_TEMPLATE/authority.md
+  - source: .github/PULL_REQUEST_TEMPLATE/epic.md
+    dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+  - source: .github/inari/issues/bug.json
+    dest: .github/inari/issues/bug.json
+  - source: .github/inari/issues/feature.json
+    dest: .github/inari/issues/feature.json
+  - source: .github/inari/issues/architecture.json
+    dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/maintenance.json
+    dest: .github/inari/issues/maintenance.json
+  - source: .github/inari/issues/research.json
+    dest: .github/inari/issues/research.json
+  - source: .github/inari/pull-requests/default.json
+    dest: .github/inari/pull-requests/default.json
+  - source: .github/inari/pull-requests/release.json
+    dest: .github/inari/pull-requests/release.json
+  - source: .github/inari/pull-requests/authority.json
+    dest: .github/inari/pull-requests/authority.json
+  - source: .github/inari/pull-requests/epic.json
+    dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
+  - source: .github/inari/pr-policy.yml
+    dest: .github/inari/pr-policy.yml
+  - source: .github/inari/manifest.json
+    dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
+  - source: templates/workflows/issue-governance.yml
+    dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/jinushi-go-release.yml
+    dest: .github/workflows/release.yml

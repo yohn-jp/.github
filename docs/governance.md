@@ -18,9 +18,11 @@ that consumer.
 
 **`yohn-jp/gh-inari` remains the shared semantic implementation.** It
 compiles the local snapshot's Issue Forms and PR templates into typed
-contracts and validates the rendered artifacts. The workflow adapters only
-own event plumbing and candidate selection; they do not duplicate required
-headings or field rules. They invoke the published `gh-inari` package:
+contracts, validates the rendered artifacts, and owns canonical branch and
+Issue/Epic/Implementation integration routing. The workflow adapters only
+own event plumbing and enforcement; they do not duplicate required headings,
+field rules, parentage, or route selection. They invoke the published
+`gh-inari` package:
 
 ```sh
 gh-inari pr validate <number> --repository <owner>/<repo> [--template <id>]
@@ -35,51 +37,71 @@ third-party Actions (see `scripts/validate-action-pins.mjs`), which exists
 specifically to bound supply-chain risk from repositories this organization
 does not control.
 
-**Branch-name validation is owned directly by `.github/workflows/pr-governance.yml`**
-(via `scripts/validate-branch-name.mjs`), because gh-inari's own scope is
-explicitly Issue/PR _content_ governance — it does not validate branch
-names. Owning this here does not create a competing authority over
-anything gh-inari already owns; it fills a gap next to it. The default
-pattern (`^(feat|fix|docs|refactor|test|chore)/\d+-[a-z0-9-]+$`) remains
-Issue-bound. The separate `release/<semver>` class is accepted without an
-Issue; malformed `release/*` names fail closed. `branch-name-pattern` and
-`branch-name-exempt` remain available for ordinary consumer-specific naming
-differences, but cannot authorize a malformed release branch.
+**Branch-name validation is projected by `.github/workflows/pr-governance.yml`**
+(via `scripts/validate-branch-name.mjs`) to the canonical Inari branch
+validator. The shared adapter does not define ordinary, `issue/*`, or
+`epic/*` grammar. `branch-name-pattern` and `branch-name-exempt` remain
+bounded legacy transport inputs: they may narrow an already-canonical
+ordinary branch, and an exemption only waives that narrower pattern for a
+branch Inari already accepts. Canonical Inari validation runs before any
+exemption, so neither input can authorize an Inari-invalid branch or any
+malformed reserved integration prefix. The
+Issue-less `release/<semver>` branches use Inari's separate release
+publication route; the workflow supplies the observed head revision and the
+adapter enforces the canonical route result.
 
-The separate `epic/<issue-number>-<slug>` class (`scripts/epic-branch.mjs`,
-Issue #177) is a temporary **integration** branch for one tracking/Epic
-Issue and its independently implemented child Issues — not an
-implementation leaf branch. It is always Issue-bound, classified with the
-same fail-closed precedence as `release/*`, and malformed `epic/*` names
-fail closed the same way. This Issue enables and accepts the branch class
-only; it does not add automatic child-PR routing, a distinct PR content
-contract, merge-method semantics, certification freshness, or lifecycle
-automation — those belong to the follow-up Epic development model. Because
-no executable authority in this repository owns actual GitHub-native branch
-protection settings (there is no repository-ruleset-as-code here, only file
-sync — see `.github/workflows/sync-org-templates.yml`), the operator
-enabling `epic/**` in a consumer repository must also configure, via that
-repository's own GitHub branch protection settings: require a pull request
-before merging, block force pushes, and block deletion. This note does not
-create a competing authority — it names the one operator action this
-repository's code cannot perform on a consumer's behalf.
+**Integration routing is projected by the same workflow and owned by Inari.**
+Consumers that opt into the three-level topology pass canonical route
+evidence through the reusable workflow's `integration-routing` input. The
+adapter adds the observed pull-request head and base refs, then binds the
+projected route to the event repository, head revision, title, and body through
+Inari's published pull-request validation surface. It fails on Inari's
+structured decision and never derives parentage from a branch name or body
+shape:
+
+```text
+Implementation -> issue/<source-Issue> -> epic/<parent-Epic> -> default
+```
+
+Implementation PRs target the source-Issue branch, source-Issue integration
+PRs target the parent Epic, and Epic integration PRs target the default
+branch. Standalone and explicit legacy routes remain compatible according to
+the canonical result. Missing or unavailable canonical route validation fails
+closed whenever route evidence is supplied.
+
+The ordinary GitHub pull-request event does not carry the complete Issue
+parent graph. Therefore the reusable workflow cannot manufacture route input
+without becoming a competing parentage authority. Consumers supply canonical
+route evidence through the workflow input when they adopt Issue integration;
+the published Inari routing and release surfaces validate it against the
+observed event evidence. A missing route input does not cause the adapter to
+infer standalone or integration parentage.
+
+The `epic/<issue-number>-<slug>` class is an integration branch for one
+tracking/Epic Issue and its independently implemented child Issues — not an
+implementation leaf branch. Canonical Inari branch validation accepts it and
+`issue/<issue-number>-<slug>`; malformed reserved prefixes fail closed before
+legacy compatibility inputs are considered. Because no executable authority
+in this repository owns actual GitHub-native branch protection settings (there
+is no repository-ruleset-as-code here, only file sync — see
+`.github/workflows/sync-org-templates.yml`), the operator enabling `epic/**`
+in a consumer repository must also configure, via that repository's own
+GitHub branch protection settings: require a pull request before merging,
+block force pushes, and block deletion.
 
 **The separate `epic(<scope>): <description>` PR-title class**
 (`classifyEpicPrTitle()` in `scripts/epic-branch.mjs`, wired into
-`scripts/validate-pr.mjs`) is likewise owned directly here, for the same
-reason branch-name validation is: gh-inari's own scope is PR _content_
-(body) governance, and today it checks a title only for being non-empty —
-no shared governance anywhere validates a PR title's
-`<type>(<scope>): <description>` form at all, for any type. This addition
-is intentionally as narrow as that gap: `classifyEpicPrTitle()` only
-recognizes and validates a title that is itself attempting the epic type
-(starting `epic(` or `epic:`); a malformed attempt fails closed
-(`GOVERNANCE_EPIC_PR_TITLE_INVALID`), but every other title — ordinary,
-release, or anything else — is left completely unclassified and
-unaffected, exactly as before. It does not introduce a distinct Epic PR
-_content_ contract, automatic child-PR routing, merge-method semantics,
-certification freshness, or lifecycle automation — those remain out of
-scope for #177 and belong to the follow-up Epic development model (#178).
+`scripts/validate-pr.mjs`) remains a narrow local addition because Inari's PR
+contract currently requires a non-empty title but does not validate the
+`<type>(<scope>): <description>` form. It only recognizes and validates a
+title that is itself attempting the Epic type (starting `epic(` or `epic:`);
+a malformed attempt fails closed (`GOVERNANCE_EPIC_PR_TITLE_INVALID`), while
+every other title remains unclassified and unaffected. This does not change
+the canonical Inari ownership of branch names. It does not introduce a
+distinct Epic PR _content_ contract, automatic child-PR routing,
+merge-method semantics, certification freshness, or lifecycle automation —
+those remain out of scope for #177 and belong to the follow-up Epic
+development model (#178).
 
 ## `@main` is a live, mutable authority
 
@@ -207,6 +229,11 @@ after this change lands there:
 The publish workflows are outside this routing change. They continue to verify
 the immutable release tag, resolved commit, package version, and exact packed
 tarball before publish.
+
+npm release PRs are prepared by the reusable
+`.github/workflows/npm-release-prepare.yml` workflow, which delegates release
+preparation and idempotent release-PR publication to published gh-inari and
+never publishes; see `docs/npm-release-preparation.md`.
 
 ## Why PRs and Issues are enforced differently
 
