@@ -135,7 +135,7 @@ test("static-quality workflow exposes the contract without matrices or repositor
   ]);
   assert.equal(call.outputs.status.value, "${{ jobs.status.outputs.status }}");
   assert.deepEqual(workflow.permissions, {});
-  assert.equal(workflow.jobs.check["runs-on"], "ubuntu-latest");
+  assert.equal(workflow.jobs.check["runs-on"], "ubuntu-24.04");
   assert.deepEqual(workflow.jobs.check.permissions, { contents: "read" });
   assert.equal(workflow.jobs.status.if, "always()");
   assert.doesNotMatch(source, /strategy:/u);

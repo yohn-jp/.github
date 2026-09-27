@@ -182,3 +182,8 @@ consumer until per-target templating or an org-wide policy resolves that.
 `test/fixtures/ts-cli` with `committed-dist: true` and
 `conformance-script: "conformance:contract"` set, so both capabilities run
 in CI on every change here, not just the default path.
+
+For the separate same-repository Prettier stacked-PR autofix, compatible
+consumer rollout, fork exclusion, and GitHub App setup, see
+[Prettier stacked-PR autofix](prettier-autofix.md). The `format:check` job
+above remains unchanged and authoritative.

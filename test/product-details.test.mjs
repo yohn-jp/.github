@@ -73,14 +73,14 @@ test("details reject missing, duplicate, and unknown product entries", async () 
   );
 });
 
-test("Wabachi detail remains explicit about early authority-programme status", async () => {
+test("Wabachi detail reflects current analysis and Architecture Canon capabilities", async () => {
   const catalog = await loadProductCatalog("portal/registry.json");
   const details = await loadProductDetails(
     "portal/product-details.json",
     catalog
   );
   const wabachi = details.products.find((detail) => detail.id === "wabachi");
-  assert.match(wabachi.maturity, /early-stage/i);
-  assert.match(wabachi.maturity, /README is still placeholder-level/i);
-  assert.match(wabachi.why, /canonical truth/i);
+  assert.match(wabachi.maturity, /active pre-1.0 CLI/i);
+  assert.match(wabachi.maturity, /Architecture Canon validation\/rendering/i);
+  assert.match(wabachi.why, /provider/i);
 });

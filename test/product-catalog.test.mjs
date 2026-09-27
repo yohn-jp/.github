@@ -17,12 +17,21 @@ function response(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-test("loads the versioned six-product portal catalog deterministically", async () => {
+test("loads the versioned eight-product portal catalog deterministically", async () => {
   const catalog = await loadProductCatalog("portal/registry.json");
   assert.equal(catalog.schemaVersion, 1);
   assert.deepEqual(
     catalog.products.map((product) => product.id),
-    ["mottainai", "nawabari", "inari", "suzukuri", "wabachi", "majiwari"]
+    [
+      "mottainai",
+      "nawabari",
+      "inari",
+      "cli-canon",
+      "suzukuri",
+      "wabachi",
+      "shikitari",
+      "majiwari"
+    ]
   );
   for (const product of catalog.products) {
     assert.match(product.repository, /^https:\/\/github\.com\/yohn-jp\//);
@@ -145,7 +154,16 @@ test("portal build publishes only the validated catalog projection", async () =>
     assert.equal(published.schemaVersion, 1);
     assert.deepEqual(
       published.products.map((product) => product.id),
-      ["mottainai", "nawabari", "inari", "suzukuri", "wabachi", "majiwari"]
+      [
+        "mottainai",
+        "nawabari",
+        "inari",
+        "cli-canon",
+        "suzukuri",
+        "wabachi",
+        "shikitari",
+        "majiwari"
+      ]
     );
     assert.doesNotMatch(
       JSON.stringify(published),

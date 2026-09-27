@@ -11,6 +11,7 @@ on:
     branches: [main]
     paths:
       - "AGENTS.md"
+      - ".github/agent-governance/AGENTS.md"
       - "CLAUDE.md"
       - "docs/agent-change-workflow.md"
       - "docs/agent-runtime-profiles.md"
@@ -20,7 +21,11 @@ on:
       - ".github/inari/**"
       - ".github/codeql/**"
       - ".github/sync.yml"
+      - ".github/sync-groups.yml"
+      - "scripts/generate-sync-config.mjs"
       - ".github/sync-agents.yml"
+      - ".github/sync-common.yml"
+      - ".github/agent-governance/skills/**"
       - "templates/workflows/**"
       - "scripts/validate-action-pins.mjs"
       - "scripts/generate-inari-manifest.mjs"
@@ -52,7 +57,7 @@ jobs:
   # policy for any consumer.
   format-check:
     name: Validate canonical Prettier formatting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,13 +75,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Repair canonical Prettier formatting
+        run: pnpm run format
+
       - name: Check canonical Prettier formatting
         run: pnpm run format:check
 
   sync:
     name: Sync managed templates
     needs: [validate, format-check]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -85,6 +93,9 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
+
+      - name: Generate flat template sync config
+        run: node scripts/generate-sync-config.mjs
 
       - name: Generate Inari snapshot manifest
         run: node scripts/generate-inari-manifest.mjs
@@ -109,6 +120,7 @@ jobs:
             nawabari
             mottainai
             wabachi
+            cli-canon
             majiwari
 
       - name: Sync templates to org repositories
@@ -140,6 +152,17 @@ jobs:
           # against .github/sync.yml fans out into a dozen-plus commits on
           # each target. false batches every changed file for a target into
           # one commit instead.
+          COMMIT_EACH_FILE: false
+
+      - name: Sync organization-wide agent governance
+        uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
+        with:
+          GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
+          GIT_EMAIL: yohn-jp-template-sync[bot]@users.noreply.github.com
+          GIT_USERNAME: yohn-jp-template-sync[bot]
+          CONFIG_PATH: .github/sync-common.yml
+          SKIP_PR: true
+          COMMIT_PREFIX: "chore: sync org-managed files"
           COMMIT_EACH_FILE: false
 
       - name: Sync shared agent instructions

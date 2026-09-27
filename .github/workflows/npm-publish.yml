@@ -48,7 +48,7 @@ permissions:
 jobs:
   plan:
     name: Plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       smoke_test_node_versions: ${{ steps.split.outputs.versions }}
     steps:
@@ -63,7 +63,7 @@ jobs:
 
   build:
     name: Build and pack
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: read
       contents: read
@@ -214,7 +214,7 @@ jobs:
   smoke-test:
     name: Smoke test (Node ${{ matrix.node-version }})
     needs: [plan, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -259,7 +259,7 @@ jobs:
   publish:
     name: Publish (OIDC Trusted Publishing)
     needs: [build, smoke-test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: npm
     permissions:
       contents: read

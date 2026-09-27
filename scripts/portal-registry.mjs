@@ -3,6 +3,10 @@ import {
   PRODUCT_CATALOG_SCHEMA_VERSION,
   validateProductCatalog
 } from "./product-catalog.mjs";
+import {
+  ENGINEERING_RULES_SCHEMA_VERSION,
+  validateEngineeringRules
+} from "./engineering-metrics.mjs";
 
 export const PORTAL_REGISTRY_SCHEMA_VERSION = 1;
 
@@ -109,11 +113,21 @@ export function validatePortalRegistry(registry) {
     }
     repositories.set(repositoryKey(repository.fullName), null);
   }
+  if (!registry.engineering)
+    throw new Error("Portal registry requires engineering rules");
+  const engineeringRules = validateEngineeringRules(
+    registry.engineering,
+    catalog
+  );
 
   return {
     schemaVersion: PORTAL_REGISTRY_SCHEMA_VERSION,
     organization,
     collectionRepositories: collectionRepositories.map(({ name }) => name),
+    engineering: {
+      schemaVersion: ENGINEERING_RULES_SCHEMA_VERSION,
+      products: engineeringRules
+    },
     products: catalog.products
   };
 }

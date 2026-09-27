@@ -49,7 +49,7 @@ jobs:
   plan:
     name: Select consumer revision
     if: inputs.config-file != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       consumer_sha: ${{ steps.consumer-ref.outputs.consumer_sha }}
     steps:
@@ -84,7 +84,7 @@ jobs:
     name: Static quality checks
     if: inputs.config-file != ''
     needs: [plan]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -246,7 +246,7 @@ jobs:
     name: Static quality status
     if: always()
     needs: [check]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:

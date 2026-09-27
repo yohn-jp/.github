@@ -50,8 +50,8 @@ export function validateQualityContract(value, sourceLabel = CONTRACT_PATH) {
     errors
   );
   if (defaults !== null) {
-    if (defaults.runner !== "ubuntu-latest") {
-      errors.push(`${sourceLabel}: defaults.runner must be ubuntu-latest`);
+    if (defaults.runner !== "ubuntu-24.04") {
+      errors.push(`${sourceLabel}: defaults.runner must be ubuntu-24.04`);
     }
     const permissions = requireRecord(
       defaults.permissions,

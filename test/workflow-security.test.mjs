@@ -30,7 +30,7 @@ test("workflow security gate is reusable and least-privilege", () => {
     "${{ jobs.audit.outputs.status }}"
   );
   assert.deepEqual(workflow.permissions, {});
-  assert.equal(workflow.jobs.audit["runs-on"], "ubuntu-latest");
+  assert.equal(workflow.jobs.audit["runs-on"], "ubuntu-24.04");
   assert.deepEqual(workflow.jobs.audit.permissions, { contents: "read" });
   assert.equal(
     workflow.jobs.audit.outputs.status,
