@@ -75,12 +75,38 @@ test("main is exempt by default", () => {
   assert.deepEqual(validateBranchName("main"), []);
 });
 
-test("exempt list is configurable", () => {
+test("exempt list waives only the narrower legacy pattern for canonical branches", () => {
+  const pattern = "^feat/\\d+-[a-z0-9-]+$";
+  assert.equal(
+    validateBranchName("chore/42-bump-tooling", { pattern }).length,
+    1
+  );
   assert.deepEqual(
-    validateBranchName("develop", { exempt: ["main", "develop"] }),
+    validateBranchName("chore/42-bump-tooling", {
+      pattern,
+      exempt: ["main", "chore/42-bump-tooling"]
+    }),
     []
   );
-  assert.equal(validateBranchName("develop", { exempt: ["main"] }).length, 1);
+  assert.equal(
+    classifyBranchName("chore/42-bump-tooling", {
+      pattern,
+      exempt: ["chore/42-bump-tooling"]
+    }).kind,
+    "exempt"
+  );
+});
+
+test("exempt ordinary branches cannot bypass canonical Inari validation", () => {
+  for (const branch of ["develop", "feat/abc", "dependabot/npm/x"]) {
+    assert.ok(canonicalBranchNaming.validateBranchName(branch).length > 0);
+    const errors = validateBranchName(branch, {
+      pattern: ".*",
+      exempt: ["main", branch]
+    });
+    assert.equal(errors.length, 1, branch);
+    assert.match(errors[0], /does not match/u);
+  }
 });
 
 test("pattern is configurable", () => {

@@ -137,14 +137,11 @@ export function classifyBranchName(branch, options = {}) {
     };
   }
 
-  if (exempt.includes(branch)) {
-    return { kind: "exempt", valid: true, errors: [] };
-  }
-
   const canonicalErrors = validateCanonicalBranchName(branch);
   // Explicit exemptions and a consumer's narrower legacy pattern remain
   // bounded transport compatibility, but cannot authorize a branch that
-  // Inari rejects. Semantic branch grammar therefore remains canonical.
+  // Inari rejects. Semantic branch grammar therefore remains canonical, and
+  // canonical validation runs before any exemption is consulted.
   if (canonicalErrors.length > 0) {
     return {
       kind: "ordinary",
@@ -153,6 +150,12 @@ export function classifyBranchName(branch, options = {}) {
         `branch name "${branch}" does not match required pattern ${pattern}; ${canonicalErrors[0]}`
       ]
     };
+  }
+
+  // An exemption only waives the consumer's narrower legacy pattern for an
+  // already-canonical branch; it never widens canonical Inari grammar.
+  if (exempt.includes(branch)) {
+    return { kind: "exempt", valid: true, errors: [] };
   }
 
   if (pattern.length > MAX_PATTERN_LENGTH) {

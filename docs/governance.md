@@ -42,8 +42,10 @@ does not control.
 validator. The shared adapter does not define ordinary, `issue/*`, or
 `epic/*` grammar. `branch-name-pattern` and `branch-name-exempt` remain
 bounded legacy transport inputs: they may narrow an already-canonical
-ordinary branch or preserve an explicit exemption, but cannot authorize an
-Inari-invalid branch or any malformed reserved integration prefix. The
+ordinary branch, and an exemption only waives that narrower pattern for a
+branch Inari already accepts. Canonical Inari validation runs before any
+exemption, so neither input can authorize an Inari-invalid branch or any
+malformed reserved integration prefix. The
 Issue-less `release/<semver>` branches use Inari's separate release
 publication route; the workflow supplies the observed head revision and the
 adapter enforces the canonical route result.
