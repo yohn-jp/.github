@@ -232,9 +232,10 @@ jobs:
           set -euo pipefail
           branch="release/$TARGET_VERSION"
           if [ -n "${GH_TOKEN:-}" ] && [ -n "${GITHUB_SERVER_URL:-}" ]; then
+            credentials="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
             export GIT_CONFIG_COUNT=1
             export GIT_CONFIG_KEY_0="http.$GITHUB_SERVER_URL/.extraheader"
-            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+            export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $credentials"
           fi
 
           mapfile -t paths < <(node -e 'for (const p of JSON.parse(process.argv[1])) console.log(p)' "$CHANGED_PATHS")
