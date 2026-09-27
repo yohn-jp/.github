@@ -228,6 +228,11 @@ The publish workflows are outside this routing change. They continue to verify
 the immutable release tag, resolved commit, package version, and exact packed
 tarball before publish.
 
+npm release PRs are prepared by the reusable
+`.github/workflows/npm-release-prepare.yml` workflow, which delegates release
+preparation and idempotent release-PR publication to published gh-inari and
+never publishes; see `docs/npm-release-preparation.md`.
+
 ## Why PRs and Issues are enforced differently
 
 - **PR governance fails the check.** `validate-pr-contract` simply exits

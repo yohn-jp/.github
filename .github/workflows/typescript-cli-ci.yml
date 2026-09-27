@@ -58,6 +58,17 @@ on:
           explicit test-environment prerequisites; keep shared CI repository-neutral.
         type: string
         default: ""
+      package-preparation-command:
+        description: >-
+          Optional consumer-owned command that prepares one package tarball.
+          Empty (default) runs the shared build and pnpm pack. The command must
+          leave exactly one .tgz in working-directory and keep lifecycle scripts enabled.
+        type: string
+        default: ""
+    outputs:
+      package-artifact-name:
+        description: Revision-bound package artifact produced and smoke-tested by verify.
+        value: ${{ jobs.build.outputs.package_artifact_name }}
 
 permissions:
   contents: read
@@ -281,8 +292,13 @@ jobs:
     needs: plan
     if: needs.plan.outputs.fast_path != 'true'
     runs-on: ubuntu-24.04
+    outputs:
+      package_artifact_name: ${{ steps.package.outputs.artifact_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Checkout provider tooling (yohn-jp/.github)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -296,13 +312,53 @@ jobs:
       - name: Isolate provider tooling
         shell: bash
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
-      - working-directory: ${{ inputs.working-directory }}
-        run: pnpm run build
+      - name: Verify exact evaluated revision
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Prepare, inspect, and identify package artifact
+        id: package
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          PACKAGE_PREPARATION_COMMAND: ${{ inputs.package-preparation-command }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          rm -f ./*.tgz
+          if [ -n "$PACKAGE_PREPARATION_COMMAND" ]; then
+            bash -euo pipefail -c "$PACKAGE_PREPARATION_COMMAND"
+          else
+            pnpm run build
+            pnpm pack
+          fi
+          shopt -s nullglob
+          tarballs=( ./*.tgz )
+          if [ "${#tarballs[@]}" -ne 1 ]; then
+            echo "::error::package preparation must produce exactly one .tgz file" >&2
+            exit 1
+          fi
+          artifact_dir="$RUNNER_TEMP/typescript-cli-package"
+          node "$RUNNER_TEMP/provider-tools/scripts/ci-package-artifact.mjs" \
+            create \
+            --archive "$PWD/${tarballs[0]}" \
+            --directory "$artifact_dir" \
+            --source-sha "$SOURCE_SHA"
+          echo "artifact_name=typescript-cli-package-$SOURCE_SHA" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: inputs.committed-dist
         with:
-          name: dist
+          name: typescript-cli-dist-${{ github.sha }}
           path: ${{ inputs.working-directory }}/dist
           retention-days: 1
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.package.outputs.artifact_name }}
+          path: ${{ runner.temp }}/typescript-cli-package
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
       - name: Restore provider tooling for action cleanup
         if: always()
         shell: bash
@@ -320,7 +376,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist
+          name: typescript-cli-dist-${{ github.sha }}
           path: ${{ inputs.working-directory }}/.built-dist
       - shell: bash
         working-directory: ${{ inputs.working-directory }}
@@ -337,49 +393,43 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: dist
-          path: ${{ inputs.working-directory }}/dist
-      - name: Checkout provider tooling (yohn-jp/.github)
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          package-manager-cache: false
+      - name: Checkout provider package verifier (yohn-jp/.github)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
           path: .provider-tools
-      - uses: ./.provider-tools/.github/actions/setup-runtime
-        with:
-          working-directory: ${{ inputs.working-directory }}
-          node-version: ${{ inputs.node-version }}
+          persist-credentials: false
       - name: Isolate provider tooling
         shell: bash
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
-      - name: Pack and inspect tarball contents
-        shell: bash
-        working-directory: ${{ inputs.working-directory }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.build.outputs.package_artifact_name }}
+          path: ${{ runner.temp }}/typescript-cli-package
+      - name: Verify exact revision and package bytes
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          ARTIFACT_DIRECTORY: ${{ runner.temp }}/typescript-cli-package
         run: |
           set -euo pipefail
-          rm -f ./*.tgz
-          pnpm pack
-          tarballs=( ./*.tgz )
-          tarball="${tarballs[0]}"
-          echo "Packed: $tarball"
-          contents="$(tar -tzf "$tarball")"
-          echo "$contents"
-          for forbidden in 'node_modules/' '\.env$' '^package/\.git(/|$)' '^package/src/'; do
-            if grep -Eq "$forbidden" <<< "$contents"; then
-              echo "::error::packed tarball unexpectedly contains files matching '$forbidden'" >&2
-              exit 1
-            fi
-          done
-          if ! grep -Eq '^package/dist/' <<< "$contents"; then
-            echo "::error::packed tarball does not contain dist/" >&2
-            exit 1
-          fi
-          echo "TARBALL=$PWD/$tarball" >> "$GITHUB_ENV"
-      - name: Smoke test packed tarball
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node "$RUNNER_TEMP/provider-tools/scripts/ci-package-artifact.mjs" \
+            verify \
+            --directory "$ARTIFACT_DIRECTORY" \
+            --expected-sha "$EXPECTED_SHA"
+      - name: Smoke test installed package artifact
         shell: bash
         working-directory: ${{ inputs.working-directory }}
+        env:
+          TARBALL: ${{ runner.temp }}/typescript-cli-package/package.tgz
         run: |
           set -euo pipefail
           smoke_dir="$(mktemp -d)"

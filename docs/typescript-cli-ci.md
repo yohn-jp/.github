@@ -25,6 +25,7 @@ jobs:
       committed-dist: false # optional, default false
       release-docs-fast-path: false # optional, default false
       conformance-script: "" # optional, default "" (disabled)
+      package-preparation-command: "" # optional, default ""
 ```
 
 Then add a branch Ruleset requirement on the `verify` check (the job name
@@ -66,23 +67,127 @@ long as the script name and exit-code contract match):
   `verify` job treats as passing.
 - **`run-governance`** — disables the nested governance job if a consumer
   already runs `metadata-validation.yml` separately. Defaults to `true`.
+- **`package-preparation-command`** — when set, runs this consumer-owned
+  command instead of the provider's separate build and pack commands. It must
+  create exactly one valid package tarball. The default is empty and preserves
+  the existing caller behavior.
 
 None of these are detected from the repository name or path; every
 behavioral difference between consumers must be one of these inputs.
 
-## CI efficiency: why jobs aren't merged
+## Proof ownership and artifact composition
 
-`format`, `lint`, `typecheck`, `test`, and `build` remain separate parallel
-jobs — each still does its own checkout and install — rather than being
-merged into one sequential job. Merging would remove real failure
-isolation (a lint failure would mask whether tests also fail) and would
-serialize work that current runners parallelize for free. The actual
-repeated cost this avoids is dependency _download_ time, not setup steps:
-every job installs through `.github/actions/setup-node-pnpm`, which uses
-`actions/setup-node`'s built-in pnpm cache keyed on the lockfile hash, so
-`pnpm install --frozen-lockfile` in the 2nd through Nth job of a run is a
-cache hit rather than a network fetch. This keeps isolation and
-parallelism while cutting the actual wasted work.
+The provider owns ordinary shared quality checks and the stable `verify`
+result. Consumers own product-specific package contracts and system
+conformance. A caller may compose those proofs beside the reusable workflow;
+they remain separate jobs and keep their own required status.
+
+| Proof                                                           | Owner                      | Composition                                                                       |
+| --------------------------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| Format, lint, typecheck, unit tests, build, metadata governance | Shared provider            | `typescript-cli-ci.yml`; included in `verify` except documented skips             |
+| Product or installed-consumer contract                          | Consumer                   | Use the prepared package artifact output when the consumer test accepts a tarball |
+| Kernel, runtime, or system behavior                             | Consumer                   | Call a purpose-built reusable system workflow as a separate job                   |
+| Package preparation and installed-package smoke test            | Shared provider by default | Prepare once, publish a revision-bound artifact, then validate those exact bytes  |
+
+`package-preparation-command` is an optional `workflow_call` input. Leaving it
+empty preserves existing callers: the provider runs `pnpm run build` followed
+by `pnpm pack`. Setting it delegates the complete preparation command to the
+consumer, for example `pnpm pack` when the consumer's `prepack` lifecycle hook
+owns its build. The command runs in the checked-out consumer revision with
+dependencies already installed. It must produce exactly one `.tgz` containing
+`dist/`. Lifecycle scripts remain enabled; the provider does not add a second
+build or pack command in this mode.
+
+The provider checks out `github.sha`, validates the tarball contents, records
+the source SHA and archive SHA-256, and uploads the result as
+`typescript-cli-package-<github.sha>`. The `package-validate` job downloads
+that artifact from the same workflow run, verifies the source SHA and digest,
+then installs and smoke-tests the same tarball bytes. A missing artifact,
+revision mismatch, changed bytes, invalid contents, or failed install fails
+`package-validate` and therefore fails `verify`. The workflow exposes
+`package-artifact-name` as an output so a consumer-owned conformance job can
+download the exact package with
+`needs.ci.outputs.package-artifact-name`. The ordinary `dist` artifact used by
+`committed-dist-check` is also named with `github.sha`.
+
+Example caller composition:
+
+```yaml
+jobs:
+  ci:
+    uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
+    with:
+      package-preparation-command: pnpm pack
+
+  product-conformance:
+    needs: ci
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.ci.outputs.package-artifact-name }}
+          path: ${{ runner.temp }}/package-artifact
+      - env:
+          PACKAGE_TARBALL: ${{ runner.temp }}/package-artifact/package.tgz
+        run: node scripts/check-installed-package.mjs
+
+  linux-system-e2e:
+    uses: yohn-jp/.github/.github/workflows/linux-system-e2e.yml@main
+    with:
+      command: pnpm run test:system
+```
+
+This is a provider interface example, not a completed migration of any
+consumer. `conformance-script` remains available for source-level conformance
+checks. A consumer that wants its product check to reuse the prepared tarball
+can move that check to a caller job and download the workflow output.
+
+The package artifact is scoped to one workflow run, has a name containing the
+evaluated source SHA, and carries a checksum checked after download. It is not
+a trusted cross-run cache. This change adds no cache writes. Runtime cache
+misses still follow the setup action's existing acquisition and install paths;
+cache correctness is not a prerequisite for a successful check.
+
+## CI measurements and job grouping
+
+The measurements below use completed consumer runs against the current shared
+provider before this change. Job wait is the GitHub Actions job `created_at`
+to `started_at` interval. Workflow elapsed time is run creation to the last
+reported completion; it is a wall-clock path measure, not the sum of parallel
+job durations.
+
+| Run                                                                               | Command and setup observations                                                                                                                              | Maximum job wait | Workflow elapsed |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------: | ---------------: |
+| [gh-inari PR run](https://github.com/yohn-jp/gh-inari/actions/runs/36305386365)   | `format:check` 19s, `lint` 12s, `typecheck` 11s, `build` 16s, `pnpm test` 121s; per-job runtime setup 17–23s; separate `pnpm run verify` body 211s          |               4s |             231s |
+| [Nawabari PR run](https://github.com/yohn-jp/nawabari/actions/runs/36306360202)   | Shared test body 107s; format/lint/typecheck/build bodies 8–11s; per-job runtime setup 8–12s; separate Linux/system and product checks remain consumer jobs |              48s |             172s |
+| [Suzukuri push run](https://github.com/yohn-jp/suzukuri/actions/runs/35831393947) | `build` body 3s, `test:package` conformance body 9s, package validation body 3s; `test:package` and `prepack` each invoke the consumer build                |               4s |              66s |
+
+The first two runs show both setup and wait can be material, while the
+longest command bodies and consumer-owned checks control the end-to-end path.
+The audit samples in Issue #293 also recorded a 61s start wait for a 3s
+Shikitari test body and a 109s wait for a 27s Wabachi body. Those samples do
+not establish a universal queue bottleneck.
+
+The provider previously ran build in one job, then ran `pnpm pack` in another.
+For a package with a build-owning `prepack`, that pack can run the build again;
+a consumer `test:package` command can add another build. The new artifact path
+prepares the archive once, validates its exact uploaded bytes in a separate
+job, and exposes the artifact for a later consumer-owned package check. For a
+build-owning `prepack`, setting `package-preparation-command: pnpm pack`
+delegates preparation to that lifecycle without a second provider build.
+Consumer checks only stop repeating preparation after their migration uses
+the output artifact; this provider change does not claim those migrations.
+
+The measurements do not justify a compact fast-check group yet. Setup is
+visible (8–23s in these samples), but independent command bodies also run in
+parallel, queue wait varies by workflow, and full test/system work dominates
+several critical paths. Grouping fast checks would serialize proofs without
+evidence that it shortens the end-to-end path. The provider keeps the existing
+parallel jobs and their failure visibility.
 
 ## The stable `verify` required status
 
