@@ -75,7 +75,9 @@ jobs:
 
       - name: Install shared governance validator
         working-directory: ${{ runner.temp }}/governance-tools
-        run: npm install --no-save --omit=dev gh-inari@latest
+        run: |
+          INARI_VERSION="$(node "$RUNNER_TEMP/governance-tools/scripts/resolve-inari-version.mjs")"
+          npm install --no-save --omit=dev "gh-inari@${INARI_VERSION}"
 
       - name: Validate branch name
         env:

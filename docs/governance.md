@@ -29,10 +29,23 @@ gh-inari pr validate <number> --repository <owner>/<repo> [--template <id>]
 gh-inari issue validate <number> --repository <owner>/<repo> [--template <id>]
 ```
 
-The workflows install the organization-owned `gh-inari@latest` compiler in
-an isolated temporary directory. Updating that implementation does not alter
-which governance revision a consumer enforces: the local snapshot and its
-manifest remain the input. This is distinct from the SHA-pinning policy for
+The workflows install the organization-owned `gh-inari` compiler in an
+isolated temporary directory at the single reviewed version pinned in this
+repository's `package.json` (and locked identically in `pnpm-lock.yaml`),
+resolved through `scripts/resolve-inari-version.mjs`. Inari Canon, PR
+governance, Issue governance, metadata validation, and the repository-local
+Portal governance runtime therefore execute the same Inari generation; the
+Portal records that executed version as governance evidence, and
+`test/inari-runtime-version.test.mjs` fails deterministically on drift.
+Updating Inari is a reviewed change to that pin. The local snapshot and its
+manifest remain the governance input.
+
+Release preparation (`npm-release-prepare.yml`, see
+[npm-release-preparation.md](npm-release-preparation.md)) is a separate,
+intentional authority rather than governance-runtime execution: it resolves
+the current published `gh-inari`, requires at least the release-preparation
+minimum, installs that exact resolved version, and records its version,
+tarball, and integrity per run. It does not consume the governance pin. This is distinct from the SHA-pinning policy for
 third-party Actions (see `scripts/validate-action-pins.mjs`), which exists
 specifically to bound supply-chain risk from repositories this organization
 does not control.
