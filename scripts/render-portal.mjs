@@ -199,15 +199,118 @@ function renderRelationships(catalog, locale) {
 
 function formatEngineeringValue(field, locale, key) {
   if (field.value === null || field.value === undefined) return "—";
-  if (key === "verificationDuration" && typeof field.value === "number") {
-    const seconds = Math.round(field.value / 1000);
-    return seconds < 60
-      ? `${seconds} s`
-      : `${Math.floor(seconds / 60)} m ${seconds % 60} s`;
-  }
+  if (key === "verificationDuration" && typeof field.value === "number")
+    return formatDuration(field.value, locale);
   if (typeof field.value === "number")
     return new Intl.NumberFormat(locale).format(field.value);
   return escapeHtml(field.value);
+}
+
+function formatDuration(milliseconds, locale) {
+  const seconds = Math.round(milliseconds / 1000);
+  const formatted = (value) => new Intl.NumberFormat(locale).format(value);
+  return seconds < 60
+    ? `${formatted(seconds)} s`
+    : `${formatted(Math.floor(seconds / 60))} m ${formatted(seconds % 60)} s`;
+}
+
+function renderDurationMeasurement(measurement, label, locale, t) {
+  const name = [measurement.jobName, measurement.stepName]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(" · ");
+  const value =
+    measurement.status === "available"
+      ? formatDuration(measurement.valueMs, locale)
+      : t("portal.engineering.durationUnavailable");
+  const source = measurement.source?.startsWith("https://github.com/")
+    ? `<a href="${escapeHtml(measurement.source)}" rel="noreferrer">${escapeHtml(measurement.source)}</a>`
+    : escapeHtml(measurement.source ?? "");
+  const provenance = [
+    measurement.startedAt && escapeHtml(measurement.startedAt),
+    measurement.completedAt && escapeHtml(measurement.completedAt),
+    measurement.revision && escapeHtml(measurement.revision),
+    measurement.runAttempt &&
+      `${escapeHtml(t("portal.engineering.runAttempt"))} ${measurement.runAttempt}`,
+    source,
+    measurement.reason && escapeHtml(measurement.reason)
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return `<li><strong>${escapeHtml(label)}${name ? ` · ${name}` : ""}:</strong> ${escapeHtml(value)}${provenance ? `<span> · ${provenance}</span>` : ""}</li>`;
+}
+
+function renderDurationEvidence(evidence, locale, t) {
+  if (!evidence) return "";
+  const items = [
+    renderDurationMeasurement(
+      evidence.workflow,
+      t("portal.engineering.durationWorkflow"),
+      locale,
+      t
+    ),
+    renderDurationMeasurement(
+      evidence.workflowQueueWait,
+      t("portal.engineering.durationWorkflowWait"),
+      locale,
+      t
+    ),
+    renderDurationMeasurement(
+      evidence.testCommand,
+      t("portal.engineering.durationTestCommand"),
+      locale,
+      t
+    )
+  ];
+  for (const job of evidence.jobs) {
+    items.push(
+      `<li><details><summary>${escapeHtml(job.name)}</summary><ul>${renderDurationMeasurement(job.wait, t("portal.engineering.durationJobWait"), locale, t)}${renderDurationMeasurement(job.wall, t("portal.engineering.durationJobWall"), locale, t)}<li><details><summary>${escapeHtml(t("portal.engineering.durationSteps", { count: job.steps.length }))}</summary><ul>${job.steps
+        .map((step) =>
+          renderDurationMeasurement(
+            step,
+            t("portal.engineering.durationStepWall"),
+            locale,
+            t
+          )
+        )
+        .join("")}</ul></details></li></ul></details></li>`
+    );
+  }
+  const jobsStatus =
+    evidence.jobsStatus === "available"
+      ? t("portal.engineering.state.available")
+      : evidence.jobsStatus === "partial"
+        ? t("portal.engineering.state.partial")
+        : t("portal.engineering.state.unavailable");
+  return `<details class="duration-evidence"><summary>${escapeHtml(t("portal.engineering.durationEvidence"))}</summary><p>${escapeHtml(t("portal.engineering.jobEvidenceState"))}: ${escapeHtml(jobsStatus)}${evidence.jobsReason ? ` · ${escapeHtml(evidence.jobsReason)}` : ""}</p><ul>${items.join("")}</ul></details>`;
+}
+
+function renderCensusFileList(label, paths) {
+  return `<details><summary>${escapeHtml(label)} (${paths.length})</summary><ul>${paths
+    .map((path) => `<li><code>${escapeHtml(path)}</code></li>`)
+    .join("")}</ul></details>`;
+}
+
+function renderEngineeringCensus(census, t) {
+  if (!census) return "";
+  const roots = (entries) =>
+    entries
+      .map(
+        (entry) =>
+          `<li><code>${escapeHtml(entry.path)}</code> · ${escapeHtml(t(`portal.engineering.censusRoot.${entry.state}`))}</li>`
+      )
+      .join("");
+  const excluded = census.excluded
+    .map(
+      (file) =>
+        `<li><code>${escapeHtml(file.path)}</code> · ${escapeHtml(file.reason)}</li>`
+    )
+    .join("");
+  return `<details class="engineering-census"><summary>${escapeHtml(t("portal.engineering.census"))} · ${escapeHtml(t(`portal.engineering.censusState.${census.status}`))}</summary><p>${escapeHtml(t("portal.engineering.lineMethod"))}</p><p>${escapeHtml(t("portal.engineering.candidateExtensions"))}: ${census.candidateExtensions
+    .map((extension) => `<code>${escapeHtml(extension)}</code>`)
+    .join(
+      ", "
+    )}</p>${census.reason ? `<p>${escapeHtml(census.reason)}</p>` : ""}<p>${escapeHtml(t("portal.engineering.sourceRoots"))}</p><ul>${roots(census.sourceRoots)}</ul><p>${escapeHtml(t("portal.engineering.testRoots"))}</p><ul>${roots(census.testRoots)}</ul>${renderCensusFileList(t("portal.engineering.includedSourceFiles"), census.included.source)}${renderCensusFileList(t("portal.engineering.includedTestFiles"), census.included.test)}<details><summary>${escapeHtml(t("portal.engineering.excludedFiles"))} (${census.excluded.length})</summary><ul>${excluded}</ul></details>${renderCensusFileList(t("portal.engineering.unclassifiedFiles"), census.unclassified)}</details>`;
 }
 
 function renderMetric(
@@ -237,6 +340,7 @@ function renderMetric(
     <strong class="metric-value">${formatEngineeringValue(field, locale, key)}</strong>
     <span class="metric-state">${escapeHtml(state)}</span>
     <p class="metric-provenance">${provenance}</p>
+    ${key === "verificationDuration" ? renderDurationEvidence(field.durationEvidence, locale, t) : ""}
   </article>`;
 }
 
@@ -268,11 +372,13 @@ function renderProductMetrics(engineering, product, locale, t) {
     ["verificationStatus", "portal.engineering.verificationStatus"],
     ["verificationDuration", "portal.engineering.verificationDuration"]
   ];
-  return fields
-    .map(([key, label]) =>
-      renderMetric(entry.metrics[key], key, t(label), locale, t)
-    )
-    .join("\n");
+  return (
+    fields
+      .map(([key, label]) =>
+        renderMetric(entry.metrics[key], key, t(label), locale, t)
+      )
+      .join("\n") + renderEngineeringCensus(entry.census, t)
+  );
 }
 
 function renderRecentWork(dashboard, product, t) {

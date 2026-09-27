@@ -97,21 +97,26 @@ async function fixtureFetch(url) {
     return jsonResponse({
       truncated: false,
       tree: [
-        {
+        ...rules.sourceIncludePaths.map((root) => ({
           type: "blob",
-          path: `${rules.sourceIncludePaths[0]}/sample.mjs`,
+          path: `${root}/sample.mjs`,
           sha: "b".repeat(40)
-        },
-        {
+        })),
+        ...rules.sourceIncludePaths.map((root) => ({
           type: "blob",
-          path: `${rules.testIncludePaths[0]}/sample.test.mjs`,
+          path: `${root}/sample.test.mjs`,
           sha: "c".repeat(40)
-        },
+        })),
+        ...rules.testIncludePaths.map((root) => ({
+          type: "blob",
+          path: `${root}/sample.test.mjs`,
+          sha: "c".repeat(40)
+        })),
         ...(repository === "nawabari"
           ? [
               {
                 type: "blob",
-                path: `${rules.testIncludePaths[0]}/sample-extra.test.mjs`,
+                path: `${rules.sourceIncludePaths[0]}/sample-extra.test.mjs`,
                 sha: "d".repeat(40)
               }
             ]
@@ -585,9 +590,9 @@ test("Engineering shows repository counts and Actions provenance with absence an
     page.locator(`#${product} .engineering-metric`).filter({
       has: page.locator(".metric-label").getByText(label, { exact: true })
     });
-  const measured = productMetric("mottainai", "Source files");
+  const measured = productMetric("mottainai", "Included source files");
   await expect(measured).toHaveAttribute("data-metric-state", "available");
-  await expect(measured.locator(".metric-value")).toHaveText("1");
+  await expect(measured.locator(".metric-value")).toHaveText("5");
   await expect(measured.locator(".metric-provenance")).toContainText(
     ENGINEERING_REVISION
   );
@@ -603,10 +608,9 @@ test("Engineering shows repository counts and Actions provenance with absence an
   await expect(
     productMetric("nawabari", "Verification status")
   ).toHaveAttribute("data-metric-state", "stale");
-  await expect(productMetric("nawabari", "Test LOC")).toHaveAttribute(
-    "data-metric-state",
-    "partial"
-  );
+  await expect(
+    productMetric("nawabari", "Non-empty test physical lines")
+  ).toHaveAttribute("data-metric-state", "partial");
   await expect(
     productMetric("inari", "Verification status").locator(".metric-value")
   ).toHaveText("cancelled");
@@ -621,7 +625,7 @@ test("Engineering shows repository counts and Actions provenance with absence an
   );
   expect(engineering.summary.sourceLoc.status).toBe("available");
   expect(engineering.summary.testLoc.status).toBe("partial");
-  expect(engineering.summary.verificationDuration.status).toBe("partial");
+  expect(engineering.summary.verificationDuration.status).toBe("unavailable");
 });
 
 test("Home and Product content remain visible with JavaScript disabled", async ({

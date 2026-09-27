@@ -4,11 +4,13 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildDashboard } from "../scripts/build-dashboard.mjs";
+import { unavailableEngineeringMetrics } from "../scripts/engineering-metrics.mjs";
 import { loadProductCatalog } from "../scripts/product-catalog.mjs";
 import { loadProductDetails } from "../scripts/product-details.mjs";
 import {
   localizedPortalPath,
   renderLocaleMetadata,
+  renderEngineeringPage,
   renderPortalHome,
   renderProductOverviewPage
 } from "../scripts/render-portal.mjs";
@@ -39,6 +41,108 @@ test("home renderer projects catalog products and relationships", async () => {
   }
   assert.match(html, /id="products"/);
   assert.match(html, /id="system"/);
+});
+
+test("Engineering and product labels state line and duration semantics in English and Japanese", async () => {
+  const { template, catalog, details } = await portalInputs();
+  const engineering = unavailableEngineeringMetrics(catalog);
+  const homeEn = renderPortalHome(template, catalog, "en", { engineering });
+  const homeJa = renderPortalHome(template, catalog, "ja", { engineering });
+  const engineeringEn = renderEngineeringPage(catalog, engineering, "en");
+  const engineeringJa = renderEngineeringPage(catalog, engineering, "ja");
+  const product = catalog.products.find((entry) => entry.id === "mottainai");
+  const detail = details.products.find((entry) => entry.id === "mottainai");
+  const productEn = renderProductOverviewPage(product, catalog, detail, "en", {
+    engineering
+  });
+  const productJa = renderProductOverviewPage(product, catalog, detail, "ja", {
+    engineering
+  });
+
+  for (const html of [homeEn]) {
+    assert.match(html, /Non-empty source physical lines/);
+    assert.match(html, /Workflow critical path/);
+    assert.doesNotMatch(html, /Source LOC|Test LOC|Verify duration/);
+  }
+  for (const html of [engineeringEn, productEn]) {
+    assert.match(html, /Non-empty source physical lines/);
+    assert.match(html, /Non-empty test physical lines/);
+    assert.match(html, /Workflow critical path/);
+    assert.doesNotMatch(html, /Source LOC|Test LOC|Verify duration/);
+  }
+  for (const html of [homeJa]) {
+    assert.match(html, /ソース非空物理行数/);
+    assert.match(html, /ワークフローのクリティカルパス/);
+    assert.doesNotMatch(html, /Source LOC|Test LOC|Verify duration/);
+  }
+  for (const html of [engineeringJa, productJa]) {
+    assert.match(html, /ソース非空物理行数/);
+    assert.match(html, /テスト非空物理行数/);
+    assert.match(html, /ワークフローのクリティカルパス/);
+    assert.doesNotMatch(html, /Source LOC|Test LOC|Verify duration/);
+  }
+  assert.match(productEn, /Code census/);
+  assert.match(productJa, /コードの集計/);
+
+  const detailedEngineering = structuredClone(engineering);
+  const runUrl = "https://github.com/yohn-jp/mottainai/actions/runs/42";
+  const measurement = (kind, status, valueMs, extras = {}) => ({
+    kind,
+    status,
+    valueMs,
+    source: runUrl,
+    revision: "a".repeat(40),
+    runId: 42,
+    runAttempt: 2,
+    startedAt: "2026-09-26T00:00:00Z",
+    completedAt: "2026-09-26T00:00:01Z",
+    ...(status === "unavailable" ? { reason: "No exact evidence." } : {}),
+    ...extras
+  });
+  detailedEngineering.products.find(
+    (entry) => entry.id === "mottainai"
+  ).metrics.verificationDuration.durationEvidence = {
+    kind: "github_actions_duration_projection",
+    source: runUrl,
+    runId: 42,
+    runAttempt: 2,
+    revision: "a".repeat(40),
+    workflow: measurement("workflow_critical_path", "available", 12000),
+    workflowQueueWait: measurement("workflow_queue_wait", "available", 5000),
+    jobsStatus: "available",
+    jobsReason: null,
+    jobs: [
+      {
+        id: 7,
+        name: "parallel tests",
+        runAttempt: 2,
+        wait: measurement("job_created_to_start_wait", "available", 3000),
+        wall: measurement("job_wall_time", "available", 10000),
+        steps: [
+          measurement("step_wall_time", "available", 5000, {
+            stepName: "Test command"
+          })
+        ]
+      }
+    ],
+    testCommand: measurement("test_command_time", "unavailable", null, {
+      reason: "No exact command timing is available."
+    })
+  };
+  const detailedEn = renderProductOverviewPage(product, catalog, detail, "en", {
+    engineering: detailedEngineering
+  });
+  const detailedJa = renderProductOverviewPage(product, catalog, detail, "ja", {
+    engineering: detailedEngineering
+  });
+  assert.match(detailedEn, /Job creation-to-start wait/);
+  assert.match(detailedEn, /Job wall time/);
+  assert.match(detailedEn, /Step wall time/);
+  assert.match(detailedEn, /Test command time/);
+  assert.match(detailedJa, /ジョブ作成から開始までの待機時間/);
+  assert.match(detailedJa, /ジョブの実経過時間/);
+  assert.match(detailedJa, /ステップの実経過時間/);
+  assert.match(detailedJa, /テストコマンドの時間/);
 });
 
 test("variable-length product cards and Work CTAs stay in document flow", async () => {
@@ -253,7 +357,7 @@ test("build publishes root and stable product routes", async () => {
       "utf8"
     );
     assert.match(engineering, /Evidence, not decoration/);
-    assert.match(engineering, /Source LOC/);
+    assert.match(engineering, /Non-empty source physical lines/);
     assert.match(engineering, /data-metric-state="unavailable"/);
     for (const locale of ["en", "ja"]) {
       const home = await readFile(
