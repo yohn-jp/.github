@@ -19,8 +19,8 @@ on:
       source-revision:
         description: >-
           Exact 40-character commit SHA of the caller repository to prepare
-          the release from. Canonical Inari fails closed unless it is the
-          current head of the caller's governed default branch.
+          the release from. The run fails closed unless it is the current
+          head of the caller's default branch.
         type: string
         required: true
       release-intent:
@@ -96,10 +96,14 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout exact caller source revision
+      # Only the caller's default-branch head is ever checked out: release
+      # history is read from that branch, so a source revision that is not
+      # its current head (for example a pull-request head) fails closed here
+      # instead of being checked out and installed.
+      - name: Checkout caller default branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.source-revision }}
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Record exact caller source revision
@@ -111,7 +115,7 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           if [ "$actual" != "$SOURCE_REVISION" ]; then
-            echo "::error::checked-out revision $actual does not match requested source revision $SOURCE_REVISION" >&2
+            echo "::error::default-branch head $actual is not the requested source revision $SOURCE_REVISION" >&2
             exit 1
           fi
           echo "revision=$actual" >> "$GITHUB_OUTPUT"

@@ -156,8 +156,12 @@ test("workflow_call contract takes an exact source revision and explicit intent"
   ]) {
     assert.ok(call.outputs[output], `missing output ${output}`);
   }
-  const checkout = stepNamed("Checkout exact caller source revision");
-  assert.equal(checkout.with.ref, "${{ inputs.source-revision }}");
+  const checkout = stepNamed("Checkout caller default branch");
+  assert.equal(
+    checkout.with.ref,
+    "${{ github.event.repository.default_branch }}"
+  );
+  assert.doesNotMatch(workflowSource, /ref: \$\{\{ inputs\./);
   assert.equal(checkout.with["persist-credentials"], false);
   assert.match(
     stepNamed("Record exact caller source revision").run,

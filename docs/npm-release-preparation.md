@@ -58,11 +58,11 @@ jobs:
 
 Inputs:
 
-| Input             | Required | Meaning                                                      |
-| ----------------- | -------- | ------------------------------------------------------------ |
-| `source-revision` | yes      | Exact 40-character caller commit SHA to prepare from.        |
-| `release-intent`  | yes      | `patch`, `minor`, `major`, or an exact semantic version.     |
-| `node-version`    | no       | Node.js version for install and verification (default `24`). |
+| Input             | Required | Meaning                                                                |
+| ----------------- | -------- | ---------------------------------------------------------------------- |
+| `source-revision` | yes      | Exact 40-character caller commit SHA; must be the default-branch head. |
+| `release-intent`  | yes      | `patch`, `minor`, `major`, or an exact semantic version.               |
+| `node-version`    | no       | Node.js version for install and verification (default `24`).           |
 
 Outputs: `source-revision`, `inari-version`, `inari-integrity`,
 `target-version`, `release-branch`, `release-head-revision`,
@@ -76,7 +76,9 @@ override any of them; an unsupported repository shape fails closed inside
 
 ## Run sequence
 
-1. Check out exactly `source-revision` and record it.
+1. Check out the caller's default branch, fail closed unless its head is
+   exactly `source-revision` (a pull-request head is never checked out), and
+   record it.
 2. Install the caller's dependencies with the shared `setup-node-pnpm` action.
 3. Resolve `gh-inari@latest` from the npm registry, require at least the
    first release carrying the release-preparation surface (`0.18.0`), install
