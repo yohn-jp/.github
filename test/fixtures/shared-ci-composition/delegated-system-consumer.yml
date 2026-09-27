@@ -1,0 +1,16 @@
+name: Delegated system consumer
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
+
+  linux-system-e2e:
+    uses: yohn-jp/.github/.github/workflows/linux-system-e2e.yml@main
+    with:
+      command: pnpm run test:system

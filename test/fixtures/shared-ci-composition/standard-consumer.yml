@@ -1,0 +1,11 @@
+name: Standard shared CI consumer
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: yohn-jp/.github/.github/workflows/typescript-cli-ci.yml@main
