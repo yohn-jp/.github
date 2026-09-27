@@ -14,6 +14,7 @@ group:
     yohn-jp/wabachi
     yohn-jp/majiwari
     yohn-jp/cli-canon
+    yohn-jp/jinushi
   files:
     - source: .github/agent-governance/AGENTS.md
       dest: .github/agent-governance/AGENTS.md
