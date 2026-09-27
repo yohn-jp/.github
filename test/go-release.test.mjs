@@ -182,7 +182,7 @@ test("artifact verification requires a non-empty executable and records its dige
 test("publication verifies the transferred bytes and serializes per repository", () => {
   assert.deepEqual(publishJob.concurrency, {
     group: "go-development-release-${{ github.repository }}",
-    queue: "max"
+    "cancel-in-progress": false
   });
 
   const download = stepNamed(publishJob, "Download verified build bytes");
