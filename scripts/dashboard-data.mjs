@@ -5,6 +5,7 @@ import {
   GOVERNANCE_COLLECTION_STATES,
   GOVERNANCE_REASON_CODES,
   governanceFailureReason,
+  INARI_GOVERNANCE_RUNTIME_VERSION,
   preflightIssueGovernance,
   unavailableGovernance
 } from "./inari-governance.mjs";
@@ -300,6 +301,7 @@ function repositoryGovernance(preflight, diagnostics = []) {
     available: status !== "unavailable",
     reason: uniqueDiagnostics[0]?.reason ?? null,
     diagnostics: uniqueDiagnostics,
+    inariVersion: preflight?.inariVersion ?? INARI_GOVERNANCE_RUNTIME_VERSION,
     revision: preflight?.revision ?? null,
     contractCount: preflight?.contractCount ?? 0
   };
@@ -334,6 +336,7 @@ function healthyGovernancePreflight(repository) {
     status: "healthy",
     availability: "healthy",
     available: true,
+    inariVersion: INARI_GOVERNANCE_RUNTIME_VERSION,
     reason: null,
     diagnostics: [],
     revision: null,

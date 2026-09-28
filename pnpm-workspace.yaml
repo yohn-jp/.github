@@ -1,0 +1,6 @@
+# gh-inari declares a preinstall hook that only acts inside its own source
+# worktree (the script it targets is not shipped in the published package).
+# Deny it explicitly so frozen installs of the reviewed governance pin run no
+# dependency lifecycle scripts and pnpm does not fail on an unreviewed build.
+allowBuilds:
+  gh-inari: false

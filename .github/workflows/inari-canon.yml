@@ -7,6 +7,9 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
       - "scripts/validate-inari-canon.mjs"
+      - "scripts/resolve-inari-version.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
       - ".github/workflows/inari-canon.yml"
   push:
     branches: [main]
@@ -15,6 +18,9 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
       - ".github/PULL_REQUEST_TEMPLATE/**"
       - "scripts/validate-inari-canon.mjs"
+      - "scripts/resolve-inari-version.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
       - ".github/workflows/inari-canon.yml"
   schedule:
     - cron: "17 3 * * *"
@@ -40,16 +46,17 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install current published Inari
+      - name: Install pinned published Inari
         shell: bash
         run: |
+          INARI_VERSION="$(node scripts/resolve-inari-version.mjs)"
           npm install \
             --prefix "$RUNNER_TEMP/inari-canon" \
             --ignore-scripts \
             --no-audit \
             --no-fund \
             --package-lock=false \
-            gh-inari@latest
+            "gh-inari@${INARI_VERSION}"
 
       - name: Validate organization templates against Inari Canon
         env:

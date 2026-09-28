@@ -5,6 +5,7 @@ import { compileLocalGovernedContract } from "gh-inari/governance";
 import { renderIssueArtifact } from "gh-inari/artifact";
 import {
   collectIssueGovernance,
+  INARI_GOVERNANCE_RUNTIME_VERSION,
   GOVERNANCE_REASON_CODES,
   preflightIssueGovernance
 } from "../scripts/inari-governance.mjs";
@@ -338,6 +339,7 @@ test("a real Inari render/parse round trip projects the declared dependency mark
   });
 
   assert.equal(governance.status, "valid");
+  assert.equal(governance.inariVersion, INARI_GOVERNANCE_RUNTIME_VERSION);
   assert.deepEqual(governance.dependencies.blocks, []);
   assert.equal(governance.dependencies.blockedBy.length, 1);
   assert.deepEqual(governance.dependencies.blockedBy[0], {

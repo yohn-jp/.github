@@ -1,0 +1,2 @@
+# Standalone consumer fixture: keep it its own pnpm root so installs use this
+# fixture's lockfile rather than the enclosing repository workspace.
