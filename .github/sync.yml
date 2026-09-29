@@ -714,3 +714,5 @@ yohn-jp/hachidori:
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
     dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/hachidori-go-release.yml
+    dest: .github/workflows/release.yml
