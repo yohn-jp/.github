@@ -94,6 +94,11 @@ file-groups:
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
   mottainai-extra: []
+  hachidori-extra:
+    - source: templates/workflows/governance.yml
+      dest: .github/workflows/governance.yml
+    - source: templates/workflows/issue-governance.yml
+      dest: .github/workflows/issue-governance.yml
   jinushi-extra:
     - source: templates/workflows/governance.yml
       dest: .github/workflows/governance.yml
@@ -168,3 +173,10 @@ sync-groups:
     include:
       - common
       - jinushi-extra
+
+  hachidori:
+    repositories:
+      - yohn-jp/hachidori
+    include:
+      - common
+      - hachidori-extra
