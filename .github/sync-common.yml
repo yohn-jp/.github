@@ -15,6 +15,7 @@ group:
     yohn-jp/majiwari
     yohn-jp/cli-canon
     yohn-jp/jinushi
+    yohn-jp/hachidori
   files:
     - source: .github/agent-governance/AGENTS.md
       dest: .github/agent-governance/AGENTS.md
