@@ -1,0 +1,44 @@
+name: Go CI
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing go.mod.
+        type: string
+        default: "."
+    secrets: {}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Format, vet, and test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ inputs.working-directory }}/go.mod
+          cache: false
+      - name: Check formatting
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            printf '%s\n' "$unformatted"
+            exit 1
+          fi
+      - name: Vet
+        working-directory: ${{ inputs.working-directory }}
+        run: go vet ./...
+      - name: Test with race detector
+        working-directory: ${{ inputs.working-directory }}
+        run: go test -race ./...

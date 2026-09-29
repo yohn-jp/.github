@@ -1,0 +1,57 @@
+name: Action reference policy
+
+on:
+  workflow_call:
+    secrets: {}
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate action references
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate workflow action references
+        shell: python
+        run: |
+          import pathlib, re, sys
+
+          sha = re.compile(r"^[0-9a-f]{40}$")
+          digest = re.compile(r"^sha256:[0-9a-f]{64}$")
+          org = re.compile(r"^yohn-jp/\.github/\.github/workflows/[^@]+@(.+)$")
+          failures = []
+
+          roots = [pathlib.Path(".github/workflows")]
+          for root in roots:
+              if not root.exists():
+                  continue
+              for path in sorted(list(root.glob("*.yml")) + list(root.glob("*.yaml"))):
+                  for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                      match = re.match(r"^\s*(?:-\s*)?uses:\s*([^\s#]+)", line)
+                      if not match:
+                          continue
+                      ref = match.group(1).strip("'\"")
+                      if ref.startswith(("./", "../")):
+                          continue
+                      if ref.startswith("docker://"):
+                          value = ref.rsplit("@", 1)[-1] if "@" in ref else ""
+                          if not digest.fullmatch(value):
+                              failures.append(f"{path}:{number}: docker action must use an immutable sha256 digest: {ref}")
+                          continue
+                      owned = org.fullmatch(ref)
+                      if owned:
+                          if owned.group(1) != "main":
+                              failures.append(f"{path}:{number}: organization reusable workflow must use @main: {ref}")
+                          continue
+                      value = ref.rsplit("@", 1)[-1] if "@" in ref else ""
+                      if not sha.fullmatch(value):
+                          failures.append(f"{path}:{number}: external action must use a full 40-character commit SHA: {ref}")
+
+          if failures:
+              print("\n".join(failures))
+              sys.exit(1)

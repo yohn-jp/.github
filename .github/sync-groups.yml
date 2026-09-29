@@ -94,18 +94,23 @@ file-groups:
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
   mottainai-extra: []
-  hachidori-extra:
+  go-common:
+    - source: templates/workflows/go-ci.yml
+      dest: .github/workflows/ci.yml
+    - source: templates/workflows/go-codeql.yml
+      dest: .github/workflows/codeql.yml
+    - source: .github/codeql/codeql-config.yml
+      dest: .github/codeql/codeql-config.yml
     - source: templates/workflows/governance.yml
       dest: .github/workflows/governance.yml
     - source: templates/workflows/issue-governance.yml
       dest: .github/workflows/issue-governance.yml
+    - source: templates/workflows/action-pins.yml
+      dest: .github/workflows/action-pins.yml
+  hachidori-extra:
     - source: templates/workflows/hachidori-go-release.yml
       dest: .github/workflows/release.yml
   jinushi-extra:
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
     - source: templates/workflows/jinushi-go-release.yml
       dest: .github/workflows/release.yml
 
@@ -174,6 +179,7 @@ sync-groups:
       - yohn-jp/jinushi
     include:
       - common
+      - go-common
       - jinushi-extra
 
   hachidori:
@@ -181,4 +187,5 @@ sync-groups:
       - yohn-jp/hachidori
     include:
       - common
+      - go-common
       - hachidori-extra
