@@ -24,6 +24,7 @@ jobs:
   build:
     name: Test and build Windows amd64 executable
     runs-on: windows-2025
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
     permissions:
       actions: read
       contents: read
