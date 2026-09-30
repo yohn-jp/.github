@@ -93,3 +93,40 @@ test("every repository distributing codeql.yml also gets the CodeQL config", () 
     }
   }
 });
+
+test("default-include applies to every group and conflicting dests are rejected", () => {
+  const base = {
+    version: 1,
+    "default-include": ["common"],
+    "file-groups": {
+      common: [{ source: "a.md", dest: "a.md" }],
+      one: [{ source: "x.yml", dest: "ci.yml" }],
+      two: [{ source: "y.yml", dest: "ci.yml" }]
+    }
+  };
+  const expanded = expandSyncConfig({
+    ...base,
+    "sync-groups": {
+      g: { repositories: ["yohn-jp/r"], include: ["one"] },
+      empty: { repositories: ["yohn-jp/e"], include: [] }
+    }
+  });
+  assert.deepEqual(
+    expanded["yohn-jp/r"].map(({ dest }) => dest),
+    ["a.md", "ci.yml"]
+  );
+  assert.deepEqual(
+    expanded["yohn-jp/e"].map(({ dest }) => dest),
+    ["a.md"]
+  );
+  assert.throws(
+    () =>
+      expandSyncConfig({
+        ...base,
+        "sync-groups": {
+          g: { repositories: ["yohn-jp/r"], include: ["one", "two"] }
+        }
+      }),
+    /ci\.yml is mapped from both/
+  );
+});

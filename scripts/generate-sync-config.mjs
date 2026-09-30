@@ -44,7 +44,12 @@ export function expandSyncConfig(config) {
       }
       const mappings = [];
       const seen = new Set();
-      for (const fileGroupName of syncGroup.include ?? []) {
+      const included = [
+        ...(config["default-include"] ?? []),
+        ...(syncGroup.include ?? [])
+      ];
+      const destinations = new Map();
+      for (const fileGroupName of included) {
         const entries = fileGroups[fileGroupName] ?? bundles[fileGroupName];
         if (!entries) {
           throw new Error(
@@ -56,6 +61,12 @@ export function expandSyncConfig(config) {
           const identity = `${value.source}\0${value.dest}`;
           if (seen.has(identity)) continue;
           seen.add(identity);
+          if (destinations.has(value.dest)) {
+            throw new Error(
+              `${repository}: ${value.dest} is mapped from both ${destinations.get(value.dest)} and ${value.source}`
+            );
+          }
+          destinations.set(value.dest, value.source);
           mappings.push(value);
         }
       }

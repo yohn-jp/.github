@@ -655,24 +655,24 @@ yohn-jp/majiwari:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
-  - source: templates/workflows/codeql.yml
-    dest: .github/workflows/codeql.yml
-  - source: .github/codeql/codeql-config.yml
-    dest: .github/codeql/codeql-config.yml
   - source: AGENTS.md
     dest: AGENTS.md
   - source: CLAUDE.md
     dest: CLAUDE.md
   - source: templates/workflows/majiwari-ci.yml
     dest: .github/workflows/ci.yml
+  - source: scripts/validate-action-pins.mjs
+    dest: scripts/validate-action-pins.mjs
+  - source: templates/workflows/codeql.yml
+    dest: .github/workflows/codeql.yml
+  - source: .github/codeql/codeql-config.yml
+    dest: .github/codeql/codeql-config.yml
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
     dest: .github/workflows/issue-governance.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
-  - source: scripts/validate-action-pins.mjs
-    dest: scripts/validate-action-pins.mjs
 yohn-jp/jinushi:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
@@ -728,18 +728,18 @@ yohn-jp/jinushi:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: templates/workflows/go-ci.yml
+    dest: .github/workflows/ci.yml
+  - source: templates/workflows/action-pins.yml
+    dest: .github/workflows/action-pins.yml
   - source: templates/workflows/go-codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
     dest: .github/codeql/codeql-config.yml
-  - source: templates/workflows/go-ci.yml
-    dest: .github/workflows/ci.yml
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
     dest: .github/workflows/issue-governance.yml
-  - source: templates/workflows/action-pins.yml
-    dest: .github/workflows/action-pins.yml
   - source: templates/workflows/jinushi-go-release.yml
     dest: .github/workflows/release.yml
 yohn-jp/hachidori:
@@ -797,17 +797,17 @@ yohn-jp/hachidori:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: templates/workflows/go-ci.yml
+    dest: .github/workflows/ci.yml
+  - source: templates/workflows/action-pins.yml
+    dest: .github/workflows/action-pins.yml
   - source: templates/workflows/go-codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
     dest: .github/codeql/codeql-config.yml
-  - source: templates/workflows/go-ci.yml
-    dest: .github/workflows/ci.yml
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
     dest: .github/workflows/issue-governance.yml
-  - source: templates/workflows/action-pins.yml
-    dest: .github/workflows/action-pins.yml
   - source: templates/workflows/hachidori-go-release.yml
     dest: .github/workflows/release.yml
