@@ -12,9 +12,6 @@ const syncWorkflow = readFileSync(
 
 function normalizedMappings(config, repository) {
   return (config[repository] ?? [])
-    .filter(
-      ({ source }) => source !== "templates/workflows/prettier-autofix.yml"
-    )
     .map(({ source, dest }) => `${source} -> ${dest}`)
     .sort();
 }
@@ -26,12 +23,12 @@ test("cli-canon receives the same managed repository metadata as Wabachi", () =>
   );
 });
 
-test("cli-canon is excluded from Prettier autofix without the shared formatter contract", () => {
+test("cli-canon receives the Prettier autofix wrapper (opted in by #262)", () => {
   assert.equal(
     (sync["yohn-jp/cli-canon"] ?? []).some(
       ({ source }) => source === "templates/workflows/prettier-autofix.yml"
     ),
-    false
+    true
   );
 });
 
