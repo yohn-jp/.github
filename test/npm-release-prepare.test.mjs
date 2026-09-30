@@ -279,7 +279,7 @@ test("consumer wrapper calls the provider @main and is authored through sync-gro
 
   const groups = yaml.load(readFileSync(".github/sync-groups.yml", "utf8"));
   assert.ok(
-    groups["file-groups"]["standard-extra"].some(
+    groups["file-groups"]["npm-release"].some(
       (entry) =>
         entry.source === wrapperPath &&
         entry.dest === ".github/workflows/release-prepare.yml"

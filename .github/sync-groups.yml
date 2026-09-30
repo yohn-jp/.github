@@ -56,27 +56,21 @@ file-groups:
       dest: .github/ISSUE_TEMPLATE/implementation.yml
     - source: .github/inari/issues/implementation.json
       dest: .github/inari/issues/implementation.json
-  standard-extra:
+  governance:
     - source: templates/workflows/governance.yml
       dest: .github/workflows/governance.yml
+  issue-governance:
     - source: templates/workflows/issue-governance.yml
       dest: .github/workflows/issue-governance.yml
+  prettier-autofix:
+    - source: templates/workflows/prettier-autofix.yml
+      dest: .github/workflows/prettier-autofix.yml
+  npm-release:
     - source: templates/workflows/publish.yml
       dest: .github/workflows/publish.yml
     - source: templates/workflows/release-prepare.yml
       dest: .github/workflows/release-prepare.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  gh-makami-extra:
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  nawabari-extra:
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
+  governance-scripts:
     - source: scripts/validate-pr.mjs
       dest: scripts/validate-pr.mjs
     - source: scripts/pr-contract-routing.mjs
@@ -89,40 +83,27 @@ file-groups:
       dest: scripts/epic-branch.mjs
     - source: scripts/validate-issue.mjs
       dest: scripts/validate-issue.mjs
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
-  mottainai-extra: []
-  go-common:
-    - source: templates/workflows/go-ci.yml
-      dest: .github/workflows/ci.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/action-pins.yml
-      dest: .github/workflows/action-pins.yml
-  hachidori-extra:
-    - source: templates/workflows/hachidori-go-release.yml
-      dest: .github/workflows/release.yml
-  jinushi-extra:
-    - source: templates/workflows/jinushi-go-release.yml
-      dest: .github/workflows/release.yml
-
-  majiwari-extra:
+  agent-root:
     - source: AGENTS.md
       dest: AGENTS.md
     - source: CLAUDE.md
       dest: CLAUDE.md
+  go:
+    - source: templates/workflows/go-ci.yml
+      dest: .github/workflows/ci.yml
+    - source: templates/workflows/action-pins.yml
+      dest: .github/workflows/action-pins.yml
+  majiwari:
     - source: templates/workflows/majiwari-ci.yml
       dest: .github/workflows/ci.yml
-    - source: templates/workflows/governance.yml
-      dest: .github/workflows/governance.yml
-    - source: templates/workflows/issue-governance.yml
-      dest: .github/workflows/issue-governance.yml
-    - source: templates/workflows/prettier-autofix.yml
-      dest: .github/workflows/prettier-autofix.yml
     - source: scripts/validate-action-pins.mjs
       dest: scripts/validate-action-pins.mjs
+  hachidori-release:
+    - source: templates/workflows/hachidori-go-release.yml
+      dest: .github/workflows/release.yml
+  jinushi-release:
+    - source: templates/workflows/jinushi-go-release.yml
+      dest: .github/workflows/release.yml
 
 # A bundle is a set of files that only work together (a workflow and the
 # local files it references). Groups include bundles by name, so a workflow can
@@ -139,6 +120,10 @@ bundles:
     - source: .github/codeql/codeql-config.yml
       dest: .github/codeql/codeql-config.yml
 
+# Every group includes default-include first; a group lists only what differs.
+default-include:
+  - common
+
 sync-groups:
   standard:
     repositories:
@@ -149,53 +134,60 @@ sync-groups:
       - yohn-jp/cli-canon
       - yohn-jp/tsukai
     include:
-      - common
       - codeql
-      - standard-extra
+      - governance
+      - issue-governance
+      - npm-release
+      - prettier-autofix
 
   gh-makami:
     repositories:
       - yohn-jp/gh-makami
     include:
-      - common
-      - gh-makami-extra
+      - governance
+      - prettier-autofix
 
   nawabari:
     repositories:
       - yohn-jp/nawabari
     include:
-      - common
-      - nawabari-extra
+      - governance
+      - issue-governance
+      - governance-scripts
+      - prettier-autofix
 
   mottainai:
     repositories:
       - yohn-jp/mottainai
-    include:
-      - common
-      - mottainai-extra
+    include: []
 
   majiwari:
     repositories:
       - yohn-jp/majiwari
     include:
-      - common
+      - agent-root
+      - majiwari
       - codeql
-      - majiwari-extra
+      - governance
+      - issue-governance
+      - prettier-autofix
 
   jinushi:
     repositories:
       - yohn-jp/jinushi
     include:
-      - common
+      - go
       - go-codeql
-      - go-common
-      - jinushi-extra
+      - governance
+      - issue-governance
+      - jinushi-release
 
   hachidori:
     repositories:
       - yohn-jp/hachidori
     include:
-      - common
+      - go
       - go-codeql
-      - go-common
-      - hachidori-extra
+      - governance
+      - issue-governance
+      - hachidori-release
