@@ -150,3 +150,18 @@ test("sync.yml is the single generated config and carries agent governance for e
     );
   }
 });
+
+test("GitHub App token scope lists exactly the repositories in sync-groups.yml", () => {
+  const config = yaml.load(readFileSync(".github/sync-groups.yml", "utf8"));
+  const expected = Object.keys(expandSyncConfig(config))
+    .map((repository) => repository.replace(/^yohn-jp\//, ""))
+    .sort();
+  const workflow = yaml.load(
+    readFileSync(".github/workflows/sync-org-templates.yml", "utf8")
+  );
+  const token = workflow.jobs.sync.steps.find(
+    (step) => step.name === "Create GitHub App token"
+  );
+  const actual = token.with.repositories.split(/\s+/).filter(Boolean).sort();
+  assert.deepEqual(actual, expected);
+});

@@ -297,7 +297,10 @@ test("PR scripts, formatter config, dependencies, plugins, and ignore files cann
       "node_modules/\nsrc/target.js\n"
     );
     writeFileSync(path.join(source, "src/target.js"), "const value='x'\n");
-    writeFileSync(path.join(source, "src/trusted-ignored.js"), "const ignored='x'\n");
+    writeFileSync(
+      path.join(source, "src/trusted-ignored.js"),
+      "const ignored='x'\n"
+    );
     writeFileSync(
       path.join(source, "src/arbitrary.txt"),
       "keep this non-canonical payload\n"

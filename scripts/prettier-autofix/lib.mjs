@@ -584,7 +584,10 @@ function autofixPullRequestTitle(sourcePullRequest) {
   const suffix = ` (PR #${sourcePullRequest.number})`;
   const ref = sourcePullRequest.head?.ref ?? "source";
   const maxRefLength = 240 - prefix.length - suffix.length;
-  const displayRef = ref.length > maxRefLength ? `${ref.slice(0, Math.max(1, maxRefLength - 1))}…` : ref;
+  const displayRef =
+    ref.length > maxRefLength
+      ? `${ref.slice(0, Math.max(1, maxRefLength - 1))}…`
+      : ref;
   return `${prefix}${displayRef}${suffix}`;
 }
 

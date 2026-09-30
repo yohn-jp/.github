@@ -145,7 +145,9 @@ writeFileSync(output, `${JSON.stringify(formatterAuthority, null, 2)}\n`, {
 
 export function assertCliBelongsToPackage(resolvedCli, packageRoot) {
   if (!resolvedCli.startsWith(`${packageRoot}${sep}`)) {
-    throw new Error("Prettier CLI resolves outside the validated Prettier package");
+    throw new Error(
+      "Prettier CLI resolves outside the validated Prettier package"
+    );
   }
 }
 

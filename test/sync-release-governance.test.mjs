@@ -32,11 +32,14 @@ test("every synchronized consumer receives the canonical release snapshot", () =
       "yohn-jp/cli-canon",
       "yohn-jp/gh-inari",
       "yohn-jp/gh-makami",
+      "yohn-jp/hachidori",
+      "yohn-jp/jinushi",
       "yohn-jp/majiwari",
       "yohn-jp/mottainai",
       "yohn-jp/nawabari",
       "yohn-jp/shikitari",
       "yohn-jp/suzukuri",
+      "yohn-jp/tsukai",
       "yohn-jp/wabachi"
     ].sort()
   );
