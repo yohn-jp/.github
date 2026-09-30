@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import yaml from "js-yaml";
 
 const sync = yaml.load(readFileSync(".github/sync.yml", "utf8"));
-const agentSync = yaml.load(readFileSync(".github/sync-agents.yml", "utf8"));
+const agentSync = yaml.load(readFileSync(".github/sync.yml", "utf8"));
 const syncWorkflow = readFileSync(
   ".github/workflows/sync-org-templates.yml",
   "utf8"

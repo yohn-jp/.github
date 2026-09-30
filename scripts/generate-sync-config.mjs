@@ -16,7 +16,9 @@ function mapping(entry) {
     typeof entry.source === "string" &&
     typeof entry.dest === "string"
   ) {
-    return { source: entry.source, dest: entry.dest };
+    return entry.deleteOrphaned === true
+      ? { source: entry.source, dest: entry.dest, deleteOrphaned: true }
+      : { source: entry.source, dest: entry.dest };
   }
   throw new Error(`invalid sync mapping: ${JSON.stringify(entry)}`);
 }
@@ -132,9 +134,10 @@ export function renderSyncConfig(config) {
   const lines = ["# Generated from .github/sync-groups.yml; do not edit."];
   for (const [repository, mappings] of Object.entries(repositories)) {
     lines.push(`${repository}:`);
-    for (const { source, dest } of mappings) {
+    for (const { source, dest, deleteOrphaned } of mappings) {
       lines.push(`  - source: ${source}`);
       lines.push(`    dest: ${dest}`);
+      if (deleteOrphaned) lines.push("    deleteOrphaned: true");
     }
   }
   return `${lines.join("\n")}\n`;

@@ -12,11 +12,11 @@
 //   2. Every `authority.*` reference is a { canonical, projected } pair.
 //      `canonical` must resolve to a real file in THIS (provider)
 //      repository. `projected` must resolve to a real file after
-//      .github/sync-agents.yml projection — but no consumer repository is
-//      checked out here, so "resolves" is checked as: every sync-agents.yml
+//      .github/sync.yml projection — but no consumer repository is
+//      checked out here, so "resolves" is checked as: every sync.yml
 //      target maps the same canonical source to that exact projected dest.
 //      A drifted or missing mapping means the projected path in the profile
-//      document does not describe what sync-agents.yml will actually
+//      document does not describe what sync.yml will actually
 //      produce, which is exactly the defect that let a projected path point
 //      at a nonexistent consumer file.
 //
@@ -36,7 +36,7 @@ const PROFILES_PATH = join(
   REPOSITORY_ROOT,
   ".github/agents/runtime-profiles.json"
 );
-const SYNC_AGENTS_PATH = join(REPOSITORY_ROOT, ".github/sync-agents.yml");
+const SYNC_AGENTS_PATH = join(REPOSITORY_ROOT, ".github/sync.yml");
 
 const PROFILE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REQUIRED_PROFILE_KEYS = [
@@ -178,13 +178,13 @@ export function validateRuntimeProfilesStructure(doc) {
 /**
  * Confirm every authority reference actually resolves in the context it
  * claims to describe: `canonical` against this provider repository's
- * working tree, `projected` against what .github/sync-agents.yml declares
+ * working tree, `projected` against what .github/sync.yml declares
  * it will produce in every consumer repository that receives the
  * corresponding canonical source file.
  *
  * @param {unknown} doc parsed runtime-profiles.json
  * @param {string} repoRoot provider repository root, for resolving `canonical`
- * @param {unknown} syncAgentsDoc parsed .github/sync-agents.yml
+ * @param {unknown} syncAgentsDoc parsed .github/sync.yml
  * @returns {string[]} semantic errors
  */
 export function validateRuntimeProfilesAuthorityIntegrity(
@@ -198,7 +198,7 @@ export function validateRuntimeProfilesAuthorityIntegrity(
 
   if (!isRecord(syncAgentsDoc)) {
     errors.push(
-      ".github/sync-agents.yml: must parse to an object to check authority projection"
+      ".github/sync.yml: must parse to an object to check authority projection"
     );
     return errors;
   }
@@ -223,7 +223,7 @@ export function validateRuntimeProfilesAuthorityIntegrity(
     );
     if (targets.length === 0) {
       errors.push(
-        ".github/sync-agents.yml: no sync targets defined; cannot confirm projected authority paths"
+        ".github/sync.yml: no sync targets defined; cannot confirm projected authority paths"
       );
       continue;
     }
@@ -234,13 +234,13 @@ export function validateRuntimeProfilesAuthorityIntegrity(
       );
       if (!mapping) {
         errors.push(
-          `authority.${authorityKey}: canonical source "${canonical}" is not synced to ${target} by .github/sync-agents.yml`
+          `authority.${authorityKey}: canonical source "${canonical}" is not synced to ${target} by .github/sync.yml`
         );
         continue;
       }
       if (mapping.dest !== projected) {
         errors.push(
-          `authority.${authorityKey}.projected: "${projected}" does not match .github/sync-agents.yml dest ` +
+          `authority.${authorityKey}.projected: "${projected}" does not match .github/sync.yml dest ` +
             `"${mapping.dest}" for ${target} (source "${canonical}")`
         );
       }

@@ -130,3 +130,23 @@ test("default-include applies to every group and conflicting dests are rejected"
     /ci\.yml is mapped from both/
   );
 });
+
+test("sync.yml is the single generated config and carries agent governance for every repository", () => {
+  const sync = yaml.load(readFileSync(".github/sync.yml", "utf8"));
+  const workflow = readFileSync(
+    ".github/workflows/sync-org-templates.yml",
+    "utf8"
+  );
+  assert.doesNotMatch(workflow, /sync-agents\.yml|sync-common\.yml/);
+  assert.equal((workflow.match(/CONFIG_PATH:/g) ?? []).length, 1);
+  for (const [repository, mappings] of Object.entries(sync)) {
+    const skills = mappings.find(
+      ({ dest }) => dest === ".github/agent-governance/skills/"
+    );
+    assert.equal(skills?.deleteOrphaned, true, `${repository} skills mapping`);
+    assert.ok(
+      mappings.some(({ dest }) => dest === "CLAUDE.md"),
+      `${repository} CLAUDE.md`
+    );
+  }
+});

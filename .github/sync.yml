@@ -54,6 +54,21 @@ yohn-jp/gh-inari:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
@@ -123,6 +138,21 @@ yohn-jp/suzukuri:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
@@ -192,6 +222,21 @@ yohn-jp/shikitari:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
@@ -261,6 +306,21 @@ yohn-jp/wabachi:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
@@ -330,6 +390,21 @@ yohn-jp/cli-canon:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
@@ -399,6 +474,21 @@ yohn-jp/tsukai:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/codeql.yml
     dest: .github/workflows/codeql.yml
   - source: .github/codeql/codeql-config.yml
@@ -468,6 +558,21 @@ yohn-jp/gh-makami:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/prettier-autofix.yml
@@ -527,6 +632,21 @@ yohn-jp/nawabari:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/governance.yml
     dest: .github/workflows/governance.yml
   - source: templates/workflows/issue-governance.yml
@@ -600,6 +720,21 @@ yohn-jp/mottainai:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
 yohn-jp/majiwari:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
@@ -655,10 +790,23 @@ yohn-jp/majiwari:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
-  - source: AGENTS.md
-    dest: AGENTS.md
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
   - source: CLAUDE.md
     dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
+  - source: AGENTS.md
+    dest: AGENTS.md
   - source: templates/workflows/majiwari-ci.yml
     dest: .github/workflows/ci.yml
   - source: scripts/validate-action-pins.mjs
@@ -728,6 +876,21 @@ yohn-jp/jinushi:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/go-ci.yml
     dest: .github/workflows/ci.yml
   - source: templates/workflows/action-pins.yml
@@ -797,6 +960,21 @@ yohn-jp/hachidori:
     dest: .github/ISSUE_TEMPLATE/implementation.yml
   - source: .github/inari/issues/implementation.json
     dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
   - source: templates/workflows/go-ci.yml
     dest: .github/workflows/ci.yml
   - source: templates/workflows/action-pins.yml
