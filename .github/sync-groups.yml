@@ -142,6 +142,7 @@ sync-groups:
       - yohn-jp/shikitari
       - yohn-jp/wabachi
       - yohn-jp/cli-canon
+      - yohn-jp/tsukai
     include:
       - common
       - standard-extra
