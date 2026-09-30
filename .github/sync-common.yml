@@ -16,6 +16,7 @@ group:
     yohn-jp/cli-canon
     yohn-jp/jinushi
     yohn-jp/hachidori
+    yohn-jp/tsukai
   files:
     - source: .github/agent-governance/AGENTS.md
       dest: .github/agent-governance/AGENTS.md
