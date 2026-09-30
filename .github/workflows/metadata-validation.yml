@@ -82,6 +82,12 @@ jobs:
       - name: Validate synchronized governance script formatting
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-synced-script-format.mjs"
 
+      # Only the organization source repository owns sync-groups.yml; callers
+      # without it have nothing to validate.
+      - name: Validate sync config and workflow dependencies
+        if: hashFiles('.github/sync-groups.yml') != ''
+        run: node "$RUNNER_TEMP/metadata-tools/scripts/generate-sync-config.mjs" --check
+
       - name: Validate Inari JSON formatting
         run: node "$RUNNER_TEMP/metadata-tools/scripts/validate-inari-format.mjs"
 

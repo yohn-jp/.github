@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import { posix } from "node:path";
 import yaml from "js-yaml";
 
 const sourcePath = ".github/sync-groups.yml";
@@ -22,9 +24,16 @@ function mapping(entry) {
 export function expandSyncConfig(config) {
   if (config?.version !== 1) throw new Error("sync config version must be 1");
   const fileGroups = config["file-groups"];
+  const bundles = config.bundles ?? {};
   const syncGroups = config["sync-groups"];
   if (!fileGroups || !syncGroups) {
     throw new Error("sync config requires file-groups and sync-groups");
+  }
+
+  for (const name of Object.keys(bundles)) {
+    if (name in fileGroups) {
+      throw new Error(`${name} is defined as both a file group and a bundle`);
+    }
   }
 
   const repositories = {};
@@ -36,10 +45,10 @@ export function expandSyncConfig(config) {
       const mappings = [];
       const seen = new Set();
       for (const fileGroupName of syncGroup.include ?? []) {
-        const entries = fileGroups[fileGroupName];
+        const entries = fileGroups[fileGroupName] ?? bundles[fileGroupName];
         if (!entries) {
           throw new Error(
-            `sync group ${syncGroupName} references unknown file group ${fileGroupName}`
+            `sync group ${syncGroupName} references unknown file group or bundle ${fileGroupName}`
           );
         }
         for (const entry of entries) {
@@ -54,6 +63,57 @@ export function expandSyncConfig(config) {
     }
   }
   return repositories;
+}
+
+function workflowReferences(workflow) {
+  const references = new Set();
+  const visit = (value, key) => {
+    if (typeof value === "string") {
+      for (const match of value.matchAll(
+        /(?<![\w/.-])\.\/((?:\.github|scripts)\/[\w./-]+)/g
+      )) {
+        references.add(match[1]);
+      }
+      if (key === "config-file") references.add(posix.normalize(value));
+    } else if (Array.isArray(value)) {
+      for (const item of value) visit(item, key);
+    } else if (value && typeof value === "object") {
+      for (const [childKey, child] of Object.entries(value)) {
+        visit(child, childKey);
+      }
+    }
+  };
+  visit(workflow);
+  return references;
+}
+
+function isDistributed(reference, mappings) {
+  return mappings.some(({ dest }) =>
+    dest.endsWith("/")
+      ? reference.startsWith(dest)
+      : dest === reference || dest.startsWith(`${reference}/`)
+  );
+}
+
+// Every local path a distributed workflow references must be distributed to
+// the same repository, otherwise the workflow fails there (e.g. CodeQL init
+// without its config file).
+export function findMissingWorkflowDependencies(repositories, readSource) {
+  const problems = [];
+  for (const [repository, mappings] of Object.entries(repositories)) {
+    for (const { source, dest } of mappings) {
+      if (!/^\.github\/workflows\/[^/]+\.ya?ml$/.test(dest)) continue;
+      const workflow = yaml.load(readSource(source));
+      for (const reference of workflowReferences(workflow)) {
+        if (!isDistributed(reference, mappings)) {
+          problems.push(
+            `${repository}: ${dest} (from ${source}) references ${reference} which is not distributed to the repository`
+          );
+        }
+      }
+    }
+  }
+  return problems;
 }
 
 export function renderSyncConfig(config) {
@@ -74,6 +134,12 @@ async function main() {
   const config = yaml.load(await readFile(sourcePath, "utf8"));
   const expected = renderSyncConfig(config);
   if (check) {
+    const problems = findMissingWorkflowDependencies(
+      expandSyncConfig(config),
+      (source) => readFileSync(source, "utf8")
+    );
+    for (const problem of problems) console.error(problem);
+    if (problems.length > 0) process.exitCode = 1;
     const actual = await readFile(outputPath, "utf8");
     if (actual !== expected) {
       console.error(
