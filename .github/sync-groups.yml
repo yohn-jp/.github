@@ -56,6 +56,22 @@ file-groups:
       dest: .github/ISSUE_TEMPLATE/implementation.yml
     - source: .github/inari/issues/implementation.json
       dest: .github/inari/issues/implementation.json
+  agent-governance:
+    - source: .github/agent-governance/AGENTS.md
+      dest: .github/agent-governance/AGENTS.md
+    - source: .github/agent-governance/skills/
+      dest: .github/agent-governance/skills/
+      deleteOrphaned: true
+    - source: CLAUDE.md
+      dest: CLAUDE.md
+    - source: docs/agent-change-workflow.md
+      dest: .github/agent-governance/change-workflow.md
+    - source: docs/agent-runtime-profiles.md
+      dest: .github/agent-governance/runtime-profiles.md
+    - source: .github/agents/runtime-profiles.json
+      dest: .github/agent-governance/runtime-profiles.json
+    - source: .github/agents/runtime-profiles.schema.json
+      dest: .github/agent-governance/runtime-profiles.schema.json
   governance:
     - source: templates/workflows/governance.yml
       dest: .github/workflows/governance.yml
@@ -86,8 +102,6 @@ file-groups:
   agent-root:
     - source: AGENTS.md
       dest: AGENTS.md
-    - source: CLAUDE.md
-      dest: CLAUDE.md
   go:
     - source: templates/workflows/go-ci.yml
       dest: .github/workflows/ci.yml
@@ -123,6 +137,7 @@ bundles:
 # Every group includes default-include first; a group lists only what differs.
 default-include:
   - common
+  - agent-governance
 
 sync-groups:
   standard:

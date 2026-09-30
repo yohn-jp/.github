@@ -29,10 +29,12 @@ its managed source/configuration paths (and is also available via
 (`ORG_TEMPLATE_SYNC_APP_ID` / `ORG_TEMPLATE_SYNC_APP_PRIVATE_KEY`) and
 [`BetaHuhn/repo-file-sync-action`](https://github.com/BetaHuhn/repo-file-sync-action)
 to push the configured files directly to each target repository's default
-branch (`SKIP_PR: true`). Two explicit maps are used:
-
-- `.github/sync.yml` for repository metadata, governance adapters, and opted-in workflow wrappers;
-- `.github/sync-agents.yml` for shared coding-agent instructions, workflow guidance, and runtime profiles.
+branch (`SKIP_PR: true`). One source declares every mapping:
+`.github/sync-groups.yml` (file groups, bundles, and sync groups). The flat
+`.github/sync.yml` is generated from it by
+`node scripts/generate-sync-config.mjs`; do not edit it by hand. The
+`agent-governance` file group carries shared coding-agent instructions,
+workflow guidance, runtime profiles, and Skills to every managed repository.
 
 | File                                                                                                    | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -103,14 +105,14 @@ added; otherwise an in-flight sync can overwrite the local change.
 Shared agent governance follows a stricter extension model. Do not locally
 patch generated `AGENTS.md`, `CLAUDE.md`, or
 `.github/agent-governance/{change-workflow.md,runtime-profiles.md,runtime-profiles.json,runtime-profiles.schema.json}`
-while the repository remains in `.github/sync-agents.yml`: the next sync will
+while the repository remains in `.github/sync-groups.yml`: the next sync will
 replace the patch and would create an ambiguous authority in the meantime.
 Request broadly useful changes in this canonical repository. Put legitimate
 repository-specific additions in
 `.github/agent-governance/repository-overlay.md` instead.
 
 If a repository must fully opt out of shared agent governance, remove its
-mapping from `.github/sync-agents.yml` through a reviewed canonical change
+mapping from `.github/sync-groups.yml` through a reviewed canonical change
 before replacing generated files locally. Document why the divergence is
 intentional so future maintainers do not mistake it for drift.
 
@@ -174,7 +176,7 @@ Mottainai-specific trust exception. Nawabari receives the routing helper
 alongside its synced validator so the copied adapter has no unresolved local
 dependency.
 
-Shared agent workflow/profile changes follow `.github/sync-agents.yml` and
+Shared agent workflow/profile changes follow `.github/sync-groups.yml` and
 are triggered by changes to `AGENTS.md`, `CLAUDE.md`, the canonical agent
 workflow/profile docs, the machine-readable profile sources, or the sync map.
 `sync-org-templates.yml`'s `sync` job is fail-closed: it declares `needs:

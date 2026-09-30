@@ -34,10 +34,10 @@ test("rejects duplicate profile ids (yohn-jp/.github#184: duplicate IDs)", () =>
   );
 });
 
-test("accepts authority references whose canonical path exists and whose projected path matches sync-agents.yml", () => {
+test("accepts authority references whose canonical path exists and whose projected path matches sync.yml", () => {
   const doc = loadJson("test/fixtures/runtime-profiles/valid.json");
   const syncAgentsDoc = yaml.load(
-    readFileSync("test/fixtures/runtime-profiles/sync-agents-valid.yml", "utf8")
+    readFileSync("test/fixtures/runtime-profiles/sync-valid.yml", "utf8")
   );
   const errors = validateRuntimeProfilesAuthorityIntegrity(
     doc,
@@ -47,11 +47,11 @@ test("accepts authority references whose canonical path exists and whose project
   assert.deepEqual(errors, []);
 });
 
-test("rejects a projected authority path that does not match sync-agents.yml's dest (yohn-jp/.github#184: broken projection path)", () => {
+test("rejects a projected authority path that does not match sync.yml's dest (yohn-jp/.github#184: broken projection path)", () => {
   const doc = loadJson("test/fixtures/runtime-profiles/valid.json");
   const syncAgentsDoc = yaml.load(
     readFileSync(
-      "test/fixtures/runtime-profiles/sync-agents-broken-projection.yml",
+      "test/fixtures/runtime-profiles/sync-broken-projection.yml",
       "utf8"
     )
   );
@@ -75,7 +75,7 @@ test("rejects a canonical authority path that does not exist in this repository"
   const doc = loadJson("test/fixtures/runtime-profiles/valid.json");
   doc.authority.workflow.canonical = "docs/does-not-exist.md";
   const syncAgentsDoc = yaml.load(
-    readFileSync("test/fixtures/runtime-profiles/sync-agents-valid.yml", "utf8")
+    readFileSync("test/fixtures/runtime-profiles/sync-valid.yml", "utf8")
   );
   const errors = validateRuntimeProfilesAuthorityIntegrity(
     doc,
@@ -91,7 +91,7 @@ test("rejects a canonical authority path that does not exist in this repository"
   );
 });
 
-test("the real .github/agents/runtime-profiles.json passes end-to-end validation against .github/sync-agents.yml", () => {
+test("the real .github/agents/runtime-profiles.json passes end-to-end validation against .github/sync.yml", () => {
   const errors = validateRuntimeProfilesFile();
   assert.deepEqual(errors, []);
 });
