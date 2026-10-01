@@ -15,6 +15,10 @@ on:
         description: Directory containing the Go module to build.
         type: string
         default: "."
+      development-line:
+        description: SemVer MAJOR.MINOR line for automated development tags (MAJOR.MINOR.PATCH-dev).
+        type: string
+        default: "0.1"
     secrets: {}
 
 permissions:
@@ -127,12 +131,13 @@ jobs:
           test "$actual_sha256" = "$EXPECTED_SHA256"
           expected_checksum_line="$EXPECTED_SHA256  $BINARY_FILENAME"
           test -f "$checksum" && test "$(tr -d '\r\n' < "$checksum")" = "$expected_checksum_line"
-      - name: Publish dev-N prerelease
+      - name: Publish SemVer development prerelease
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         env:
           ARTIFACT_DIRECTORY: ${{ runner.temp }}/go-development-release
           BINARY_FILENAME: ${{ needs.build.outputs.binary_filename }}
+          DEVELOPMENT_LINE: ${{ inputs.development-line }}
           EXPECTED_SHA256: ${{ needs.build.outputs.sha256 }}
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
@@ -140,21 +145,43 @@ jobs:
           RUNNER_TEMP: ${{ runner.temp }}
         run: |
           set -euo pipefail
+          if [[ ! "$DEVELOPMENT_LINE" =~ ^(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$ ]]; then
+            echo "development-line must be MAJOR.MINOR without leading zeros" >&2
+            exit 1
+          fi
+          line_major="${BASH_REMATCH[1]}"
+          line_minor="${BASH_REMATCH[2]}"
           binary="$ARTIFACT_DIRECTORY/$BINARY_FILENAME"
           checksum="$binary.sha256"
           actual_sha256="$(sha256sum -- "$binary" | awk '{print $1}')"
           test "$actual_sha256" = "$EXPECTED_SHA256"
           expected_checksum_line="$EXPECTED_SHA256  $BINARY_FILENAME"
           test "$(tr -d '\r\n' < "$checksum")" = "$expected_checksum_line"
-          refs_file="$RUNNER_TEMP/go-windows-development-release-dev-tags"
-          gh api --paginate "repos/$GH_REPOSITORY/git/matching-refs/tags/dev-" --jq '.[].ref' > "$refs_file"
-          max_sequence=0
+          refs_file="$RUNNER_TEMP/go-windows-development-release-line-tags"
+          gh api --paginate "repos/$GH_REPOSITORY/git/matching-refs/tags/$line_major.$line_minor." --jq '.[].ref' > "$refs_file"
+          # Only MAJOR.MINOR.PATCH-dev tags on the selected line advance the
+          # allocator; legacy dev-N, stable, and malformed tags are ignored.
+          # Any existing tag whose version core is MAJOR.MINOR.PATCH (stable,
+          # dev, or other pre-release/build variants) occupies that patch, so
+          # the candidate skips forward and never reuses or moves a tag.
+          dev_pattern="^refs/tags/$line_major\.$line_minor\.(0|[1-9][0-9]{0,17})-dev$"
+          occupied_pattern="^refs/tags/$line_major\.$line_minor\.([0-9]{1,18})([-+].*)?$"
+          max_patch=0
+          declare -A occupied=()
           while IFS= read -r ref; do
-            if [[ "$ref" =~ ^refs/tags/dev-([0-9]+)$ ]]; then
-              digits="${BASH_REMATCH[1]}"
-              sequence=$((10#$digits))
-              if (( sequence > max_sequence )); then max_sequence=$sequence; fi
+            if [[ "$ref" =~ $dev_pattern ]]; then
+              patch=$((10#${BASH_REMATCH[1]}))
+              if (( patch > max_patch )); then max_patch=$patch; fi
+            fi
+            if [[ "$ref" =~ $occupied_pattern ]]; then
+              occupied[$((10#${BASH_REMATCH[1]}))]=1
             fi
           done < "$refs_file"
-          release_tag="dev-$((max_sequence + 1))"
+          next_patch=$((max_patch + 1))
+          while [[ -n "${occupied[$next_patch]:-}" ]]; do next_patch=$((next_patch + 1)); done
+          release_tag="$line_major.$line_minor.$next_patch-dev"
+          if grep -qxF "refs/tags/$release_tag" "$refs_file"; then
+            echo "refusing to reuse existing tag $release_tag" >&2
+            exit 1
+          fi
           gh release create "$release_tag" "$binary" "$checksum" --repo "$GH_REPOSITORY" --title "$release_tag" --notes "Automated Windows amd64 development build from $RELEASE_SHA." --target "$RELEASE_SHA" --prerelease --latest=false
