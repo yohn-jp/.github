@@ -29,6 +29,7 @@ jobs:
       smoke-test-node-versions: "24" # optional, default "24"
       npm-cli-version: "12.0.2" # optional, default "12.0.2"
       certification-verification-script: "" # optional, default "" (gate disabled)
+      dry-run: false # optional, default false; true runs everything except publish
     permissions:
       contents: read
       id-token: write
@@ -57,6 +58,43 @@ entry with `--version`, falling back to `--help`).
 
 Package name and version are read directly from `package.json` — never
 passed as separate inputs or inferred from the repository name.
+
+## package.json `repository.url`
+
+`package.json` must declare `repository.url` equal to
+`https://github.com/<owner>/<repo>` of the publishing repository. The `build`
+job fails before packing otherwise (`scripts/check-repository-url.mjs`, unit
+tested in `test/npm-publish.test.mjs`); without this, npm rejects the publish
+with E422 during provenance validation, which only happens at release time.
+`git+` prefixes, `.git` suffixes, `git@github.com:owner/repo`, and
+`github:owner/repo` are normalized before comparing. An unset or mismatched
+URL fails. This check runs for both release and `dry-run`.
+
+## Dry run
+
+`dry-run: true` runs every job except `publish`, so release-only failures show
+up in pull requests: tag/version check, typecheck, test, build,
+`repository.url` check, pack, and the smoke-test matrix. Differences from a
+release:
+
+- Checks out `github.sha` instead of a release tag. `RELEASE_TAG` is
+  `v<package.json version>` and `RELEASE_SOURCE_SHA` is `github.sha`, so the
+  tag/version check is trivially satisfied.
+- The certification gate is **not** run (the consumer's evidence does not
+  exist at PR time). If `certification-verification-script` is set, only that
+  the file exists under `working-directory` is checked.
+- `publish` is skipped. Release-triggered behavior is unchanged.
+
+`typescript-cli-ci.yml` calls this workflow with `dry-run: true` on pull
+requests and `main` pushes when the consumer has
+`.github/workflows/publish.yml` (decided in its `plan` job, which also copies
+the `with:` inputs of that file's `npm-publish.yml` job). The `npm-publish-dry-run`
+job is part of the `verify` aggregate.
+
+GitHub validates a nested job's permissions against its caller even when the
+job is skipped, so the dry-run caller must grant what the whole workflow
+requests: `contents: read`, `actions: read` and `id-token: write`. The dry run
+never uses `id-token` or the publish environment.
 
 ## Release tag / version verification
 

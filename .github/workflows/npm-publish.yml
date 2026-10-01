@@ -40,6 +40,15 @@ on:
           define one.
         type: string
         default: ""
+      dry-run:
+        description: >-
+          Run everything except publish (build, typecheck, test, repository.url
+          check, pack, smoke test) against the checked-out ref instead of a
+          release tag, so release-only failures surface in pull requests. The
+          certification gate is not run; if certification-verification-script
+          is set, only the script's existence is checked.
+        type: boolean
+        default: false
     secrets: {}
 
 permissions:
@@ -74,20 +83,37 @@ jobs:
       tarball-sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
       - name: Checkout
+        if: ${{ !inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Checkout (dry-run)
+        if: ${{ inputs.dry-run }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Resolve release context
         id: release-context
         shell: bash
         env:
+          DRY_RUN: ${{ inputs.dry-run }}
+          WORKING_DIRECTORY: ${{ inputs.working-directory }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          DRY_RUN_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then
+            source_sha="$DRY_RUN_SHA"
+            RELEASE_TAG="v$(node -p 'require(process.argv[1]).version' "$PWD/$WORKING_DIRECTORY/package.json")"
+          else
+            source_sha="$(git rev-parse HEAD)"
+          fi
           {
-            echo "source_sha=$(git rev-parse HEAD)"
+            echo "source_sha=$source_sha"
             echo "tag=$RELEASE_TAG"
           } >> "$GITHUB_OUTPUT"
 
@@ -130,9 +156,28 @@ jobs:
 
       - name: Verify release version
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ steps.release-context.outputs.tag }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: node "$RUNNER_TEMP/release-tools/scripts/check-release-version.mjs" --package-version "$PACKAGE_VERSION" --tag "$RELEASE_TAG"
+
+      - name: Verify package.json repository.url
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          GITHUB_REPOSITORY_SLUG: ${{ github.repository }}
+        run: node "$RUNNER_TEMP/release-tools/scripts/check-repository-url.mjs" --package-json package.json --repository "$GITHUB_REPOSITORY_SLUG"
+
+      - name: Check certification script exists (dry-run)
+        if: ${{ inputs.dry-run && inputs.certification-verification-script != '' }}
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
+            echo "::error::certification-verification-script '$CERTIFICATION_VERIFICATION_SCRIPT' not found" >&2
+            exit 1
+          fi
 
       - name: Pack tarball
         id: pack
@@ -159,7 +204,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Verify release certification
-        if: inputs.certification-verification-script != ''
+        if: inputs.certification-verification-script != '' && !inputs.dry-run
         shell: bash
         working-directory: ${{ inputs.working-directory }}
         env:
@@ -221,9 +266,17 @@ jobs:
         node-version: ${{ fromJSON(needs.plan.outputs.smoke_test_node_versions) }}
     steps:
       - name: Checkout
+        if: ${{ !inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/tags/${{ github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Checkout (dry-run)
+        if: ${{ inputs.dry-run }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Setup Node.js
@@ -259,6 +312,7 @@ jobs:
   publish:
     name: Publish (OIDC Trusted Publishing)
     needs: [build, smoke-test]
+    if: ${{ !inputs.dry-run }}
     runs-on: ubuntu-24.04
     environment: npm
     permissions:
