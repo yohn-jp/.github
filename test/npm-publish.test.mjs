@@ -12,6 +12,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import yaml from "js-yaml";
+import {
+  normalizeRepositoryUrl,
+  repositoryMatches
+} from "../scripts/check-repository-url.mjs";
 
 const workflowPath = ".github/workflows/npm-publish.yml";
 const workflowSource = readFileSync(workflowPath, "utf8");
@@ -61,7 +65,10 @@ function stubTsx(root) {
 
 test("release certification gate is optional and receives only the generic exact-release context", () => {
   const verifyStep = stepNamed("Verify release certification");
-  assert.equal(verifyStep.if, "inputs.certification-verification-script != ''");
+  assert.equal(
+    verifyStep.if,
+    "inputs.certification-verification-script != '' && !inputs.dry-run"
+  );
   assert.deepEqual(workflow.permissions, { contents: "read" });
   assert.deepEqual(buildJob.permissions, {
     actions: "read",
@@ -86,6 +93,7 @@ test("release certification gate is optional and receives only the generic exact
     stepNamed("Checkout").with.ref,
     "refs/tags/${{ github.event.release.tag_name }}"
   );
+  assert.equal(stepNamed("Checkout").if, "${{ !inputs.dry-run }}");
 
   const root = mkdtempSync(join(tmpdir(), "npm-publish-certification-"));
   try {
@@ -242,4 +250,142 @@ test("the shared workflow keeps the certification token scoped to its verifier",
     }
   }
   assert.doesNotMatch(workflowSource, /\b(?:gh-inari|Inari)\b|evidence schema/);
+});
+
+test("dry-run input defaults to false and the publish job never runs under it", () => {
+  const input = workflow.on.workflow_call.inputs["dry-run"];
+  assert.equal(input.type, "boolean");
+  assert.equal(input.default, false);
+  assert.equal(workflow.jobs.publish.if, "${{ !inputs.dry-run }}");
+  assert.deepEqual(workflow.jobs.publish.needs, ["build", "smoke-test"]);
+  for (const name of ["build", "smoke-test"]) {
+    assert.equal(workflow.jobs[name].if, undefined);
+  }
+});
+
+test("dry-run checks out the PR ref and derives the release context from package.json", () => {
+  const dryCheckout = stepNamed("Checkout (dry-run)");
+  assert.equal(dryCheckout.if, "${{ inputs.dry-run }}");
+  assert.equal(dryCheckout.with.ref, "${{ github.sha }}");
+  const smokeSteps = workflow.jobs["smoke-test"].steps;
+  assert.equal(
+    smokeSteps.find((step) => step.name === "Checkout (dry-run)").with.ref,
+    "${{ github.sha }}"
+  );
+
+  const contextStep = stepNamed("Resolve release context");
+  const root = mkdtempSync(join(tmpdir(), "npm-publish-context-"));
+  try {
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ name: "x", version: "1.2.3" })
+    );
+    const outputFile = join(root, "output");
+    writeFileSync(outputFile, "");
+    runStep(contextStep.run, root, {
+      DRY_RUN: "true",
+      WORKING_DIRECTORY: ".",
+      RELEASE_TAG: "",
+      DRY_RUN_SHA: "feedface",
+      GITHUB_OUTPUT: outputFile
+    });
+    const output = readFileSync(outputFile, "utf8");
+    assert.match(output, /^source_sha=feedface$/m);
+    assert.match(output, /^tag=v1\.2\.3$/m);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("dry-run skips the certification gate but fails when its script is missing", () => {
+  const existsStep = stepNamed("Check certification script exists (dry-run)");
+  assert.equal(
+    existsStep.if,
+    "${{ inputs.dry-run && inputs.certification-verification-script != '' }}"
+  );
+  const root = mkdtempSync(join(tmpdir(), "npm-publish-dry-run-gate-"));
+  try {
+    const environment = {
+      CERTIFICATION_VERIFICATION_SCRIPT:
+        "scripts/verify-release-certification.mjs"
+    };
+    assertStepFails(existsStep.run, root, environment, /not found/);
+    mkdirSync(join(root, "scripts"));
+    writeFileSync(
+      join(root, "scripts", "verify-release-certification.mjs"),
+      "process.exitCode = 1;\n"
+    );
+    // Existence only: the (failing) script is not executed.
+    runStep(existsStep.run, root, environment);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("package.json repository.url must match the publishing repository in dry-run and release", () => {
+  const steps = buildJob.steps.map((step) => step.name);
+  const urlIndex = steps.indexOf("Verify package.json repository.url");
+  assert.ok(urlIndex !== -1);
+  assert.equal(buildJob.steps[urlIndex].if, undefined);
+  assert.ok(urlIndex < steps.indexOf("Pack tarball"));
+  assert.equal(
+    buildJob.steps[urlIndex].env.GITHUB_REPOSITORY_SLUG,
+    "${{ github.repository }}"
+  );
+});
+
+test("repository.url normalization accepts each npm spelling of the same GitHub repository", () => {
+  const expected = "https://github.com/yohn-jp/tsukai";
+  for (const repository of [
+    "https://github.com/yohn-jp/tsukai",
+    "git+https://github.com/yohn-jp/tsukai.git",
+    "https://github.com/yohn-jp/tsukai.git",
+    "git@github.com:yohn-jp/tsukai.git",
+    "github:yohn-jp/tsukai",
+    { type: "git", url: "git+https://github.com/yohn-jp/tsukai.git" }
+  ]) {
+    assert.equal(normalizeRepositoryUrl(repository), expected);
+    assert.ok(repositoryMatches(repository, "yohn-jp/tsukai"));
+  }
+  for (const repository of [
+    undefined,
+    "",
+    {},
+    { type: "git", url: "" },
+    "git+https://github.com/yohn-jp/other.git",
+    "git+https://example.com/yohn-jp/tsukai.git"
+  ]) {
+    assert.ok(!repositoryMatches(repository, "yohn-jp/tsukai"));
+  }
+});
+
+test("repository.url step fails with the E422 cause when missing or mismatched", () => {
+  const step = stepNamed("Verify package.json repository.url");
+  const root = mkdtempSync(join(tmpdir(), "npm-publish-repo-url-"));
+  try {
+    const tools = join(root, "release-tools");
+    mkdirSync(join(tools, "scripts"), { recursive: true });
+    writeFileSync(
+      join(tools, "scripts", "check-repository-url.mjs"),
+      readFileSync("scripts/check-repository-url.mjs", "utf8")
+    );
+    const environment = {
+      RUNNER_TEMP: root,
+      GITHUB_REPOSITORY_SLUG: "yohn-jp/tsukai"
+    };
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "x" }));
+    assertStepFails(step.run, root, environment, /not set[\s\S]*E422/);
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ repository: { url: "git+https://github.com/a/b.git" } })
+    );
+    assertStepFails(step.run, root, environment, /does not match[\s\S]*E422/);
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ repository: "github:yohn-jp/tsukai" })
+    );
+    runStep(step.run, root, environment);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

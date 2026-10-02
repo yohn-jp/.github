@@ -79,6 +79,11 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       fast_path: ${{ steps.decide.outputs.fast_path }}
+      publish_dry_run: ${{ steps.publish-workflow.outputs.dry_run }}
+      publish_working_directory: ${{ steps.publish-workflow.outputs.working_directory }}
+      publish_node_version: ${{ steps.publish-workflow.outputs.node_version }}
+      publish_smoke_test_node_versions: ${{ steps.publish-workflow.outputs.smoke_test_node_versions }}
+      publish_certification_script: ${{ steps.publish-workflow.outputs.certification_script }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -121,6 +126,31 @@ jobs:
           else
             echo "fast_path=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Detect consumer publish workflow
+        id: publish-workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          workflow=.github/workflows/publish.yml
+          if [ ! -f "$workflow" ]; then
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Mirror the consumer's own npm-publish.yml inputs so the dry run
+          # packs and smoke-tests exactly what its release would.
+          with="$(yq -o=json '[.jobs[] | select((.uses // "") | contains("/.github/workflows/npm-publish.yml@")) | .with // {}] | .[0] // null' "$workflow")"
+          if [ "$with" = "null" ]; then
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          {
+            echo "dry_run=true"
+            echo "working_directory=$(jq -r '."working-directory" // "."' <<<"$with")"
+            echo "node_version=$(jq -r '."node-version" // "24"' <<<"$with")"
+            echo "smoke_test_node_versions=$(jq -r '."smoke-test-node-versions" // "24"' <<<"$with")"
+            echo "certification_script=$(jq -r '."certification-verification-script" // ""' <<<"$with")"
+          } >> "$GITHUB_OUTPUT"
 
   governance:
     name: Actions governance validation
@@ -460,6 +490,25 @@ jobs:
             mv "$RUNNER_TEMP/provider-tools" .provider-tools
           fi
 
+  npm-publish-dry-run:
+    name: npm publish dry run
+    needs: plan
+    if: >-
+      needs.plan.outputs.fast_path != 'true' &&
+      needs.plan.outputs.publish_dry_run == 'true' &&
+      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    uses: ./.github/workflows/npm-publish.yml
+    with:
+      dry-run: true
+      working-directory: ${{ needs.plan.outputs.publish_working_directory }}
+      node-version: ${{ needs.plan.outputs.publish_node_version }}
+      smoke-test-node-versions: ${{ needs.plan.outputs.publish_smoke_test_node_versions }}
+      certification-verification-script: ${{ needs.plan.outputs.publish_certification_script }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+
   verify:
     name: verify
     if: always()
@@ -474,6 +523,7 @@ jobs:
       - build
       - committed-dist-check
       - package-validate
+      - npm-publish-dry-run
     runs-on: ubuntu-24.04
     steps:
       - name: Check required job results
