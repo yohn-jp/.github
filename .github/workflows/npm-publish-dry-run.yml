@@ -1,0 +1,182 @@
+name: npm publish dry run
+
+# Read-only release preflight for pull requests. This intentionally contains
+# no publication job or OIDC permission so it can be nested under consumer CI
+# workflows that grant only contents: read.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the package to validate.
+        type: string
+        default: "."
+      node-version:
+        description: Node.js version used for build/test/pack.
+        type: string
+        default: "24"
+      smoke-test-node-versions:
+        description: Comma-separated Node.js versions to smoke-test the packed tarball on.
+        type: string
+        default: "24"
+      certification-verification-script:
+        description: Optional release-certification script whose existence is required.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    outputs:
+      smoke_test_node_versions: ${{ steps.split.outputs.versions }}
+    steps:
+      - name: Split smoke-test-node-versions into a JSON array
+        id: split
+        shell: bash
+        env:
+          VERSIONS: ${{ inputs.smoke-test-node-versions }}
+        run: |
+          versions_json="$(echo "$VERSIONS" | tr ',' '\n' | jq -R -s -c 'split("\n") | map(gsub("^\\s+|\\s+$";"")) | map(select(length > 0))')"
+          echo "versions=$versions_json" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and pack
+    runs-on: ubuntu-24.04
+    outputs:
+      tarball-name: ${{ steps.pack.outputs.name }}
+      tarball-sha256: ${{ steps.pack.outputs.sha256 }}
+    steps:
+      - name: Checkout exact evaluated revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Checkout release tooling (yohn-jp/.github)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .release-tools
+          persist-credentials: false
+
+      - uses: ./.release-tools/.github/actions/setup-node-pnpm
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Isolate release tooling
+        shell: bash
+        run: mv .release-tools "$RUNNER_TEMP/release-tools"
+
+      - name: Typecheck
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm run typecheck
+
+      - name: Test
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm test
+
+      - name: Build
+        working-directory: ${{ inputs.working-directory }}
+        run: pnpm run build
+
+      - name: Verify package.json repository.url
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          GITHUB_REPOSITORY_SLUG: ${{ github.repository }}
+        run: node "$RUNNER_TEMP/release-tools/scripts/check-repository-url.mjs" --package-json package.json --repository "$GITHUB_REPOSITORY_SLUG"
+
+      - name: Check certification script exists
+        if: ${{ inputs.certification-verification-script != '' }}
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          CERTIFICATION_VERIFICATION_SCRIPT: ${{ inputs.certification-verification-script }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$CERTIFICATION_VERIFICATION_SCRIPT" ]; then
+            echo "::error::certification-verification-script '$CERTIFICATION_VERIFICATION_SCRIPT' not found" >&2
+            exit 1
+          fi
+
+      - name: Pack tarball
+        id: pack
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing_tarballs=( ./*.tgz )
+          if [ "${#existing_tarballs[@]}" -gt 0 ]; then
+            rm -f -- "${existing_tarballs[@]}"
+          fi
+          pnpm pack
+          tarballs=( ./*.tgz )
+          if [ "${#tarballs[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one packed tarball, found ${#tarballs[@]}" >&2
+            exit 1
+          fi
+          tarball="${tarballs[0]}"
+          {
+            echo "name=$(basename "$tarball")"
+            echo "path=$PWD/${tarball#./}"
+            echo "sha256=$(sha256sum "$tarball" | cut -d ' ' -f 1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-publish-dry-run-tarball
+          path: ${{ steps.pack.outputs.path }}
+          if-no-files-found: error
+          retention-days: 1
+
+  smoke-test:
+    name: Smoke test (Node ${{ matrix.node-version }})
+    needs: [plan, build]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ${{ fromJSON(needs.plan.outputs.smoke_test_node_versions) }}
+    steps:
+      - name: Checkout exact evaluated revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          package-manager-cache: false
+
+      - name: Download tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-publish-dry-run-tarball
+          path: ${{ inputs.working-directory }}
+
+      - name: Smoke test packed tarball
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          TARBALL_NAME: ${{ needs.build.outputs.tarball-name }}
+          EXPECTED_TARBALL_SHA256: ${{ needs.build.outputs.tarball-sha256 }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$TARBALL_NAME" ]; then
+            echo "::error::expected packed tarball '$TARBALL_NAME' was not downloaded" >&2
+            exit 1
+          fi
+          actual_sha256="$(sha256sum "$TARBALL_NAME" | cut -d ' ' -f 1)"
+          if [ "$actual_sha256" != "$EXPECTED_TARBALL_SHA256" ]; then
+            echo "::error::downloaded tarball bytes do not match the packed tarball" >&2
+            exit 1
+          fi
+          node scripts/smoke-test.mjs --tarball "$TARBALL_NAME"
