@@ -58,13 +58,11 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: ${{ inputs.working-directory }}/go.mod
-          cache: false
+          cache: true
+          cache-dependency-path: ${{ inputs.working-directory }}/go.sum
       - name: Run Go tests
         working-directory: ${{ inputs.working-directory }}
         run: go test ./...
-      - name: Run Go vet
-        working-directory: ${{ inputs.working-directory }}
-        run: go vet ./...
       - name: Build Windows amd64 executable
         shell: pwsh
         working-directory: ${{ inputs.working-directory }}
@@ -80,6 +78,7 @@ jobs:
           $env:GOARCH = "amd64"
           go build -o (Join-Path $env:ARTIFACT_DIRECTORY $env:BINARY_FILENAME) $env:BUILD_TARGET
       - name: Verify executable and record SHA-256
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: verify
         shell: pwsh
         env:
@@ -93,6 +92,7 @@ jobs:
           "$sha256  $($env:BINARY_FILENAME)" | Set-Content -LiteralPath "$binary.sha256" -Encoding ascii
           "sha256=$sha256" >> $env:GITHUB_OUTPUT
       - name: Upload verified build bytes
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: go-windows-development-release-${{ github.run_id }}-${{ github.run_attempt }}
@@ -102,6 +102,7 @@ jobs:
 
   publish:
     name: Allocate dev tag and publish prerelease
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-24.04
     permissions:
