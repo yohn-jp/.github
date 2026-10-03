@@ -497,17 +497,14 @@ jobs:
       needs.plan.outputs.fast_path != 'true' &&
       needs.plan.outputs.publish_dry_run == 'true' &&
       (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: ./.github/workflows/npm-publish.yml
+    uses: ./.github/workflows/npm-publish-dry-run.yml
     with:
-      dry-run: true
       working-directory: ${{ needs.plan.outputs.publish_working_directory }}
       node-version: ${{ needs.plan.outputs.publish_node_version }}
       smoke-test-node-versions: ${{ needs.plan.outputs.publish_smoke_test_node_versions }}
       certification-verification-script: ${{ needs.plan.outputs.publish_certification_script }}
     permissions:
-      actions: read
       contents: read
-      id-token: write
 
   verify:
     name: verify
