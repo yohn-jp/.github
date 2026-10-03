@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Format, vet, and test
+  static:
+    name: Format and vet
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -25,7 +25,8 @@ jobs:
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: ${{ inputs.working-directory }}/go.mod
-          cache: false
+          cache: true
+          cache-dependency-path: ${{ inputs.working-directory }}/go.sum
       - name: Check formatting
         working-directory: ${{ inputs.working-directory }}
         shell: bash
@@ -39,6 +40,43 @@ jobs:
       - name: Vet
         working-directory: ${{ inputs.working-directory }}
         run: go vet ./...
-      - name: Test with race detector
+
+  race:
+    name: Race shard ${{ matrix.shard }}/8
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ inputs.working-directory }}/go.mod
+          cache: true
+          cache-dependency-path: ${{ inputs.working-directory }}/go.sum
+      - name: Test assigned packages with race detector
         working-directory: ${{ inputs.working-directory }}
-        run: go test -race ./...
+        shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: "8"
+        run: |
+          set -euo pipefail
+          mapfile -t packages < <(go list ./... | LC_ALL=C sort)
+          assigned=()
+          for i in "${!packages[@]}"; do
+            if (( i % SHARDS == SHARD )); then
+              assigned+=("${packages[$i]}")
+            fi
+          done
+          if (( ${#assigned[@]} == 0 )); then
+            echo "No packages assigned to shard $SHARD."
+            exit 0
+          fi
+          printf 'Race shard %s/%s: %s\n' "$SHARD" "$SHARDS" "${assigned[*]}"
+          go test -race "${assigned[@]}"
