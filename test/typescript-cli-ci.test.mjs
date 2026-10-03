@@ -192,3 +192,12 @@ test("verify remains the stable fail-closed status", () => {
   assert.match(verify.steps[0].run, /skipped/);
   assert.match(verify.steps[0].run, /exit 1/);
 });
+
+
+test("npm publish dry run stays on a read-only reusable workflow boundary", () => {
+  const dryRun = workflow.jobs["npm-publish-dry-run"];
+  assert.equal(dryRun.uses, "./.github/workflows/npm-publish-dry-run.yml");
+  assert.deepEqual(dryRun.permissions, { contents: "read" });
+  assert.equal("dry-run" in dryRun.with, false);
+  assert.doesNotMatch(JSON.stringify(dryRun), /id-token|actions\s*:\s*write/u);
+});
