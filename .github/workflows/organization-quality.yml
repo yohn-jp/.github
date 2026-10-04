@@ -15,6 +15,9 @@ name: Organization quality
 # aggregate. Lane workflows already select PR head vs. push/schedule
 # revision semantics internally (see docs/quality-ci.md "Revision
 # authority") — this caller does not re-derive or override that.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
