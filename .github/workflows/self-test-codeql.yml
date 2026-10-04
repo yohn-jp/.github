@@ -9,6 +9,9 @@ name: Self-test CodeQL Reusable Workflow
 # ./...` path (rather than `yohn-jp/.github/...@main`) means this proof
 # runs against the current branch's copy of codeql.yml, not the version
 # already on `main`.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   push:
     branches: [main]
