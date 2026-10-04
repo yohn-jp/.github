@@ -159,6 +159,7 @@ runs:
       env:
         PNPM_STORE_DIR: ${{ steps.pnpm-store-paths.outputs.dir }}
         PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+        PNPM_CONFIG_STRICT_DEP_BUILDS: "false"
       run: pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"
 
     - name: Save pnpm store cache
