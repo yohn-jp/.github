@@ -57,6 +57,10 @@ exact version) rather than redefining that authority here; this repository
 only owns branch-name validation and the GitHub-side labeling/commenting
 plumbing.
 
+## Organization release architecture
+
+See [`docs/release-architecture.md`](docs/release-architecture.md) for the organization-wide release authority, parity invariants, artifact-family contracts, consumer/provider ownership boundary, current migration inventory, and onboarding/change requirements.
+
 ## Reusable npm publishing
 
 See [`docs/npm-publish.md`](docs/npm-publish.md) for
