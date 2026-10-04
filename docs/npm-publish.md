@@ -80,9 +80,11 @@ release:
 - Checks out `github.sha` instead of a release tag. `RELEASE_TAG` is
   `v<package.json version>` and `RELEASE_SOURCE_SHA` is `github.sha`, so the
   tag/version check is trivially satisfied.
-- The certification gate is **not** run (the consumer's evidence does not
-  exist at PR time). If `certification-verification-script` is set, only that
-  the file exists under `working-directory` is checked.
+- The certification gate **is run** against the exact dry-run tarball. It receives
+  `RELEASE_SOURCE_SHA=github.sha`, `RELEASE_TAG=v<package.json version>`, and the
+  same artifact path/digest variables as a release. A verifier that requires
+  external release evidence must define how pre-release evidence is validated;
+  the shared workflow does not silently skip the gate.
 - `publish` is skipped. Release-triggered behavior is unchanged.
 
 `typescript-cli-ci.yml` calls this workflow with `dry-run: true` on pull
@@ -111,15 +113,18 @@ so it always matches the exact provider revision selected by the caller's
 ## Optional release-certification gate
 
 If `certification-verification-script` is set, the `build` job runs it
-(`node --import tsx <script>`, relative to `working-directory`) after
+(`node <script>`, relative to `working-directory`) after
 `pnpm pack` has created exactly one tarball and before it is uploaded for
-smoke/publish. The script receives no workflow-controlled arguments and the
+smoke/publish. The verifier is a Node-executable script; the shared workflow
+must not assume a consumer devDependency such as `tsx`. The script receives no workflow-controlled arguments and the
 release fails if it is missing or exits non-zero. The workflow also checks
 that the script did not change the packed tarball bytes before uploading it;
 there is no second pack operation.
 
-The verifier receives this bounded, product-neutral context through
-environment variables:
+The same verifier runs in both dry-run and release modes. This is a release
+parity invariant: no certification command may first execute after a GitHub
+Release has been created. The verifier receives this bounded, product-neutral
+context through environment variables:
 
 | Variable                  | Value                                                                                                |
 | ------------------------- | ---------------------------------------------------------------------------------------------------- |
