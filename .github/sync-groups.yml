@@ -148,6 +148,7 @@ sync-groups:
       - yohn-jp/wabachi
       - yohn-jp/cli-canon
       - yohn-jp/tsukai
+      - yohn-jp/yokodori
     include:
       - codeql
       - governance
