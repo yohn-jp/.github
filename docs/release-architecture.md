@@ -58,6 +58,7 @@ because a historical fix was made locally.
 
 ```text
 PR / main candidate
+  -> generated npm-release-certification.yml caller
   -> npm-publish.yml@main (dry-run)
   -> install
   -> typecheck
@@ -137,7 +138,10 @@ shared contract first. Only then create the next immutable product Release.
 
 ## Adding a product
 
-Choose the artifact family, implement the required product scripts, add only a
-thin caller workflow referencing the canonical `@main` workflow, and ensure
-PR/main invokes the pre-release path. A new product must not bootstrap by
+Choose the artifact family and implement the required product scripts. For the
+standard npm family, the `npm-release` sync bundle distributes both the publish
+caller and `npm-release-certification.yml`; consumers do not hand-author either
+workflow. The certification caller invokes `npm-publish.yml@main` with
+`dry-run: true` on pull requests and main pushes, while the publish caller
+invokes the same reusable workflow after Release publication. A new product must not bootstrap by
 copying another product's release YAML.
