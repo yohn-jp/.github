@@ -1,5 +1,8 @@
 name: Self-test Linux system E2E
 
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   push:
     branches: [main]
