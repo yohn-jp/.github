@@ -5,6 +5,9 @@ name: PR governance
 # adapter is checked out from this repository, while its root is the consumer
 # checkout, so contract compilation reads the consumer's synchronized
 # .github/inari snapshot and native templates.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
