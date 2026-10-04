@@ -49,6 +49,12 @@ on:
           is set, only the script's existence is checked.
         type: boolean
         default: false
+      release-tag:
+        description: >-
+          Existing immutable release tag to publish when retrying outside a
+          release.published event. Empty uses github.event.release.tag_name.
+        type: string
+        default: ""
     secrets: {}
 
 permissions:
@@ -86,7 +92,7 @@ jobs:
         if: ${{ !inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ github.event.release.tag_name }}
+          ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
           persist-credentials: false
 
       - name: Checkout (dry-run)
@@ -102,7 +108,7 @@ jobs:
         env:
           DRY_RUN: ${{ inputs.dry-run }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
           DRY_RUN_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -269,7 +275,7 @@ jobs:
         if: ${{ !inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/${{ github.event.release.tag_name }}
+          ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
           persist-credentials: false
 
       - name: Checkout (dry-run)
