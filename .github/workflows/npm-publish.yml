@@ -6,6 +6,9 @@ name: npm publish
 # publish them via npm Trusted Publishing (OIDC) — no long-lived npm token
 # secret. Package name/version are discovered from package.json, never from
 # repository-name branching.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_dispatch:
     inputs:
