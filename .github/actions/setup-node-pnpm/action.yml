@@ -161,7 +161,7 @@ runs:
         # pnpm 11 defaults minimumReleaseAge to 1440 minutes. Organization CI does not
         # impose a publication-age delay on explicitly selected dependency versions.
         PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
-      run: pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"
+      run: |\n        # pnpm 11 defaults strictDepBuilds=true, which turns safely blocked dependency\n        # lifecycle scripts into a fatal install error. Shared CI keeps those scripts\n        # blocked but does not require every consumer to maintain a transitive-package\n        # allowlist. A consumer can still opt back into strict failure in its project config.\n        pnpm config set --global strictDepBuilds false\n        pnpm install --frozen-lockfile --store-dir "$PNPM_STORE_DIR"
 
     - name: Save pnpm store cache
       if: steps.restore-store.outputs.cache-hit != 'true'
