@@ -13,6 +13,9 @@ name: npm release preparation
 # npm-publish.yml remains the publication authority once the release PR has
 # merged and a GitHub Release is published. See
 # docs/npm-release-preparation.md.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
