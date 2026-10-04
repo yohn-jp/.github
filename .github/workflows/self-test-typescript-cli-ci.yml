@@ -4,6 +4,9 @@ name: Self-test TypeScript CLI CI
 # fixture package in test/fixtures/ts-cli, including the committed-dist and
 # conformance-script capabilities, so the reusable workflow itself is
 # validated by CI rather than only by inspection.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   push:
     branches: [main]
