@@ -4,6 +4,9 @@ name: Go development release
 # only the binary name and Go build target; this provider verifies the exact
 # triggering commit, builds one Linux amd64 binary, and publishes it as a
 # development prerelease without touching stable version tags.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
