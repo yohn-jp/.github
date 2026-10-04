@@ -162,6 +162,11 @@ test("dependency installation preserves working-directory and frozen-lockfile", 
   assert.match(install.run, /pnpm install --frozen-lockfile/);
 });
 
+test("dependency installation disables pnpm minimum release age", () => {
+  const install = stepByName("Install dependencies");
+  assert.equal(install.env.PNPM_CONFIG_MINIMUM_RELEASE_AGE, "0");
+});
+
 test("executable cache is only saved when freshly acquired; store cache is skipped on an exact hit", () => {
   const saveExe = steps.find((s) => s.name === "Save pnpm executable cache");
   const saveStore = steps.find((s) => s.name === "Save pnpm store cache");
