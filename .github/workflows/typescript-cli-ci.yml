@@ -538,7 +538,7 @@ jobs:
       needs.plan.outputs.publish_dry_run == 'true' &&
       inputs.canonical-release-preflight &&
       (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
-    uses: ./.github/workflows/npm-publish.yml
+    uses: ./.github/workflows/npm-release-certify.yml
     with:
       working-directory: ${{ needs.plan.outputs.publish_working_directory }}
       node-version: ${{ needs.plan.outputs.publish_node_version }}
