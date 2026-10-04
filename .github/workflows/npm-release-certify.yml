@@ -7,21 +7,6 @@ name: npm release certification engine
 # secret. Package name/version are discovered from package.json, never from
 # repository-name branching.
 on:
-  workflow_dispatch:
-    inputs:
-      release-tag:
-        description: Existing immutable GitHub Release tag to retry.
-        required: true
-        type: string
-      repository:
-        description: Consumer repository in owner/name form.
-        required: true
-        type: string
-      certification-verification-script:
-        description: Consumer-owned release certification script.
-        required: false
-        default: ""
-        type: string
   workflow_call:
     inputs:
       working-directory:
@@ -57,14 +42,7 @@ on:
           created. The certification gate runs against the exact dry-run
           tarball with synthetic release context derived from the checked-out SHA.
         type: boolean
-        default: false
-      release-tag:
-        description: >-
-          Existing immutable release tag to publish when retrying outside a
-          release.published event. Empty uses github.event.release.tag_name.
-        type: string
-        default: ""
-    secrets: {}
+        default: false    secrets: {}
 
 permissions:
   contents: read
@@ -103,14 +81,6 @@ jobs:
       tarball-name: ${{ steps.pack.outputs.name }}
       tarball-sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
-      - name: Checkout
-        if: ${{ !inputs.dry-run }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
-          ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
-          persist-credentials: false
-
       - name: Checkout (dry-run)
         if: ${{ inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -122,26 +92,12 @@ jobs:
         id: release-context
         shell: bash
         env:
-          DRY_RUN: ${{ inputs.dry-run }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
-          RELEASE_TAG: ${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
-          TARGET_REPOSITORY: ${{ inputs.repository != '' && inputs.repository || github.repository }}
-          GH_TOKEN: ${{ github.token }}
           DRY_RUN_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [ "$DRY_RUN" != "true" ] && [ -n "${RELEASE_TAG:-}" ]; then
-            release_json="$(gh api "repos/$TARGET_REPOSITORY/releases/tags/$RELEASE_TAG")"
-            test "$(jq -r '.draft' <<<"$release_json")" = "false"
-            test "$(jq -r '.prerelease' <<<"$release_json")" = "false"
-            test "$(jq -r '.immutable' <<<"$release_json")" = "true"
-          fi
-          if [ "$DRY_RUN" = "true" ]; then
-            source_sha="$DRY_RUN_SHA"
-            RELEASE_TAG="v$(node -p 'require(process.argv[1]).version' "$PWD/$WORKING_DIRECTORY/package.json")"
-          else
-            source_sha="$(git rev-parse HEAD)"
-          fi
+          source_sha="$DRY_RUN_SHA"
+          RELEASE_TAG="v$(node -p 'require(process.argv[1]).version' "$PWD/$WORKING_DIRECTORY/package.json")"
           {
             echo "source_sha=$source_sha"
             echo "tag=$RELEASE_TAG"
@@ -282,14 +238,6 @@ jobs:
       matrix:
         node-version: ${{ fromJSON(needs.plan.outputs.smoke_test_node_versions) }}
     steps:
-      - name: Checkout
-        if: ${{ !inputs.dry-run }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
-          ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
-          persist-credentials: false
-
       - name: Checkout (dry-run)
         if: ${{ inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
