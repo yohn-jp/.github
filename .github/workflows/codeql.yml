@@ -4,6 +4,9 @@ name: CodeQL
 # Actions workflows, callable from consumer repositories. Also runs
 # directly here (push/pull_request/schedule) to scan this repository's own
 # scripts/ and workflows.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
