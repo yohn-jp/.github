@@ -158,9 +158,6 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         PNPM_STORE_DIR: ${{ steps.pnpm-store-paths.outputs.dir }}
-        # pnpm 11 defaults minimumReleaseAge to 1440 minutes. Organization CI does not
-        # impose a publication-age delay on explicitly selected dependency versions.
-        PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
         # Keep unapproved dependency lifecycle scripts blocked without making
         # their presence fatal. Scope this to the install process; do not mutate
         # runner-global pnpm configuration.
