@@ -131,6 +131,7 @@ jobs:
             jinushi
             hachidori
             tsukai
+            yokodori
 
       - name: Sync templates to org repositories
         uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
