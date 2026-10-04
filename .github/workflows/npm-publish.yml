@@ -7,6 +7,21 @@ name: npm publish
 # secret. Package name/version are discovered from package.json, never from
 # repository-name branching.
 on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Existing immutable GitHub Release tag to retry.
+        required: true
+        type: string
+      repository:
+        description: Consumer repository in owner/name form.
+        required: true
+        type: string
+      certification-verification-script:
+        description: Consumer-owned release certification script.
+        required: false
+        default: ""
+        type: string
   workflow_call:
     inputs:
       working-directory:
@@ -92,6 +107,8 @@ jobs:
         if: ${{ !inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
           ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
           persist-credentials: false
 
@@ -99,6 +116,7 @@ jobs:
         if: ${{ inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
           ref: ${{ github.sha }}
           persist-credentials: false
 
@@ -109,9 +127,17 @@ jobs:
           DRY_RUN: ${{ inputs.dry-run }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
           RELEASE_TAG: ${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
+          TARGET_REPOSITORY: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          GH_TOKEN: ${{ github.token }}
           DRY_RUN_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          if [ "$DRY_RUN" != "true" ] && [ -n "${RELEASE_TAG:-}" ]; then
+            release_json="$(gh api "repos/$TARGET_REPOSITORY/releases/tags/$RELEASE_TAG")"
+            test "$(jq -r '.draft' <<<"$release_json")" = "false"
+            test "$(jq -r '.prerelease' <<<"$release_json")" = "false"
+            test "$(jq -r '.immutable' <<<"$release_json")" = "true"
+          fi
           if [ "$DRY_RUN" = "true" ]; then
             source_sha="$DRY_RUN_SHA"
             RELEASE_TAG="v$(node -p 'require(process.argv[1]).version' "$PWD/$WORKING_DIRECTORY/package.json")"
@@ -275,6 +301,7 @@ jobs:
         if: ${{ !inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
           ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
           persist-credentials: false
 
