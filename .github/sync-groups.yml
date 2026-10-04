@@ -86,6 +86,8 @@ file-groups:
       dest: .github/workflows/publish.yml
     - source: templates/workflows/release-prepare.yml
       dest: .github/workflows/release-prepare.yml
+    - source: templates/workflows/npm-release-certification.yml
+      dest: .github/workflows/npm-release-certification.yml
   governance-scripts:
     - source: scripts/validate-pr.mjs
       dest: scripts/validate-pr.mjs
