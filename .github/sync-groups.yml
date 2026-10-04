@@ -112,9 +112,6 @@ file-groups:
       dest: .github/workflows/ci.yml
     - source: scripts/validate-action-pins.mjs
       dest: scripts/validate-action-pins.mjs
-  hachidori-release:
-    - source: templates/workflows/hachidori-go-release.yml
-      dest: .github/workflows/release.yml
   jinushi-release:
     - source: templates/workflows/jinushi-go-release.yml
       dest: .github/workflows/release.yml
@@ -206,4 +203,3 @@ sync-groups:
       - go-codeql
       - governance
       - issue-governance
-      - hachidori-release
