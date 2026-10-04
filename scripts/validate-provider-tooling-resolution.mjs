@@ -97,6 +97,16 @@ export function validateProviderToolingResolution(doc, sourceLabel) {
         refExpr.trim() === "${{ github.event.repository.default_branch }}";
       if (isTrustedConsumerDefaultCheckout) continue;
 
+      // npm-publish.yml may deliberately check out the consumer repository at
+      // an explicit immutable release tag. This is release payload, not
+      // provider tooling; the workflow separately verifies that the tag maps
+      // to an existing published immutable GitHub Release.
+      const isTrustedNpmReleaseCheckout =
+        sourceLabel.endsWith("/npm-publish.yml") &&
+        repository.trim() === "${{ inputs.repository != '' && inputs.repository || github.repository }}" &&
+        refExpr.trim() === "refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}";
+      if (isTrustedNpmReleaseCheckout) continue;
+
       const isDirectSafeForm =
         SAFE_REF_EXPRESSION.test(refExpr) &&
         SAFE_REPOSITORY_EXPRESSION.test(repository);
