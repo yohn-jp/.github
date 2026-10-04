@@ -1,0 +1,23 @@
+name: npm release certification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: npm-release-certification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    uses: yohn-jp/.github/.github/workflows/npm-publish.yml@main
+    with:
+      certification-verification-script: scripts/verify-release-certification.mjs
+      dry-run: true
+    permissions:
+      actions: read
+      contents: read
