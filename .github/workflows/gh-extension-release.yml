@@ -21,6 +21,9 @@ name: gh extension precompiled release
 # artifacts have been verified; unlike the build entrypoint, this is opt-in
 # and pulls in a pnpm/Node setup only when requested, to keep the
 # non-Node/non-gated default fully toolchain-neutral.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
