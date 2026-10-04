@@ -1,20 +1,17 @@
 name: npm release certification engine
 
-# Reusable release-triggered npm publishing: build/test, verify the release
-# tag matches package.json's version, pack one exact tarball, certify that
-# tarball, smoke-test the same bytes across a Node-version matrix, then
-# publish them via npm Trusted Publishing (OIDC) — no long-lived npm token
-# secret. Package name/version are discovered from package.json, never from
-# repository-name branching.
+# Canonical non-publishing npm release engine. Both release publication and
+# PR/main preflight use this workflow so build/pack/certification/integrity/
+# smoke behavior has one implementation. Publication remains in npm-publish.yml.
 on:
   workflow_call:
     inputs:
       working-directory:
-        description: Directory containing the package to publish.
+        description: Directory containing the package to certify.
         type: string
         default: "."
       node-version:
-        description: Node.js version used for build/test/publish.
+        description: Node.js version used for build/test.
         type: string
         default: "24"
       smoke-test-node-versions:
@@ -22,27 +19,30 @@ on:
         type: string
         default: "24"
       certification-verification-script:
-        description: >-
-          Optional path (relative to working-directory) to a consumer-owned,
-          version-controlled script that fails closed unless the consumer's
-          own release-certification evidence is complete and valid. It runs
-          after the exact tarball is packed and before that tarball is made
-          available to smoke/publish, with only the documented generic
-          release context in environment variables. The script receives no
-          workflow-controlled arguments and exits non-zero to block release.
-          Empty (default) skips this gate entirely for consumers that don't
-          define one.
+        description: Optional consumer-owned release certification script.
         type: string
         default: ""
       dry-run:
-        description: >-
-          Run everything except publish (build, typecheck, test, repository.url
-          check, pack, smoke test) against the checked-out ref instead of a
-          release tag, so release-only failures surface before a Release is
-          created. The certification gate runs against the exact dry-run
-          tarball with synthetic release context derived from the checked-out SHA.
+        description: Certify the checked-out SHA instead of an immutable release tag.
         type: boolean
-        default: false    secrets: {}
+        default: false
+      release-tag:
+        description: Immutable release tag when certifying an actual release.
+        type: string
+        default: ""
+      repository:
+        description: Consumer repository in owner/name form.
+        type: string
+        default: ""
+    outputs:
+      package-name:
+        value: ${{ jobs.build.outputs.package-name }}
+      package-version:
+        value: ${{ jobs.build.outputs.package-version }}
+      tarball-name:
+        value: ${{ jobs.build.outputs.tarball-name }}
+      tarball-sha256:
+        value: ${{ jobs.build.outputs.tarball-sha256 }}
 
 permissions:
   contents: read
@@ -73,7 +73,6 @@ jobs:
       PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
       PNPM_CONFIG_STRICT_DEP_BUILDS: "false"
     permissions:
-      actions: read
       contents: read
     outputs:
       package-name: ${{ steps.package.outputs.name }}
@@ -81,6 +80,14 @@ jobs:
       tarball-name: ${{ steps.pack.outputs.name }}
       tarball-sha256: ${{ steps.pack.outputs.sha256 }}
     steps:
+      - name: Checkout
+        if: ${{ !inputs.dry-run }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
+          persist-credentials: false
+
       - name: Checkout (dry-run)
         if: ${{ inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -92,12 +99,26 @@ jobs:
         id: release-context
         shell: bash
         env:
+          DRY_RUN: ${{ inputs.dry-run }}
           WORKING_DIRECTORY: ${{ inputs.working-directory }}
+          RELEASE_TAG: ${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
+          TARGET_REPOSITORY: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          GH_TOKEN: ${{ github.token }}
           DRY_RUN_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          source_sha="$DRY_RUN_SHA"
-          RELEASE_TAG="v$(node -p 'require(process.argv[1]).version' "$PWD/$WORKING_DIRECTORY/package.json")"
+          if [ "$DRY_RUN" != "true" ] && [ -n "${RELEASE_TAG:-}" ]; then
+            release_json="$(gh api "repos/$TARGET_REPOSITORY/releases/tags/$RELEASE_TAG")"
+            test "$(jq -r '.draft' <<<"$release_json")" = "false"
+            test "$(jq -r '.prerelease' <<<"$release_json")" = "false"
+            test "$(jq -r '.immutable' <<<"$release_json")" = "true"
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            source_sha="$DRY_RUN_SHA"
+            RELEASE_TAG="v$(node -p 'require(process.argv[1]).version' "$PWD/$WORKING_DIRECTORY/package.json")"
+          else
+            source_sha="$(git rev-parse HEAD)"
+          fi
           {
             echo "source_sha=$source_sha"
             echo "tag=$RELEASE_TAG"
@@ -238,6 +259,14 @@ jobs:
       matrix:
         node-version: ${{ fromJSON(needs.plan.outputs.smoke_test_node_versions) }}
     steps:
+      - name: Checkout
+        if: ${{ !inputs.dry-run }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          ref: refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}
+          persist-credentials: false
+
       - name: Checkout (dry-run)
         if: ${{ inputs.dry-run }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
