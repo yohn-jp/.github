@@ -17,6 +17,25 @@ on:
         description: Node.js version used across all jobs.
         type: string
         default: "24"
+      format-script:
+        description: >-
+          package.json script name for format validation. Empty skips the
+          format lane for consumers that do not define one.
+        type: string
+        default: "format:check"
+      lint-script:
+        description: >-
+          package.json script name for lint validation. Empty skips the lint
+          lane for consumers that do not define one.
+        type: string
+        default: "lint"
+      canonical-release-preflight:
+        description: >-
+          Run the canonical npm-publish.yml release engine with dry-run=true
+          on pull requests and main. Default false preserves existing consumer
+          certification ordering until each repository explicitly opts in.
+        type: boolean
+        default: false
       committed-dist:
         description: >-
           Verify the committed dist/ directory is byte-identical to a fresh
@@ -161,7 +180,7 @@ jobs:
   format:
     name: Format check
     needs: plan
-    if: needs.plan.outputs.fast_path != 'true'
+    if: needs.plan.outputs.fast_path != 'true' && inputs.format-script != ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -179,7 +198,9 @@ jobs:
         shell: bash
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
-        run: pnpm run format:check
+        env:
+          FORMAT_SCRIPT: ${{ inputs.format-script }}
+        run: pnpm run "$FORMAT_SCRIPT"
       - name: Restore provider tooling for action cleanup
         if: always()
         shell: bash
@@ -191,7 +212,7 @@ jobs:
   lint:
     name: Lint
     needs: plan
-    if: needs.plan.outputs.fast_path != 'true'
+    if: needs.plan.outputs.fast_path != 'true' && inputs.lint-script != ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -209,7 +230,9 @@ jobs:
         shell: bash
         run: mv .provider-tools "$RUNNER_TEMP/provider-tools"
       - working-directory: ${{ inputs.working-directory }}
-        run: pnpm run lint
+        env:
+          LINT_SCRIPT: ${{ inputs.lint-script }}
+        run: pnpm run "$LINT_SCRIPT"
       - name: Restore provider tooling for action cleanup
         if: always()
         shell: bash
@@ -496,6 +519,7 @@ jobs:
     if: >-
       needs.plan.outputs.fast_path != 'true' &&
       needs.plan.outputs.publish_dry_run == 'true' &&
+      !inputs.canonical-release-preflight &&
       (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
     uses: ./.github/workflows/npm-publish-dry-run.yml
     with:
@@ -504,6 +528,25 @@ jobs:
       smoke-test-node-versions: ${{ needs.plan.outputs.publish_smoke_test_node_versions }}
       certification-verification-script: ${{ needs.plan.outputs.publish_certification_script }}
     permissions:
+      contents: read
+
+  canonical-npm-publish-dry-run:
+    name: Canonical npm publish dry run
+    needs: plan
+    if: >-
+      needs.plan.outputs.fast_path != 'true' &&
+      needs.plan.outputs.publish_dry_run == 'true' &&
+      inputs.canonical-release-preflight &&
+      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    uses: ./.github/workflows/npm-publish.yml
+    with:
+      working-directory: ${{ needs.plan.outputs.publish_working_directory }}
+      node-version: ${{ needs.plan.outputs.publish_node_version }}
+      smoke-test-node-versions: ${{ needs.plan.outputs.publish_smoke_test_node_versions }}
+      certification-verification-script: ${{ needs.plan.outputs.publish_certification_script }}
+      dry-run: true
+    permissions:
+      actions: read
       contents: read
 
   verify:
@@ -521,6 +564,7 @@ jobs:
       - committed-dist-check
       - package-validate
       - npm-publish-dry-run
+      - canonical-npm-publish-dry-run
     runs-on: ubuntu-24.04
     steps:
       - name: Check required job results
