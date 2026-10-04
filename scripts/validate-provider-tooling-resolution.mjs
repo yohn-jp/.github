@@ -102,7 +102,8 @@ export function validateProviderToolingResolution(doc, sourceLabel) {
       // provider tooling; the workflow separately verifies that the tag maps
       // to an existing published immutable GitHub Release.
       const isTrustedNpmReleaseCheckout =
-        sourceLabel.endsWith("/npm-publish.yml") &&
+        (sourceLabel.endsWith("/npm-publish.yml") ||
+          sourceLabel.endsWith("/npm-release-certify.yml")) &&
         repository.trim() === "${{ inputs.repository != '' && inputs.repository || github.repository }}" &&
         refExpr.trim() === "refs/tags/${{ inputs.release-tag != '' && inputs.release-tag || github.event.release.tag_name }}";
       if (isTrustedNpmReleaseCheckout) continue;
