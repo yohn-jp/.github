@@ -94,6 +94,10 @@ jobs:
   build:
     name: Build and pack
     runs-on: ubuntu-24.04
+    # Immutable release builds reuse the tagged lockfile, including nested consumer pnpm commands.
+    # Do not apply this policy to fresh resolution outside this build job.
+    env:
+      PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
     permissions:
       actions: read
       contents: read
