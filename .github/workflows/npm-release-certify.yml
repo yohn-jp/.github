@@ -3,6 +3,9 @@ name: npm release certification engine
 # Canonical non-publishing npm release engine. Both release publication and
 # PR/main preflight use this workflow so build/pack/certification/integrity/
 # smoke behavior has one implementation. Publication remains in npm-publish.yml.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   workflow_call:
     inputs:
