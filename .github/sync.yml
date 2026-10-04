@@ -503,6 +503,90 @@ yohn-jp/tsukai:
     dest: .github/workflows/release-prepare.yml
   - source: templates/workflows/prettier-autofix.yml
     dest: .github/workflows/prettier-autofix.yml
+yohn-jp/yokodori:
+  - source: .github/ISSUE_TEMPLATE/config.yml
+    dest: .github/ISSUE_TEMPLATE/config.yml
+  - source: .github/ISSUE_TEMPLATE/bug.yml
+    dest: .github/ISSUE_TEMPLATE/bug.yml
+  - source: .github/ISSUE_TEMPLATE/feature.yml
+    dest: .github/ISSUE_TEMPLATE/feature.yml
+  - source: .github/ISSUE_TEMPLATE/architecture.yml
+    dest: .github/ISSUE_TEMPLATE/architecture.yml
+  - source: .github/ISSUE_TEMPLATE/maintenance.yml
+    dest: .github/ISSUE_TEMPLATE/maintenance.yml
+  - source: .github/ISSUE_TEMPLATE/research.yml
+    dest: .github/ISSUE_TEMPLATE/research.yml
+  - source: .github/PULL_REQUEST_TEMPLATE/default.md
+    dest: .github/PULL_REQUEST_TEMPLATE/default.md
+  - source: .github/PULL_REQUEST_TEMPLATE/release.md
+    dest: .github/PULL_REQUEST_TEMPLATE/release.md
+  - source: .github/PULL_REQUEST_TEMPLATE/authority.md
+    dest: .github/PULL_REQUEST_TEMPLATE/authority.md
+  - source: .github/PULL_REQUEST_TEMPLATE/epic.md
+    dest: .github/PULL_REQUEST_TEMPLATE/epic.md
+  - source: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+    dest: .github/PULL_REQUEST_TEMPLATE/issue-integration.md
+  - source: .github/inari/issues/bug.json
+    dest: .github/inari/issues/bug.json
+  - source: .github/inari/issues/feature.json
+    dest: .github/inari/issues/feature.json
+  - source: .github/inari/issues/architecture.json
+    dest: .github/inari/issues/architecture.json
+  - source: .github/inari/issues/maintenance.json
+    dest: .github/inari/issues/maintenance.json
+  - source: .github/inari/issues/research.json
+    dest: .github/inari/issues/research.json
+  - source: .github/inari/pull-requests/default.json
+    dest: .github/inari/pull-requests/default.json
+  - source: .github/inari/pull-requests/release.json
+    dest: .github/inari/pull-requests/release.json
+  - source: .github/inari/pull-requests/authority.json
+    dest: .github/inari/pull-requests/authority.json
+  - source: .github/inari/pull-requests/epic.json
+    dest: .github/inari/pull-requests/epic.json
+  - source: .github/inari/pull-requests/issue-integration.json
+    dest: .github/inari/pull-requests/issue-integration.json
+  - source: .github/inari/pr-policy.yml
+    dest: .github/inari/pr-policy.yml
+  - source: .github/inari/manifest.json
+    dest: .github/inari/manifest.json
+  - source: .github/ISSUE_TEMPLATE/epic.yml
+    dest: .github/ISSUE_TEMPLATE/epic.yml
+  - source: .github/inari/issues/epic.json
+    dest: .github/inari/issues/epic.json
+  - source: .github/ISSUE_TEMPLATE/implementation.yml
+    dest: .github/ISSUE_TEMPLATE/implementation.yml
+  - source: .github/inari/issues/implementation.json
+    dest: .github/inari/issues/implementation.json
+  - source: .github/agent-governance/AGENTS.md
+    dest: .github/agent-governance/AGENTS.md
+  - source: .github/agent-governance/skills/
+    dest: .github/agent-governance/skills/
+    deleteOrphaned: true
+  - source: CLAUDE.md
+    dest: CLAUDE.md
+  - source: docs/agent-change-workflow.md
+    dest: .github/agent-governance/change-workflow.md
+  - source: docs/agent-runtime-profiles.md
+    dest: .github/agent-governance/runtime-profiles.md
+  - source: .github/agents/runtime-profiles.json
+    dest: .github/agent-governance/runtime-profiles.json
+  - source: .github/agents/runtime-profiles.schema.json
+    dest: .github/agent-governance/runtime-profiles.schema.json
+  - source: templates/workflows/codeql.yml
+    dest: .github/workflows/codeql.yml
+  - source: .github/codeql/codeql-config.yml
+    dest: .github/codeql/codeql-config.yml
+  - source: templates/workflows/governance.yml
+    dest: .github/workflows/governance.yml
+  - source: templates/workflows/issue-governance.yml
+    dest: .github/workflows/issue-governance.yml
+  - source: templates/workflows/publish.yml
+    dest: .github/workflows/publish.yml
+  - source: templates/workflows/release-prepare.yml
+    dest: .github/workflows/release-prepare.yml
+  - source: templates/workflows/prettier-autofix.yml
+    dest: .github/workflows/prettier-autofix.yml
 yohn-jp/gh-makami:
   - source: .github/ISSUE_TEMPLATE/config.yml
     dest: .github/ISSUE_TEMPLATE/config.yml
