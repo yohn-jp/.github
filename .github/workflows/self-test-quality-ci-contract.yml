@@ -3,6 +3,9 @@ name: Self-test Organization Quality CI Contract
 # Validate the provider-owned machine-readable boundary on every provider
 # change. Lane implementations and consumer-specific commands are tested in
 # their own workflows; this check catches malformed wiring before rollout.
+env:
+  PNPM_CONFIG_MINIMUM_RELEASE_AGE: "0"
+
 on:
   push:
     branches: [main]
