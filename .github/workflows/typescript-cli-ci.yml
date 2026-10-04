@@ -546,7 +546,6 @@ jobs:
       certification-verification-script: ${{ needs.plan.outputs.publish_certification_script }}
       dry-run: true
     permissions:
-      actions: read
       contents: read
 
   verify:
