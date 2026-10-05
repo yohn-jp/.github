@@ -198,6 +198,7 @@ sync-groups:
   hachidori:
     repositories:
       - yohn-jp/hachidori
+      - yohn-jp/matagi
     include:
       - go
       - go-codeql
