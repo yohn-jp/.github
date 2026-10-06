@@ -1,0 +1,281 @@
+name: gofmt autofix
+
+on:
+  workflow_call:
+    inputs:
+      autofix-app-id:
+        description: GitHub App ID supplied from the caller's AUTOFIX_APP_ID Actions variable.
+        type: string
+        required: false
+        default: ""
+    secrets:
+      AUTOFIX_APP_PRIVATE_KEY:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  eligibility:
+    name: Check autofix eligibility
+    runs-on: ubuntu-24.04
+    outputs:
+      eligible: ${{ steps.check.outputs.eligible }}
+    steps:
+      - name: Exclude forks and autofix recursion
+        id: check
+        shell: bash
+        env:
+          BASE_REPOSITORY: ${{ github.repository }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "$HEAD_REPOSITORY" ] || [ "${HEAD_REPOSITORY,,}" != "${BASE_REPOSITORY,,}" ]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::gofmt autofix is skipped for external fork pull requests."
+          elif [[ "$HEAD_REF" == autofix/gofmt/pr-* ]]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::gofmt autofix PRs are excluded from recursive remediation."
+          else
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  format:
+    name: Format unprivileged source checkout with trusted gofmt
+    needs: eligibility
+    if: needs.eligibility.outputs.eligible == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.capture.outputs.changed }}
+      artifact-directory: ${{ steps.capture.outputs.directory }}
+    steps:
+      - name: Checkout exact source PR head as data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Checkout consumer default-branch formatter authority
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: formatter-authority
+          persist-credentials: false
+
+      - name: Setup trusted Go toolchain
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: formatter-authority/go.mod
+          cache: false
+
+      - name: Run trusted gofmt against tracked Go source
+        shell: bash
+        env:
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_HEAD_SHA"
+          authority_sha="$(git -C formatter-authority rev-parse HEAD)"
+          test -n "$authority_sha"
+          while IFS= read -r -d '' file; do
+            case "$file" in
+              *.go) ;;
+              *) echo "::error::unexpected tracked formatter target: $file"; exit 1 ;;
+            esac
+            test -f "source/$file"
+            test ! -L "source/$file"
+            gofmt -w -- "source/$file"
+          done < <(git -C source ls-files -z -- '*.go')
+
+      - name: Capture bounded patch and provenance
+        id: capture
+        shell: bash
+        env:
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' changed < <(git -C source diff --name-only -z --no-renames HEAD --)
+          if (( ${#changed[@]} == 0 )); then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if (( ${#changed[@]} > 200 )); then
+            echo "::error::gofmt patch changes too many files"
+            exit 1
+          fi
+          for file in "${changed[@]}"; do
+            [[ "$file" == *.go ]] || { echo "::error::gofmt changed non-Go file: $file"; exit 1; }
+            [[ "$file" != *$'\n'* && "$file" != *$'\r'* ]] || { echo "::error::unsupported control character in path"; exit 1; }
+            test -f "source/$file"
+            test ! -L "source/$file"
+          done
+          directory="$RUNNER_TEMP/gofmt-autofix-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir "$directory"
+          git -C source diff --no-ext-diff --no-textconv --no-renames --no-color             --src-prefix=a/ --dst-prefix=b/ HEAD -- > "$directory/patch.diff"
+          bytes="$(wc -c < "$directory/patch.diff")"
+          if (( bytes <= 0 || bytes > 5242880 )); then
+            echo "::error::gofmt patch size is invalid: $bytes"
+            exit 1
+          fi
+          authority_sha="$(git -C formatter-authority rev-parse HEAD)"
+          go_version="$(go version | awk '{print $3}')"
+          jq -n             --arg repository "$GITHUB_REPOSITORY"             --argjson pullRequest "$SOURCE_PR_NUMBER"             --arg headRepository "$SOURCE_HEAD_REPOSITORY"             --arg headRef "$SOURCE_HEAD_REF"             --arg headSha "$SOURCE_HEAD_SHA"             --arg defaultBranch "$DEFAULT_BRANCH"             --arg defaultSha "$authority_sha"             --arg goVersion "$go_version"             '{schemaVersion:1,repository:$repository,pullRequest:$pullRequest,headRepository:$headRepository,headRef:$headRef,headSha:$headSha,defaultBranch:$defaultBranch,defaultSha:$defaultSha,goVersion:$goVersion}'             > "$directory/provenance.json"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "directory=$directory" >> "$GITHUB_OUTPUT"
+
+      - name: Upload patch and provenance
+        if: steps.capture.outputs.changed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gofmt-autofix-${{ github.run_id }}
+          path: ${{ steps.capture.outputs.directory }}
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
+  writer:
+    name: Validate patch and create stacked gofmt PR
+    needs: [eligibility, format]
+    if: needs.eligibility.outputs.eligible == 'true' && needs.format.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Download patch and provenance
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: gofmt-autofix-${{ github.run_id }}
+          path: ${{ runner.temp }}/gofmt-autofix
+
+      - name: Checkout exact source head for patch validation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: source
+          persist-credentials: false
+
+      - name: Reject stale or unsafe repair before credentials
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ARTIFACT: ${{ runner.temp }}/gofmt-autofix
+        run: |
+          set -euo pipefail
+          test "$(find "$ARTIFACT" -maxdepth 1 -type f -printf '%f\n' | sort)" = $'patch.diff\nprovenance.json'
+          current="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$SOURCE_PR_NUMBER")"
+          test "$(jq -r .state <<<"$current")" = open
+          test "$(jq -r .head.sha <<<"$current")" = "$SOURCE_HEAD_SHA"
+          test "$(jq -r .head.repo.full_name <<<"$current")" = "$SOURCE_HEAD_REPOSITORY"
+          test "$(jq -r .head.ref <<<"$current")" = "$SOURCE_HEAD_REF"
+          test "$SOURCE_HEAD_REPOSITORY" = "$GITHUB_REPOSITORY"
+          test "$(git -C source rev-parse HEAD)" = "$SOURCE_HEAD_SHA"
+
+          provenance="$(cat "$ARTIFACT/provenance.json")"
+          test "$(jq -r .schemaVersion <<<"$provenance")" = 1
+          test "$(jq -r .repository <<<"$provenance")" = "$GITHUB_REPOSITORY"
+          test "$(jq -r .pullRequest <<<"$provenance")" = "$SOURCE_PR_NUMBER"
+          test "$(jq -r .headRepository <<<"$provenance")" = "$SOURCE_HEAD_REPOSITORY"
+          test "$(jq -r .headRef <<<"$provenance")" = "$SOURCE_HEAD_REF"
+          test "$(jq -r .headSha <<<"$provenance")" = "$SOURCE_HEAD_SHA"
+          test "$(jq -r .defaultBranch <<<"$provenance")" = "$DEFAULT_BRANCH"
+          [[ "$(jq -r .defaultSha <<<"$provenance")" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(jq -r .goVersion <<<"$provenance")" =~ ^go[0-9]+\.[0-9]+ ]]
+
+          test -s "$ARTIFACT/patch.diff"
+          test "$(wc -c < "$ARTIFACT/patch.diff")" -le 5242880
+          if grep -Eq '^(new file mode|deleted file mode|old mode|new mode|rename from|rename to|GIT binary patch|Binary files )' "$ARTIFACT/patch.diff"; then
+            echo "::error::patch contains unsupported Git metadata"
+            exit 1
+          fi
+          mapfile -t files < <(git -C source apply --numstat "$ARTIFACT/patch.diff" | cut -f3-)
+          (( ${#files[@]} > 0 && ${#files[@]} <= 200 ))
+          for file in "${files[@]}"; do
+            [[ "$file" == *.go ]] || { echo "::error::patch contains non-Go file: $file"; exit 1; }
+            [[ "$file" != *$'\n'* && "$file" != *$'\r'* ]] || exit 1
+            test -f "source/$file"
+            test ! -L "source/$file"
+          done
+          git -C source apply --check "$ARTIFACT/patch.diff"
+
+      - name: Require dedicated GitHub App credentials
+        shell: bash
+        env:
+          AUTOFIX_APP_ID: ${{ inputs.autofix-app-id }}
+          AUTOFIX_APP_PRIVATE_KEY: ${{ secrets.AUTOFIX_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AUTOFIX_APP_ID" ] || [ -z "$AUTOFIX_APP_PRIVATE_KEY" ]; then
+            echo "::error::Configure AUTOFIX_APP_ID and AUTOFIX_APP_PRIVATE_KEY to enable gofmt autofix. No token fallback is available."
+            exit 1
+          fi
+
+      - name: Create narrowly scoped GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ inputs.autofix-app-id }}
+          private-key: ${{ secrets.AUTOFIX_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-metadata: read
+          permission-pull-requests: write
+
+      - name: Publish deterministic stacked autofix PR
+        shell: bash
+        working-directory: source
+        env:
+          AUTOFIX_APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          SOURCE_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ARTIFACT: ${{ runner.temp }}/gofmt-autofix
+        run: |
+          set -euo pipefail
+          branch="autofix/gofmt/pr-$SOURCE_PR_NUMBER"
+          git apply "$ARTIFACT/patch.diff"
+          git diff --check
+          git config user.name "gofmt Autofix"
+          git config user.email "gofmt-autofix@users.noreply.github.com"
+          git add -- '*.go'
+          git diff --cached --quiet && { echo "::error::validated gofmt patch produced no commit"; exit 1; }
+          git commit -m "style: gofmt PR #$SOURCE_PR_NUMBER"
+          commit="$(git rev-parse HEAD)"
+
+          git remote set-url origin "https://x-access-token:$AUTOFIX_APP_TOKEN@github.com/$GITHUB_REPOSITORY.git"
+          expected=""
+          if git fetch --no-tags origin "refs/heads/$branch:refs/remotes/origin/gofmt-autofix-existing" 2>/dev/null; then
+            expected="$(git rev-parse refs/remotes/origin/gofmt-autofix-existing)"
+          fi
+          git push "--force-with-lease=refs/heads/$branch:$expected" origin "$commit:refs/heads/$branch"
+
+          existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --head "$branch" --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --repo "$GITHUB_REPOSITORY" --base "$SOURCE_HEAD_REF"
+          else
+            body="$(printf 'Automated gofmt repair for #%s.\n\nThis stacked pull request targets %s and was generated from %s.\n\nReview the formatting-only changes before merging. This pull request is not auto-merged.\n' "$SOURCE_PR_NUMBER" "$SOURCE_HEAD_REF" "$SOURCE_HEAD_SHA")"
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$branch" \
+              --base "$SOURCE_HEAD_REF" \
+              --title "style(gofmt): format $SOURCE_HEAD_REF (PR #$SOURCE_PR_NUMBER)" \
+              --body "$body"
+          fi
