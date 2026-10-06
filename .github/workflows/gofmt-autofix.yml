@@ -268,9 +268,11 @@ jobs:
           if [ -n "$existing" ]; then
             gh pr edit "$existing" --repo "$GITHUB_REPOSITORY" --base "$SOURCE_HEAD_REF"
           else
-            gh pr create --repo "$GITHUB_REPOSITORY"               --head "$branch"               --base "$SOURCE_HEAD_REF"               --title "style(gofmt): format $SOURCE_HEAD_REF (PR #$SOURCE_PR_NUMBER)"               --body "Automated gofmt repair for #$SOURCE_PR_NUMBER.
-
-This stacked pull request targets `$SOURCE_HEAD_REF` and was generated from `$SOURCE_HEAD_SHA`.
-
-Review the formatting-only changes before merging. This pull request is not auto-merged."
+            body="$(printf 'Automated gofmt repair for #%s.\n\nThis stacked pull request targets `%s` and was generated from `%s`.\n\nReview the formatting-only changes before merging. This pull request is not auto-merged.\n' "$SOURCE_PR_NUMBER" "$SOURCE_HEAD_REF" "$SOURCE_HEAD_SHA")"
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$branch" \
+              --base "$SOURCE_HEAD_REF" \
+              --title "style(gofmt): format $SOURCE_HEAD_REF (PR #$SOURCE_PR_NUMBER)" \
+              --body "$body"
           fi
