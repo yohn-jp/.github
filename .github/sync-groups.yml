@@ -81,6 +81,9 @@ file-groups:
   prettier-autofix:
     - source: templates/workflows/prettier-autofix.yml
       dest: .github/workflows/prettier-autofix.yml
+  gofmt-autofix:
+    - source: templates/workflows/gofmt-autofix.yml
+      dest: .github/workflows/gofmt-autofix.yml
   npm-release:
     - source: templates/workflows/publish.yml
       dest: .github/workflows/publish.yml
@@ -193,6 +196,7 @@ sync-groups:
       - go-codeql
       - governance
       - issue-governance
+      - gofmt-autofix
       - jinushi-release
 
   hachidori:
@@ -204,3 +208,4 @@ sync-groups:
       - go-codeql
       - governance
       - issue-governance
+      - gofmt-autofix
